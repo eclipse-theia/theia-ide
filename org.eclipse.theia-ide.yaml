@@ -1,0 +1,86 @@
+id: org.eclipse.theia-ide
+base: org.electronjs.Electron2.BaseApp
+base-version: '23.08'
+runtime: org.freedesktop.Platform
+runtime-version: '23.08'
+sdk: org.freedesktop.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.node18
+command: run.sh
+finish-args:
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --socket=pulseaudio
+  - --socket=ssh-auth
+  - --share=network
+  - --device=all
+  - --filesystem=host
+  #- --persist=.vscode-oss
+  - --allow=devel
+  - --talk-name=org.freedesktop.secrets
+  - --talk-name=org.kde.kwalletd5
+  - --talk-name=org.freedesktop.Flatpak
+  - --env=XCURSOR_PATH=/run/host/user-share/icons:/run/host/share/icons
+  - --filesystem=xdg-run/gnupg:ro
+  - --filesystem=xdg-config/kdeglobals:ro
+  - --talk-name=com.canonical.AppMenu.Registrar
+  - --system-talk-name=org.freedesktop.login1
+separate-locales: false
+build-options:
+  append-path: /usr/lib/sdk/node18/bin
+  env:
+    NPM_CONFIG_LOGLEVEL: info
+modules:
+  - shared-modules/libsecret/libsecret.json
+  - name: theia-ide
+    buildsystem: simple
+    build-options:
+      append-path: /usr/lib/sdk/node18/bin
+      env:
+        # https://stackoverflow.com/questions/25146976/can-i-get-npm-gyp-to-use-ccache
+        CC: ccache gcc
+        CXX: ccache g++
+        XDG_CACHE_HOME: /run/build/theia-ide/flatpak-node/cache
+        TMPDIR: /run/build/theia-ide/flatpak-node/tmp/
+        npm_config_nodedir: /usr/lib/sdk/node18
+        npm_config_offline: 'true'
+        npm_config_no_save: 'true'
+        PUPPETEER_SKIP_DOWNLOAD: 'true'
+      arch:
+        i386:
+          env:
+            npm_config_arch: ia32
+            npm_config_target_arch: ia32
+        x86_64:
+          env:
+            npm_config_arch: x64
+            npm_config_target_arch: x64
+        arm:
+          env:
+            npm_config_arch: armv7l
+            npm_config_target_arch: armv7l
+        aarch64:
+          env:
+            npm_config_arch: arm64
+            npm_config_target_arch: arm64
+    build-commands:
+      - HOME=$PWD yarn config --offline set yarn-offline-mirror $FLATPAK_BUILDER_BUILDDIR/flatpak-node/yarn-mirror
+      - yarn --offline --non-interactive --frozen-lockfile --ignore-optional --check-files --$npm_config_arch
+      - yarn build
+      #- yarn download:plugins
+      #- yarn package:applications:prod
+      - cp -va applications/electron/dist/* /app/main
+      - install -Dm755 -t /app/bin/ ../run.sh
+    sources:
+      #- type: archive
+      #  url: https://github.com/eclipse-theia/theia-blueprint/archive/1.52.0.tar.gz
+      #  sha256: xyz
+      - type: dir
+        path: .
+      # flatpak-node-generator --electron-node-headers --recursive yarn yarn.lock
+      - generated-sources.json
+      - type: script
+        dest-filename: run.sh
+        commands:
+          - zypak-wrapper.sh /app/main/theia-ide "$@"

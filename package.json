@@ -37,7 +37,7 @@
     "clean": "lerna run clean && rimraf node_modules",
     "build": "yarn build:extensions && yarn build:applications",
     "build:dev": "yarn build:extensions && yarn build:applications:dev",
-    "build:applications": "yarn build:extensions && lerna run --scope=\"theia-ide*app\" build:prod --concurrency 1",
+    "build:applications": "yarn build:extensions && lerna run --scope=\"theia-ide-electron-app\" build:prod --concurrency 1",
     "build:applications:dev": "yarn build:extensions && lerna run --scope=\"theia-ide*app\" build --concurrency 1",
     "build:extensions": "lerna run --scope=\"theia-ide*ext\" build",
     "download:plugins": "theia download:plugins --rate-limit=15 --parallel=false",
@@ -79,9 +79,8 @@
   ],
   "resolutions": {
     "@types/puppeteer": "^5.4.0",
-    "@yarnpkg/parsers": "3.0.0-rc.44",
+    "@yarnpkg/parsers": "3.0.2",
     "**/multer": "1.4.4-lts.1",
-    "**/nan": "2.20.0",
-    "**/cpu-features": "0.0.9"
+    "**/nan": "2.20.0"
   }
 }
