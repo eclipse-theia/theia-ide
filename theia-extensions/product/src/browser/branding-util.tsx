@@ -91,7 +91,7 @@ export function renderTickets(windowService: WindowService): React.ReactNode {
             Eclipse Theia IDE only packages existing functionality into a product and installers
             for the product. If you believe there is a mistake in packaging, something needs to be added to the
             packaging or the installers do not work properly,
-            please <BrowserLink text="open an issue on Github" url="https://github.com/eclipse-theia/theia-blueprint/issues/new/choose"
+            please <BrowserLink text="open an issue on Github" url="https://github.com/eclipse-theia/theia-ide/issues/new/choose"
                 windowService={windowService} ></BrowserLink> to let us know.
         </div>
     </div>;
@@ -104,7 +104,7 @@ export function renderSourceCode(windowService: WindowService): React.ReactNode 
         </h3>
         <div >
             The source code of Eclipse Theia IDE is available
-            on <BrowserLink text="Github" url="https://github.com/eclipse-theia/theia-blueprint"
+            on <BrowserLink text="Github" url="https://github.com/eclipse-theia/theia-ide"
                 windowService={windowService} ></BrowserLink>.
         </div>
     </div>;

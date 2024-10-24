@@ -36,7 +36,7 @@ export class TheiaIDEContribution implements CommandContribution, MenuContributi
     @inject(WindowService)
     protected readonly windowService: WindowService;
 
-    static REPORT_ISSUE_URL = 'https://github.com/eclipse-theia/theia-blueprint/issues/new?assignees=&labels=&template=bug_report.md';
+    static REPORT_ISSUE_URL = 'https://github.com/eclipse-theia/theia-ide/issues/new?assignees=&labels=&template=bug_report.md';
     static DOCUMENTATION_URL = 'https://theia-ide.org/docs/user_getting_started/';
 
     registerCommands(commandRegistry: CommandRegistry): void {

@@ -66,7 +66,7 @@ E.g. `1.45.0,1.46.100,1.47.100`.\
 
 ## Publish Docker Image
 
-Run this [workflow](https://github.com/eclipse-theia/theia-blueprint/actions/workflows/publish-theia-ide-img.yml) from the master branch.
+Run this [workflow](https://github.com/eclipse-theia/theia-ide/actions/workflows/publish-theia-ide-img.yml) from the master branch.
 
 ## Preview, Testing and Release Process for the Theia IDE
 
