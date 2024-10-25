@@ -35,15 +35,6 @@ If there was a Theia Release
 
 and adapt the code/built-ins accordingly.
 
-Next, update the `Jenkinsfile`'s `copyInstallerAndUpdateLatestYml` invocation for windows. Here we have to specficy for which olders versions we want to enable direct (incremental) updates to this version on Windows.\
-See <https://download.eclipse.org/theia/ide-preview/> for the available old versions.\
-*We plan to automate this, but at the moment it's a manual step.*
-
-E.g.:\
-`copyInstallerAndUpdateLatestYml('windows', 'TheiaIDESetup', 'exe', 'latest.yml', '1.46.0,1.46.100,1.47.0')`\
-->\
-`copyInstallerAndUpdateLatestYml('windows', 'TheiaIDESetup', 'exe', 'latest.yml', '1.46.0,1.46.100,1.47.0,1.47.100')`
-
 Finally, open a PR with your changes.
 
 ## Upgrade Dependencies

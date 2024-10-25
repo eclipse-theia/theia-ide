@@ -264,8 +264,11 @@ spec:
                         }
                         container('jnlp') {
                             script {
+                                echo 'Computing updatable versions before uploading new installer'
+                                def updatableVersions = getUpdatableVersions()
+                                echo 'updatableVersions: ' + updatableVersions
                                 uploadInstaller('windows')
-                                copyInstallerAndUpdateLatestYml('windows', 'TheiaIDESetup', 'exe', 'latest.yml', '1.46.0,1.46.100,1.47.0,1.47.100,1.48.0,1.48.300,1.49.100,1.49.101,1.50.0,1.50.100,1.51.0,1.52.0,1.53.100,1.53.200')
+                                copyInstallerAndUpdateLatestYml('windows', 'TheiaIDESetup', 'exe', 'latest.yml', updatableVersions)
                             }
                         }
                     }
@@ -411,6 +414,32 @@ def uploadInstaller(String platform) {
     } else {
         echo "Skipped upload for branch ${env.BRANCH_NAME}"
     }
+}
+
+/**
+ * List all directories in the ide-preview directory. 
+ * Only takes the ones with a version identifier name. 
+ * Only take version numbers lower than the current version. 
+ */
+def getUpdatableVersions() {
+    def packageJSON = readJSON file: "package.json"
+    String currentVersion = "${packageJSON.version}"
+    
+    def versions = ''
+    
+    sshagent(['projects-storage.eclipse.org-bot-ssh']) {
+        versions = sh(
+            script: """
+            ssh genie.theia@projects-storage.eclipse.org "cd /home/data/httpd/download.eclipse.org/theia/ide-preview/ && \
+            find . -maxdepth 1 -type d -regex '.*/[0-9]+\\.[0-9]+\\.[0-9]+' -exec basename {} \\; | sort -V | awk -v curVer='${currentVersion}' '{
+                if (\\\$1 != curVer && \\\$1 < curVer) print \\\$1
+            }' | paste -sd ','"
+            """,
+            returnStdout: true
+        ).trim()
+    }
+    
+    return versions
 }
 
 /**
