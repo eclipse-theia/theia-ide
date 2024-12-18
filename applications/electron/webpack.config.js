@@ -16,16 +16,19 @@ configs[0].module.rules.push({
     loader: require.resolve('@theia/application-manager/lib/expose-loader')
 }); */
 
-/** 
+/**
  * Do no run TerserPlugin with parallel: true
  * Each spawned node may take the full memory configured via NODE_OPTIONS / --max_old_space_size
  * In total this may lead to OOM issues
- */ 
+ */
 if (nodeConfig.config.optimization) {
     nodeConfig.config.optimization.minimizer = [
         new TerserPlugin({
             parallel: false,
-            exclude: /^(lib|builtins)\//
+            exclude: /^(lib|builtins)\//,
+            terserOptions: {
+                keep_classnames: /AbortSignal/
+            }
         })
     ];
 }
