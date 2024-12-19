@@ -111,7 +111,7 @@
     "clean": "theia clean && rimraf node_modules",
     "build": "yarn -s rebuild && theia build --app-target=\"browser\" --mode development",
     "build:prod": "yarn -s rebuild && theia  build --app-target=\"browser\"",
-    "rebuild": "theia rebuild:browser --cacheRoot .",
+    "rebuild": "theia rebuild:browser --cacheRoot ../..",
     "start": "theia start --plugins=local-dir:../../plugins",
     "watch": "concurrently --kill-others -n tsc,build -c red,yellow \"tsc -b -w --preserveWatchOutput\" \"yarn -s watch:bundle\"",
     "update:theia": "ts-node ../../scripts/update-theia-version.ts",

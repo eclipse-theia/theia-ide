@@ -145,7 +145,7 @@
     "clean:dist": "rimraf dist",
     "build": "yarn -s rebuild && theia build --app-target=\"electron\" --mode development",
     "build:prod": "yarn -s rebuild && theia build --app-target=\"electron\"",
-    "rebuild": "theia rebuild:electron --cacheRoot .",
+    "rebuild": "theia rebuild:electron --cacheRoot ../..",
     "watch": "concurrently -n compile,build \"theiaext watch --preserveWatchOutput\" \"theia build --watch --mode development\"",
     "start": "electron scripts/theia-electron-main.js --plugins=local-dir:../../plugins",
     "start:debug": "yarn start --log-level=debug",
