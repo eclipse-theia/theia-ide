@@ -21,7 +21,7 @@ jenkinsRelatedRegex = "(?i).*jenkins.*"
 pipeline {
     agent none
     options {
-        timeout(time: 4, unit: 'HOURS')
+        timeout(time: 5, unit: 'HOURS')
         disableConcurrentBuilds()
     }
     environment {
@@ -197,7 +197,9 @@ spec:
                     steps {
                         unstash 'mac'
                         script {
+                            signInstaller('zip', 'mac')
                             signInstaller('dmg', 'mac')
+                            notarizeInstaller('zip')
                             notarizeInstaller('dmg')
                             uploadInstaller('macos')
                         }
