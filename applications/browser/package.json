@@ -27,7 +27,8 @@
           "toolbar.showToolbar": true,
           "files.enableTrash": false,
           "security.workspace.trust.enabled": false
-        }
+        },
+        "reloadOnReconnect": true
       }
     },
     "backend": {
@@ -35,7 +36,8 @@
         "warnOnPotentiallyInsecureHostPattern": false,
         "startupTimeout": -1,
         "resolveSystemPlugins": false,
-        "configurationFolder": ".theia-ide"
+        "configurationFolder": ".theia-ide",
+        "frontendConnectionTimeout": 3000
       }
     },
     "generator": {
