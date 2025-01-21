@@ -489,7 +489,7 @@ def signInstaller(String ext, String os) {
 
     // https://wiki.eclipse.org/IT_Infrastructure_Doc#Web_service
     if (os == 'mac') {
-        url = 'https://cbi.eclipse.org/macos/codesign/sign'
+        url = 'https://cbi-staging.eclipse.org/macos/codesign/sign'
     } else if (os == 'windows') {
         url = 'https://cbi.eclipse.org/authenticode/sign'
     } else {
