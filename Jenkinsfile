@@ -32,8 +32,8 @@ pipeline {
         // installers. It can sometimes be necessary to run these steps, e.g.
         // when troubleshooting. Set the variable below to 'true' to do so.
         // We will still stop short of publishing anything.
-        THEIA_IDE_JENKINS_RELEASE_DRYRUN = 'false'
-        // THEIA_IDE_JENKINS_RELEASE_DRYRUN = 'true'
+        // THEIA_IDE_JENKINS_RELEASE_DRYRUN = 'false'
+        THEIA_IDE_JENKINS_RELEASE_DRYRUN = 'true'
         msvs_version = '2019'
         GYP_MSVS_VERSION = '2019'
 
@@ -243,6 +243,12 @@ spec:
                     }
                     steps {
                         unstash 'mac'
+                        sh "cp ${distFolder}/*.zip ${distFolder}/*-after-build.zip"
+                        sh "cp ${distFolder}/*.dmg ${distFolder}/*-after-build.dmg"
+                        archiveArtifacts artifacts: "${distFolder}/*-after-build.zip", fingerprint: true
+                        archiveArtifacts artifacts: "${distFolder}/*-after-build.dmg", fingerprint: true
+                        sh "rm -f ${distFolder}/*-after-build.zip"
+                        sh "rm -f ${distFolder}/*-after-build.dmg"
                         container('theia-dev') {
                             withCredentials([string(credentialsId: "github-bot-token", variable: 'GITHUB_TOKEN')]) {
                                 script {
@@ -257,6 +263,8 @@ spec:
                                 }
                             }
                         }
+                        archiveArtifacts artifacts: "${distFolder}/*.zip", fingerprint: true
+                        archiveArtifacts artifacts: "${distFolder}/*.dmg", fingerprint: true
                         container('jnlp') {
                             script {
                                 uploadInstaller('macos')
