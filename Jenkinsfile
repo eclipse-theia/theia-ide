@@ -257,6 +257,7 @@ spec:
                                 }
                             }
                         }
+                        archiveArtifacts artifacts: "${distFolder}/*.dmg, ${distFolder}/*.zip", allowEmptyArchive: false
                         container('jnlp') {
                             script {
                                 uploadInstaller('macos')
