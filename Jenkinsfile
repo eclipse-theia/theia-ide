@@ -293,6 +293,7 @@ spec:
                                     // Cleanup
                                     sh "rm -rf \"${extractedFolder}\" \"${mountPoint}\""
                                 }
+                                archiveArtifacts artifacts: "${distFolder}/*.dmg, ${distFolder}/*.zip", allowEmptyArchive: false
                                 stash includes: "${toStash}", name: 'mac3'
                             }
                         }
