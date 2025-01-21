@@ -32,8 +32,8 @@ pipeline {
         // installers. It can sometimes be necessary to run these steps, e.g.
         // when troubleshooting. Set the variable below to 'true' to do so.
         // We will still stop short of publishing anything.
-        THEIA_IDE_JENKINS_RELEASE_DRYRUN = 'false'
-        // THEIA_IDE_JENKINS_RELEASE_DRYRUN = 'true'
+        // THEIA_IDE_JENKINS_RELEASE_DRYRUN = 'false'
+        THEIA_IDE_JENKINS_RELEASE_DRYRUN = 'true'
         msvs_version = '2019'
         GYP_MSVS_VERSION = '2019'
 
@@ -257,6 +257,7 @@ spec:
                                 }
                             }
                         }
+                        archiveArtifacts artifacts: "${distFolder}/*.dmg, ${distFolder}/*.zip", allowEmptyArchive: false
                         container('jnlp') {
                             script {
                                 uploadInstaller('macos')
@@ -387,7 +388,7 @@ def signInstaller(String ext, String os) {
 
     // https://wiki.eclipse.org/IT_Infrastructure_Doc#Web_service
     if (os == 'mac') {
-        url = 'https://cbi.eclipse.org/macos/codesign/sign'
+        url = 'https://cbi-staging.eclipse.org/macos/codesign/sign'
     } else if (os == 'windows') {
         url = 'https://cbi.eclipse.org/authenticode/sign'
     } else {
