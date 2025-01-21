@@ -5,7 +5,8 @@ const path = require('path');
 const util = require('util');
 const child_process = require('child_process');
 const rimraf = require('rimraf');
-const sign_util = require('electron-osx-sign/util');
+const archiver = require('archiver');
+const extract = require('extract-zip');
 const asyncRimraf = util.promisify(rimraf);
 
 const DELETE_PATHS = [
@@ -39,6 +40,25 @@ const signFile = file => {
     }
 };
 
+async function zipDirectory(source, out) {
+    const archive = archiver('zip', { zlib: { level: 9 } });
+    const stream = fs.createWriteStream(out);
+
+    return new Promise((resolve, reject) => {
+        archive
+            .directory(source, false)
+            .on('error', err => reject(err))
+            .pipe(stream);
+
+        stream.on('close', () => resolve());
+        archive.finalize();
+    });
+}
+
+async function unzipFile(zipPath, destination) {
+    return extract(zipPath, { dir: destination });
+}
+
 exports.default = async function (context) {
     await afterPackHook(context);
     const running_ci = process.env.THEIA_IDE_JENKINS_CI === 'true';
@@ -65,31 +85,44 @@ exports.default = async function (context) {
         return;
     }
 
-    // Use app-builder-lib to find all binaries to sign, at this level it will include the final .app
-    let childPaths = await sign_util.walkAsync(context.appOutDir);
+    // Create a zip of the contents at context.appOutDir
+    const zipPath = path.resolve(context.appOutDir, '..', 'app-to-be-signed.zip');
+    // const signedZipPath = path.resolve(context.appOutDir, '..', 'signed-app-to-be-signed.zip');
+    console.log(`Creating zip of ${context.appOutDir} at ${zipPath}...`);
+    await zipDirectory(context.appOutDir, zipPath);
 
-    // Sign deepest first
-    // From https://github.com/electron-userland/electron-builder/blob/master/packages/app-builder-lib/electron-osx-sign/sign.js#L120
-    childPaths = childPaths.sort((a, b) => {
-        const aDepth = a.split(path.sep).length;
-        const bDepth = b.split(path.sep).length;
-        return bDepth - aDepth;
-    });
+    try {
+        // Send the zip file to the signing service
+        console.log('Sending zip file to signing service via sign.sh...');
+        signFile(zipPath);
 
-    // Sign binaries
-    childPaths.forEach(file => signFile(file, context.appOutDir));
+        console.log(`Expecting signed zip at ${zipPath}...`);
 
-    // Notarize app
-    child_process.spawnSync(notarizeCommand, [
-        path.basename(appPath),
-        context.packager.appInfo.info._configuration.appId
-    ], {
-        cwd: path.dirname(appPath),
-        maxBuffer: 1024 * 10000,
-        env: process.env,
-        stdio: 'inherit',
-        encoding: 'utf-8'
-    });
+        // Replace the contents of context.appOutDir with the signed result
+        console.log(`Unzipping signed contents from ${zipPath} to ${context.appOutDir}...`);
+        await asyncRimraf(context.appOutDir); // Clean the output directory
+        await unzipFile(zipPath, context.appOutDir);
+
+        // Notarize app
+        console.log('Proceeding with notarization...');
+        child_process.spawnSync(notarizeCommand, [
+            path.basename(appPath),
+            context.packager.appInfo.info._configuration.appId
+        ], {
+            cwd: path.dirname(appPath),
+            maxBuffer: 1024 * 10000,
+            env: process.env,
+            stdio: 'inherit',
+            encoding: 'utf-8'
+        });
+
+        console.log('Signing and notarization complete.');
+    } finally {
+        // Clean up intermediate zip files
+        console.log('Cleaning up intermediate files...');
+        await asyncRimraf(zipPath);
+        console.log('...cleanup done');
+    }
 };
 
 // taken and modified from: https://github.com/gergof/electron-builder-sandbox-fix/blob/a2251d7d8f22be807d2142da0cf768c78d4cfb0a/lib/index.js
