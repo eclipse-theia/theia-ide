@@ -193,9 +193,11 @@ spec:
                     }
                 }
                 stage('Sign, Notarize and Upload Mac') {
-                    agent {
-                        kubernetes {
-                            yaml """
+                    stages {
+                        stage('Sign and Notarize Mac') {
+                            agent {
+                                kubernetes {
+                                    yaml """
 apiVersion: v1
 kind: Pod
 spec:
@@ -239,27 +241,116 @@ spec:
     configMap:
       name: known-hosts
 """
+                                }
+                            }
+                            steps {
+                                unstash 'mac'
+                                container('theia-dev') {
+                                    withCredentials([string(credentialsId: "github-bot-token", variable: 'GITHUB_TOKEN')]) {
+                                        script {
+                                            signInstaller('zip', 'mac')
+                                            signInstaller('dmg', 'mac')
+                                            notarizeInstaller('zip')
+                                            notarizeInstaller('dmg')
+                                        }
+                                    }
+                                }
+                                stash includes: "${toStash}", name: 'mac2'
+                            }
                         }
-                    }
-                    steps {
-                        unstash 'mac'
-                        container('theia-dev') {
-                            withCredentials([string(credentialsId: "github-bot-token", variable: 'GITHUB_TOKEN')]) {
+                        stage('Recreate Zip with Ditto for correct file permissions') {
+                            agent {
+                                label 'macos'
+                            }
+                            steps {
+                                unstash 'mac2'
                                 script {
                                     def packageJSON = readJSON file: "package.json"
                                     String version = "${packageJSON.version}"
-                                    signInstaller('zip', 'mac')
-                                    signInstaller('dmg', 'mac')
-                                    notarizeInstaller('zip')
-                                    notarizeInstaller('dmg')
-                                    updateMetadata('TheiaIDE-' + version + '-mac.zip', 'latest-mac.yml', 'macos', false, '.zip', 1200)
-                                    updateMetadata('TheiaIDE.dmg', 'latest-mac.yml', 'macos', false, '.dmg', 1200)
+
+                                    def notarizedZip = "${distFolder}/TheiaIDE-" + version + "-mac.zip"
+                                    def extractedFolder = "${distFolder}/TheiaIDE-extracted"
+                                    def rezippedFile = "${distFolder}/TheiaIDE-rezipped.zip"
+
+                                    sh "rm -rf ${extractedFolder}"
+                                    sh "unzip ${notarizedZip} -d ${extractedFolder}"
+
+                                    sh "ditto -c -k ${extractedFolder} ${rezippedFile}"
+
+                                    sh "rm -rf ${notarizedZip}"
+                                    sh "mv ${rezippedFile} ${notarizedZip}"
+
+                                    sh "rm -rf ${extractedFolder}"
                                 }
+                                stash includes: "${toStash}", name: 'mac3'
                             }
                         }
-                        container('jnlp') {
-                            script {
-                                uploadInstaller('macos')
+                        stage('Update Metadata and Upload Mac') {
+                            agent {
+                                kubernetes {
+                                    yaml """
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+  - name: theia-dev
+    image: eclipsetheia/theia-blueprint:builder
+    imagePullPolicy: Always
+    command:
+    - cat
+    tty: true
+    resources:
+      limits:
+        memory: "8Gi"
+        cpu: "2"
+      requests:
+        memory: "8Gi"
+        cpu: "2"
+    volumeMounts:
+    - name: global-cache
+      mountPath: /.cache
+    - name: global-yarn
+      mountPath: /.yarn      
+    - name: global-npm
+      mountPath: /.npm      
+    - name: electron-cache
+      mountPath: /.electron-gyp
+  - name: jnlp
+    volumeMounts:
+    - name: volume-known-hosts
+      mountPath: /home/jenkins/.ssh
+  volumes:
+  - name: global-cache
+    emptyDir: {}
+  - name: global-yarn
+    emptyDir: {}
+  - name: global-npm
+    emptyDir: {}
+  - name: electron-cache
+    emptyDir: {}
+  - name: volume-known-hosts
+    configMap:
+      name: known-hosts
+"""
+                                }
+                            }
+                            steps {
+                                unstash 'mac3'
+                                container('theia-dev') {
+                                    withCredentials([string(credentialsId: "github-bot-token", variable: 'GITHUB_TOKEN')]) {
+                                        script {
+                                            def packageJSON = readJSON file: "package.json"
+                                            String version = "${packageJSON.version}"
+                                            updateMetadata('TheiaIDE-' + version + '-mac.zip', 'latest-mac.yml', 'macos', false, '.zip', 1200)
+                                            updateMetadata('TheiaIDE.dmg', 'latest-mac.yml', 'macos', false, '.dmg', 1200)
+                                        }
+                                    }
+                                }
+                                container('jnlp') {
+                                    script {
+                                        uploadInstaller('macos')
+                                    }
+                                }
                             }
                         }
                     }
