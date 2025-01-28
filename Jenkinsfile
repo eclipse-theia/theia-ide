@@ -248,9 +248,7 @@ spec:
                                 container('theia-dev') {
                                     withCredentials([string(credentialsId: "github-bot-token", variable: 'GITHUB_TOKEN')]) {
                                         script {
-                                            signInstaller('zip', 'mac')
                                             signInstaller('dmg', 'mac')
-                                            notarizeInstaller('zip')
                                             notarizeInstaller('dmg')
                                         }
                                     }
@@ -268,19 +266,32 @@ spec:
                                     def packageJSON = readJSON file: "package.json"
                                     String version = "${packageJSON.version}"
 
-                                    def notarizedZip = "${distFolder}/TheiaIDE-" + version + "-mac.zip"
+                                    def notarizedDmg = "${distFolder}/TheiaIDE.dmg"
+
+                                    // We'll mount and then copy the .app out of the DMG
+                                    def mountPoint = "${distFolder}/TheiaIDE-mount"
                                     def extractedFolder = "${distFolder}/TheiaIDE-extracted"
                                     def rezippedFile = "${distFolder}/TheiaIDE-rezipped.zip"
+                                    def finalZip = "${distFolder}/TheiaIDE-${version}-mac.zip"
+                                    sh "rm -rf \"${extractedFolder}\" \"${mountPoint}\""
+                                    sh "mkdir -p \"${extractedFolder}\" \"${mountPoint}\""
+                                    sh "hdiutil attach \"${notarizedDmg}\" -mountpoint \"${mountPoint}\""
 
-                                    sh "rm -rf ${extractedFolder}"
-                                    sh "unzip ${notarizedZip} -d ${extractedFolder}"
+                                    // Copy the .app from the DMG to a folder we can zip
+                                    sh "ditto \"${mountPoint}/TheiaIDE.app\" \"${extractedFolder}/TheiaIDE.app\""
 
-                                    sh "ditto -c -k ${extractedFolder} ${rezippedFile}"
+                                    // Unmount the DMG
+                                    sh "hdiutil detach \"${mountPoint}\""
 
-                                    sh "rm -rf ${notarizedZip}"
-                                    sh "mv ${rezippedFile} ${notarizedZip}"
+                                    // Zip with ditto
+                                    sh "ditto -c -k \"${extractedFolder}\" \"${rezippedFile}\""
 
-                                    sh "rm -rf ${extractedFolder}"
+                                    // Replace the old zip with the newly created one
+                                    sh "rm -f \"${finalZip}\""
+                                    sh "mv \"${rezippedFile}\" \"${finalZip}\""
+
+                                    // Cleanup
+                                    sh "rm -rf \"${extractedFolder}\" \"${mountPoint}\""
                                 }
                                 stash includes: "${toStash}", name: 'mac3'
                             }
