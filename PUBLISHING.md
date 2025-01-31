@@ -17,11 +17,12 @@ If there was a new Theia *patch* release, e.g. 1.48.1, we use Theia's patch vers
 # Update mono repo version
 yarn version --no-git-tag-version
 
+# If there was a Theia release, update Theia dependencies
+yarn update:theia 1.48.0 && yarn update:theia:children 1.48.0
+
 # Update version of all packages
 yarn lerna version --exact --no-push --no-git-tag-version
 
-# If there was a Theia release, update Theia dependencies
-yarn update:theia 1.48.0 && yarn update:theia:children 1.48.0
 
 # Update yarn.lock
 yarn
