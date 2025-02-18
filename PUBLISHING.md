@@ -1,81 +1,79 @@
 # Publishing
 
-This guide contains the steps to publish a new version of the Theia IDE. The preview, testing and release process is described in [this section](#preview-testing-and-release-process-for-the-theia-ide)
+This guide outlines the steps for publishing a new version of the Theia IDE, including the preview, testing, and release processes. The preview, testing, and release process is described in [this section](#preview-testing-and-release-process-for-the-theia-ide).
 
-Every commit to master will be published as a preview version.
-Updates will only work when there was a version change.
+Every commit to master will be published as a preview version. Updates will only work when there is a version change.
 
 ## Update Package Versions and Theia
 
-If there was *no* Theia release we usually want to increment the patch version by 1, e.g. 1.47.100 -> 1.47.101.
+This guide refers to two versions that may be the same depending on the context. Please read carefully to avoid confusion:
 
-If there was a new Theia *minor* release, e.g. 1.48.0, we want to use the same version as Theia.
-
-If there was a new Theia *patch* release, e.g. 1.48.1, we use Theia's patch version multiplied by 100, e.g. 1.48.100.
+- **THEIA_VERSION**: The version of Theia to use in this version of the Theia IDE.
+- **THEIA_IDE_VERSION**: The version of the Theia IDE itself that is being published, which might differ from Theia's version.
+  - If there was *no* Theia release, increment the patch version by 1 (e.g. 1.47.100 -> 1.47.101).
+  - If there was a new Theia *minor* release (e.g. 1.48.0), use the same version as Theia.
+  - If there was a new Theia *patch* release (e.g. 1.48.1), use Theia's patch version multiplied by 100 (e.g. 1.48.100).
 
 ```sh
-# Update mono repo version
+# Install dependencies for building
+yarn
+
+# Update mono repo version to THEIA_IDE_VERSION
 yarn version --no-git-tag-version
 
-# If there was a Theia release, update Theia dependencies
+# If there was a Theia release, update Theia dependencies to THEIA_VERSION
 yarn update:theia 1.48.0 && yarn update:theia:children 1.48.0
 
-# Update version of all packages
+# Update version of all packages to THEIA_IDE_VERSION
 yarn lerna version --exact --no-push --no-git-tag-version
-
 
 # Update yarn.lock
 yarn
 ```
 
-If there was a Theia Release
+If there was a Theia Release:
 
-* check if there are any breaking changes
-* check if new built-ins are available
-* check if any changes were made to the sample applications (e.g. new packages or additional configuration)
+- Check for breaking changes, new built-ins, and updates to sample applications (e.g., new packages or additional configurations).
+- Adapt the code/built-ins as necessary.
 
-and adapt the code/built-ins accordingly.
-
-Finally, open a PR with your changes.
+Finally, open a PR with your changes. Merging the PR will automatically trigger the release to the preview channel.
 
 ## Upgrade Dependencies
 
-We want to run `yarn upgrade` regularily to get the latest versions of our dependencies.
-You may want to keep this in a separate PR as this might require IP Reviews from the Eclipse Foundation and may take some time.
-After an upgrade you should check the used `electron` version in the `yarn.lock`.
-If there was an update, update `electronVersion` in `applications/electron/electron-builder.yml` accordingly.
+Regularly run `yarn upgrade` to keep dependencies up-to-date. You may want to keep this in a separate PR, as it might require IP Reviews from the Eclipse Foundation and may take some time. After an upgrade, check the used `electron` version in the `yarn.lock`. If there was an update, adjust `electronVersion` in `applications/electron/electron-builder.yml` accordingly.
 
 ## Promote IDE from Preview to Stable Channel
 
-You can promote the IDE via this [Build Job](https://ci.eclipse.org/theia/job/Theia%20-%20Promote%20IDE/).
+Promote the IDE using this [Build Job](https://ci.eclipse.org/theia/job/Theia%20-%20Promote%20IDE/).
 
-In `VERSION` specfiy which version to copy from <https://download.eclipse.org/theia/ide-preview/>, e.g. 1.48.0.
-
-In `TOUPDATE` specify the older versions for which you want to enable direct (incremental) updates on windows.\
-See <https://download.eclipse.org/theia/ide/> for the old releases.
-E.g. `1.45.0,1.46.100,1.47.100`.\
-*We plan to automate this, but at the moment it's a required parameter.*
+In `VERSION`, specify which version to copy from <https://download.eclipse.org/theia/ide-preview/> (the THEIA_IDE_VERSION) (e.g., 1.48.0).
 
 ## Publish Docker Image
 
 Run this [workflow](https://github.com/eclipse-theia/theia-ide/actions/workflows/publish-theia-ide-img.yml) from the master branch.
 
-## Preview, Testing and Release Process for the Theia IDE
+## Preview, Testing, and Release Process for the Theia IDE
 
-Once a new Theia Platform release is available, the Theia IDE is updated to the new version. This automatically makes a new preview build available (see above). Once the preview build is successfully tested by the preview testers, it is published as a new official version, also available for automatic update. The detailed steps for this process are described in the following:
+When a new Theia Platform release is available, the Theia IDE is updated accordingly, resulting in a new preview build. After successful testing, it is published as an official version. The detailed steps are as follows:
 
-1. Create a new preview version of the Theia IDE as decribed above (do not publish as stable yet)
+1. Create a new preview version of the Theia IDE as described above (do not publish as stable yet).
 2. Create a new discussion [here](https://github.com/eclipse-theia/theia/discussions) based on the following template:
->Theia IDE 1.xz preview testing</br></br>
->The new version 1.XZ.0 of the Theia IDE is available on the preview channel now, please join the preview testing! You can download it here: {link to the download}. You can update your existing installation by setting the preference *updates.channel* to *preview*. 
-Please respond here when you were able to test the preview without finding blockers, by commenting with a :heavy_check_mark:. If you find any issues, please mention them in this thread and report them as an issue once confirmed by other testers.
 
-3. Announce availability of the preview release on theia-dev@eclipse.org based on the following template:
->Theia IDE 1.xz preview</br></br>
->Hi,</br></br>The new version 1.XZ.0 of the Theia IDE is available on the preview channel now. Please join the preview test and help us stabilizing the release. Please visit this discussion for more information and for coordination: {link to the Github discussion created above}</br></br>best regards,
+>Theia IDE 1.xz preview testing
+>
+>The new version 1.XZ.0 of the Theia IDE is available on the preview channel now. Please join the preview testing! You can download it here: {link to the download}. Update your existing installation by setting the preference *updates.channel* to *preview*.
+Please respond here when you can test the preview without finding blockers, by commenting with a :heavy_check_mark:. If you find any issues, please mention them in this thread and report them as an issue once confirmed by other testers.
 
-4. Fix reported blockers and create patch releases (This is a community effort and typically takes 1-2 weeks)
+3. Announce the availability of the preview release on <theia-dev@eclipse.org> based on the following template:
+
+>Theia IDE 1.xz preview
+>
+>Hi,
+>The new version 1.XZ.0 of the Theia IDE is available on the preview channel now. Please join the preview test and help us stabilize the release. Visit this discussion for more information and coordination: {link to the Github discussion created above}
+>Best regards,
+
+4. Fix reported blockers and create patch releases (this is a community effort and typically takes 1-2 weeks).
 5. Once no blockers are left, declare the release final (see publishing above).
-6. Post official release announcement
+6. Post the official release announcement.
 
-**If too many issues are found, fixes take too long or no corresponding ressources are available to fix things, a Theia IDE release might be skipped. This means, it will not update to a new Theia version, but wait for the next version.**
+**If too many issues arise, fixes take too long, or there are insufficient resources, the Theia IDE release may be skipped, delaying the update to the next version.**

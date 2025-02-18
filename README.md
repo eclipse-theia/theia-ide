@@ -130,7 +130,7 @@ The Eclipse Theia IDE only packages existing functionality into a product and in
 
 ### Docker
 
-The Docker image of the Theia IDE is currently in *experimental state*. It is built from the same sources and packages as the desktop version, but it is not part of the [preview test](https://github.com/eclipse-theia/theia-ide/blob/master/PUBLISHING.md#preview-testing-and-release-process-for-the-theia-ide).
+The Docker image of the Theia IDE is currently in _experimental state_. It is built from the same sources and packages as the desktop version, but it is not part of the [preview test](https://github.com/eclipse-theia/theia-ide/blob/master/PUBLISHING.md#preview-testing-and-release-process-for-the-theia-ide).
 You can find a prebuilt Docker image of the IDE [here](https://github.com/eclipse-theia/theia-ide/pkgs/container/theia-ide%2Ftheia-ide).
 
 You can also create the Docker image for the Eclipse Theia IDE based on the browser app with the following build command:
