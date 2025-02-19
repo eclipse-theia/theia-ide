@@ -78,7 +78,7 @@ nsis:
   artifactName: ${productName}Setup.${ext}
   license: LICENSE
 dmg:
-  artifactName: ${productName}.${ext}
+  artifactName: ${productName}-${arch}.${ext}
 deb:
   artifactName: ${productName}.${ext}
 appImage:
