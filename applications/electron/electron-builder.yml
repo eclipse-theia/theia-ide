@@ -44,9 +44,9 @@ mac:
         - theia
   darkModeSupport: true
   target:
-    - dmg
+    - target: dmg
       arch: [ "x64", "arm64" ]
-    - zip
+    - target: zip
       arch: [ "x64", "arm64" ]
   publish:
     provider: generic
