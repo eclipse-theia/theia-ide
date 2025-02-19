@@ -486,6 +486,7 @@ def signInstaller(String ext, String os) {
         return
     }
 
+    sh "ls -al ${distFolder}"
     List installers = findFiles(glob: "${distFolder}/*.${ext}")
 
     // https://wiki.eclipse.org/IT_Infrastructure_Doc#Web_service
