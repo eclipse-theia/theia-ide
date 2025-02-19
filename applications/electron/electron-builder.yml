@@ -45,7 +45,9 @@ mac:
   darkModeSupport: true
   target:
     - dmg
+      arch: [ "x64", "arm64" ]
     - zip
+      arch: [ "x64", "arm64" ]
   publish:
     provider: generic
     url: "https://download.eclipse.org/theia/ide/latest/macos"
