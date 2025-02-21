@@ -66,6 +66,8 @@ Documentation on how to package Theia as a Desktop Product may be found [here](h
 
 For development and casual testing of the Eclipse Theia IDE, one can build it in "dev" mode. This permits building the IDE on systems with less resources, like a Raspberry Pi 4B with 4GB of RAM.
 
+NOTE: If manually building after updating dependencies or pulling to a newer commit, run `git clean -xfd` to help avoid runtime conflicts.
+
 ```sh
 # Build "dev" version of the app. Its quicker, uses less resources, 
 # but the front end app is not "minified"
