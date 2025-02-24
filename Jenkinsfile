@@ -511,6 +511,8 @@ def signInstaller(String ext, String os) {
         sh "rm ${installer.path}"
         sh "mv ${distFolder}/signed-${installer.name} ${installer.path}"
     }
+    
+    sh "ls -al ${distFolder}"
 }
 
 def notarizeInstaller(String ext) {
