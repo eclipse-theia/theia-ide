@@ -498,12 +498,18 @@ def signInstaller(String ext, String os) {
         error("Error during signing: unsupported OS: ${os}")
     }
 
-    if (installers.size() == 1) {
-        sh "curl -o ${distFolder}/signed-${installers[0].name} -F file=@${installers[0].path} ${url}"
-        sh "rm ${installers[0].path}"
-        sh "mv ${distFolder}/signed-${installers[0].name} ${installers[0].path}"
-    } else {
-        error("Error during signing: installer not found or multiple installers exist: ${installers.size()}")
+    if (installers.size() == 0) {
+        error("Error during signing: no installer found")
+    } else if (os == 'mac' && installers.size() != 2) {
+        error("Error during signing: unexpected amount of installers exist: ${installers.size()}")
+    } else if (os == 'windows' && installers.size() != 1) {
+        error("Error during signing: multiple installers exist: ${installers.size()}")
+    }
+
+    for (installer in installers) {
+        sh "curl -o ${distFolder}/signed-${installer.name} -F file=@${installer.path} ${url}"
+        sh "rm ${installer.path}"
+        sh "mv ${distFolder}/signed-${installer.name} ${installer.path}"
     }
 }
 
