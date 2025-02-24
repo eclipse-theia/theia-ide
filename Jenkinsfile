@@ -524,28 +524,30 @@ def notarizeInstaller(String ext) {
     String service = 'https://cbi.eclipse.org/macos/xcrun'
     List installers = findFiles(glob: "${distFolder}/*.${ext}")
 
-    if (installers.size() == 1) {
-        String response = sh(script: "curl -X POST -F file=@${installers[0].path} -F \'options={\"primaryBundleId\": \"eclipse.theia\", \"staple\": true};type=application/json\' ${service}/notarize", returnStdout: true)
+    if (os == 'mac' && installers.size() != 2) {
+        for (installer in installers) {
+            String response = sh(script: "curl -X POST -F file=@${installer.path} -F \'options={\"primaryBundleId\": \"eclipse.theia\", \"staple\": true};type=application/json\' ${service}/notarize", returnStdout: true)
 
-        def jsonSlurper = new JsonSlurper()
-        def json = jsonSlurper.parseText(response)
-        String uuid = json.uuid
+            def jsonSlurper = new JsonSlurper()
+            def json = jsonSlurper.parseText(response)
+            String uuid = json.uuid
 
-        while(json.notarizationStatus.status == 'IN_PROGRESS') {
-            sh "sleep 60"
-            response = sh(script: "curl ${service}/${uuid}/status", returnStdout: true)
-            json = jsonSlurper.parseText(response)
+            while(json.notarizationStatus.status == 'IN_PROGRESS') {
+                sh "sleep 60"
+                response = sh(script: "curl ${service}/${uuid}/status", returnStdout: true)
+                json = jsonSlurper.parseText(response)
+            }
+
+            if (json.notarizationStatus.status != 'COMPLETE') {
+                error("Failed to notarize ${installer.name}: ${response}")
+            }
+
+            sh "curl -o ${distFolder}/stapled-${installer.name} ${service}/${uuid}/download"
+            sh "rm ${installer.path}"
+            sh "mv ${distFolder}/stapled-${installer.name} ${installer.path}"
         }
-
-        if (json.notarizationStatus.status != 'COMPLETE') {
-            error("Failed to notarize ${installers[0].name}: ${response}")
-        }
-
-        sh "curl -o ${distFolder}/stapled-${installers[0].name} ${service}/${uuid}/download"
-        sh "rm ${installers[0].path}"
-        sh "mv ${distFolder}/stapled-${installers[0].name} ${installers[0].path}"
     } else {
-        error("Error during notarization: installer not found or multiple installers exist: ${installers.size()}")
+        error("Error during notarization: installer not found or multiple installers exist or unexpected OS: ${os} ${installers.size()}")
     }
 }
 
