@@ -546,7 +546,6 @@ def notarizeInstaller(String ext) {
             sh "rm ${installer.path}"
             sh "mv ${distFolder}/stapled-${installer.name} ${installer.path}"
         }
-        sh "ls -al ${distFolder}"
     } else {
         error("Error during notarization: installer not found or multiple installers exist or unexpected OS: ${os} ${installers.size()}")
     }
