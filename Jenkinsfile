@@ -214,8 +214,8 @@ spec:
         memory: "8Gi"
         cpu: "2"
       requests:
-        memory: "8Gi"
-        cpu: "2"
+        memory: "3Gi"
+        cpu: "0.5"
     volumeMounts:
     - name: global-cache
       mountPath: /.cache
@@ -317,8 +317,8 @@ spec:
         memory: "8Gi"
         cpu: "2"
       requests:
-        memory: "8Gi"
-        cpu: "2"
+        memory: "3Gi"
+        cpu: "0.5"
     volumeMounts:
     - name: global-cache
       mountPath: /.cache
@@ -387,8 +387,8 @@ spec:
         memory: "8Gi"
         cpu: "2"
       requests:
-        memory: "8Gi"
-        cpu: "2"
+        memory: "3Gi"
+        cpu: "0.5"
     volumeMounts:
     - name: global-cache
       mountPath: /.cache
