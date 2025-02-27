@@ -128,8 +128,8 @@ spec:
                         script {
                             buildInstaller(60)
                         }
-                        archiveArtifacts artifacts: "${distFolder}/*.dmg, ${distFolder}/*.zip", allowEmptyArchive: false
-                        stash includes: "${toStash}", name: 'mac'
+                        stash includes: "${distFolder}/TheiaIDE-*.dmg, ${distFolder}/latest-mac.yml", name: 'mac'
+                        // stash includes: "${toStash}", name: 'mac'
                     }
                     post {
                         failure {
@@ -250,7 +250,7 @@ spec:
                                     withCredentials([string(credentialsId: "github-bot-token", variable: 'GITHUB_TOKEN')]) {
                                         script {
                                             signInstaller('dmg', 'mac')
-                                            notarizeInstaller('dmg')
+                                            notarizeInstaller('dmg', 'mac')
                                         }
                                     }
                                 }
@@ -364,6 +364,7 @@ spec:
                                         uploadInstaller('macos')
                                     }
                                 }
+                                archiveArtifacts artifacts: "${distFolder}/**", allowEmptyArchive: false
                             }
                         }
                     }
@@ -516,7 +517,7 @@ def signInstaller(String ext, String os) {
     sh "ls -al ${distFolder}"
 }
 
-def notarizeInstaller(String ext) {
+def notarizeInstaller(String ext, String os) {
     if (!isRelease()) {
         echo "This is not a release, so skipping installer notarizing for branch ${env.BRANCH_NAME}"
         return

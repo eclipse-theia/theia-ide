@@ -57,8 +57,7 @@ jobs:
         if: runner.os == 'macOS'
         uses: actions/upload-artifact@v4
         with:
-          name: dmg-files
-          path: "**/*.dmg"
+          path: "applications/electron/dist/TheiaIDE-arm64.dmg"
 
       - name: Test (Linux)
         if: matrix.tests != 'skip' && runner.os == 'Linux'
