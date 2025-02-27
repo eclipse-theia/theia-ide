@@ -19,7 +19,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-2019, ubuntu-22.04, macos-13]
+        os: [windows-2019, ubuntu-22.04, macos-14]
         node: ['20.x']
 
     runs-on: ${{ matrix.os }}
@@ -46,12 +46,18 @@ jobs:
         shell: bash
         run: |
           yarn --skip-integrity-check --network-timeout 100000
-          yarn build:dev
+          yarn build
           yarn download:plugins
-          yarn package:applications:preview
+          yarn electron package
         env:
           NODE_OPTIONS: --max_old_space_size=4096
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # https://github.com/microsoft/vscode-ripgrep/issues/9
+
+      - name: Archive DMG Files
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v4
+        with:
+          path: "applications/electron/dist/TheiaIDE-arm64.dmg"
 
       - name: Test (Linux)
         if: matrix.tests != 'skip' && runner.os == 'Linux'

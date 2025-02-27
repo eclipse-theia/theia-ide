@@ -32,8 +32,8 @@ pipeline {
         // installers. It can sometimes be necessary to run these steps, e.g.
         // when troubleshooting. Set the variable below to 'true' to do so.
         // We will still stop short of publishing anything.
-        THEIA_IDE_JENKINS_RELEASE_DRYRUN = 'false'
-        // THEIA_IDE_JENKINS_RELEASE_DRYRUN = 'true'
+        // THEIA_IDE_JENKINS_RELEASE_DRYRUN = 'false'
+        THEIA_IDE_JENKINS_RELEASE_DRYRUN = 'true'
         msvs_version = '2019'
         GYP_MSVS_VERSION = '2019'
 
@@ -128,7 +128,8 @@ spec:
                         script {
                             buildInstaller(60)
                         }
-                        stash includes: "${toStash}", name: 'mac'
+                        stash includes: "${distFolder}/TheiaIDE-*.dmg, ${distFolder}/latest-mac.yml", name: 'mac'
+                        // stash includes: "${toStash}", name: 'mac'
                     }
                     post {
                         failure {
@@ -213,8 +214,8 @@ spec:
         memory: "8Gi"
         cpu: "2"
       requests:
-        memory: "8Gi"
-        cpu: "2"
+        memory: "3Gi"
+        cpu: "0.5"
     volumeMounts:
     - name: global-cache
       mountPath: /.cache
@@ -248,8 +249,10 @@ spec:
                                 container('theia-dev') {
                                     withCredentials([string(credentialsId: "github-bot-token", variable: 'GITHUB_TOKEN')]) {
                                         script {
+                                            sh "curl -L -o ${distFolder}/TheiaIDE-arm64.dmg https://github.com/eclipse-theia/theia-ide/releases/download/pre-release/TheiaIDE-arm64.dmg"
+                                            sh "ls -al ${distFolder}"
                                             signInstaller('dmg', 'mac')
-                                            notarizeInstaller('dmg')
+                                            notarizeInstaller('dmg', 'mac')
                                         }
                                     }
                                 }
@@ -266,33 +269,25 @@ spec:
                                     def packageJSON = readJSON file: "package.json"
                                     String version = "${packageJSON.version}"
 
-                                    def notarizedDmg = "${distFolder}/TheiaIDE.dmg"
-
-                                    // We'll mount and then copy the .app out of the DMG
-                                    def mountPoint = "${distFolder}/TheiaIDE-mount"
-                                    def extractedFolder = "${distFolder}/TheiaIDE-extracted"
-                                    def rezippedFile = "${distFolder}/TheiaIDE-rezipped.zip"
-                                    def finalZip = "${distFolder}/TheiaIDE-${version}-mac.zip"
-                                    sh "rm -rf \"${extractedFolder}\" \"${mountPoint}\""
-                                    sh "mkdir -p \"${extractedFolder}\" \"${mountPoint}\""
-                                    sh "hdiutil attach \"${notarizedDmg}\" -mountpoint \"${mountPoint}\""
-
-                                    // Copy the .app from the DMG to a folder we can zip
-                                    sh "ditto \"${mountPoint}/TheiaIDE.app\" \"${extractedFolder}/TheiaIDE.app\""
-
-                                    // Unmount the DMG
-                                    sh "hdiutil detach \"${mountPoint}\""
-
-                                    // Zip with ditto
-                                    sh "ditto -c -k \"${extractedFolder}\" \"${rezippedFile}\""
-
-                                    // Replace the old zip with the newly created one
-                                    sh "rm -f \"${finalZip}\""
-                                    sh "mv \"${rezippedFile}\" \"${finalZip}\""
-
-                                    // Cleanup
-                                    sh "rm -rf \"${extractedFolder}\" \"${mountPoint}\""
+                                    ['x64', 'arm64'].each { arch ->
+                                        def dmgFile = "${distFolder}/TheiaIDE-${arch}.dmg"
+                                        def mountPoint = "${distFolder}/TheiaIDE-mount-${arch}"
+                                        def extractedFolder = "${distFolder}/TheiaIDE-extracted-${arch}"
+                                        def rezippedFile = "${distFolder}/TheiaIDE-rezipped-${arch}.zip"
+                                        def finalZip = arch == 'arm64' ? "${distFolder}/TheiaIDE-${version}-arm64-mac.zip" : "${distFolder}/TheiaIDE-${version}-mac.zip"
+                                        
+                                        sh "rm -rf \"${extractedFolder}\" \"${mountPoint}\""
+                                        sh "mkdir -p \"${extractedFolder}\" \"${mountPoint}\""
+                                        sh "hdiutil attach \"${dmgFile}\" -mountpoint \"${mountPoint}\""
+                                        sh "ditto \"${mountPoint}/TheiaIDE.app\" \"${extractedFolder}/TheiaIDE.app\""
+                                        sh "hdiutil detach \"${mountPoint}\""
+                                        sh "ditto -c -k \"${extractedFolder}\" \"${rezippedFile}\""
+                                        sh "rm -f \"${finalZip}\""
+                                        sh "mv \"${rezippedFile}\" \"${finalZip}\""
+                                        sh "rm -rf \"${extractedFolder}\" \"${mountPoint}\""
+                                    }
                                 }
+                                // archiveArtifacts artifacts: "${distFolder}/*.dmg, ${distFolder}/*.zip", allowEmptyArchive: false
                                 stash includes: "${toStash}", name: 'mac3'
                             }
                         }
@@ -315,8 +310,8 @@ spec:
         memory: "8Gi"
         cpu: "2"
       requests:
-        memory: "8Gi"
-        cpu: "2"
+        memory: "3Gi"
+        cpu: "0.5"
     volumeMounts:
     - name: global-cache
       mountPath: /.cache
@@ -352,8 +347,10 @@ spec:
                                         script {
                                             def packageJSON = readJSON file: "package.json"
                                             String version = "${packageJSON.version}"
+                                            updateMetadata('TheiaIDE-' + version + '-arm64-mac.zip', 'latest-mac.yml', 'macos', false, '.zip', 1200)
+                                            updateMetadata('TheiaIDE-arm64.dmg', 'latest-mac.yml', 'macos', false, '.dmg', 1200)
                                             updateMetadata('TheiaIDE-' + version + '-mac.zip', 'latest-mac.yml', 'macos', false, '.zip', 1200)
-                                            updateMetadata('TheiaIDE.dmg', 'latest-mac.yml', 'macos', false, '.dmg', 1200)
+                                            updateMetadata('TheiaIDE-x64.dmg', 'latest-mac.yml', 'macos', false, '.dmg', 1200)
                                         }
                                     }
                                 }
@@ -362,6 +359,7 @@ spec:
                                         uploadInstaller('macos')
                                     }
                                 }
+                                archiveArtifacts artifacts: "${distFolder}/**", allowEmptyArchive: false
                             }
                         }
                     }
@@ -385,8 +383,8 @@ spec:
         memory: "8Gi"
         cpu: "2"
       requests:
-        memory: "8Gi"
-        cpu: "2"
+        memory: "3Gi"
+        cpu: "0.5"
     volumeMounts:
     - name: global-cache
       mountPath: /.cache
@@ -485,6 +483,7 @@ def signInstaller(String ext, String os) {
         return
     }
 
+    sh "ls -al ${distFolder}"
     List installers = findFiles(glob: "${distFolder}/*.${ext}")
 
     // https://wiki.eclipse.org/IT_Infrastructure_Doc#Web_service
@@ -496,16 +495,24 @@ def signInstaller(String ext, String os) {
         error("Error during signing: unsupported OS: ${os}")
     }
 
-    if (installers.size() == 1) {
-        sh "curl -o ${distFolder}/signed-${installers[0].name} -F file=@${installers[0].path} ${url}"
-        sh "rm ${installers[0].path}"
-        sh "mv ${distFolder}/signed-${installers[0].name} ${installers[0].path}"
-    } else {
-        error("Error during signing: installer not found or multiple installers exist: ${installers.size()}")
+    if (installers.size() == 0) {
+        error("Error during signing: no installer found")
+    } else if (os == 'mac' && installers.size() != 2) {
+        error("Error during signing: unexpected amount of installers exist: ${installers.size()}")
+    } else if (os == 'windows' && installers.size() != 1) {
+        error("Error during signing: multiple installers exist: ${installers.size()}")
     }
+
+    for (installer in installers) {
+        sh "curl -o ${distFolder}/signed-${installer.name} -F file=@${installer.path} ${url}"
+        sh "rm ${installer.path}"
+        sh "mv ${distFolder}/signed-${installer.name} ${installer.path}"
+    }
+    
+    sh "ls -al ${distFolder}"
 }
 
-def notarizeInstaller(String ext) {
+def notarizeInstaller(String ext, String os) {
     if (!isRelease()) {
         echo "This is not a release, so skipping installer notarizing for branch ${env.BRANCH_NAME}"
         return
@@ -514,29 +521,32 @@ def notarizeInstaller(String ext) {
     String service = 'https://cbi.eclipse.org/macos/xcrun'
     List installers = findFiles(glob: "${distFolder}/*.${ext}")
 
-    if (installers.size() == 1) {
-        String response = sh(script: "curl -X POST -F file=@${installers[0].path} -F \'options={\"primaryBundleId\": \"eclipse.theia\", \"staple\": true};type=application/json\' ${service}/notarize", returnStdout: true)
+    if (os == 'mac' && installers.size() == 2) {
+        for (installer in installers) {
+            String response = sh(script: "curl -X POST -F file=@${installer.path} -F \'options={\"primaryBundleId\": \"eclipse.theia\", \"staple\": true};type=application/json\' ${service}/notarize", returnStdout: true)
 
-        def jsonSlurper = new JsonSlurper()
-        def json = jsonSlurper.parseText(response)
-        String uuid = json.uuid
+            def jsonSlurper = new JsonSlurper()
+            def json = jsonSlurper.parseText(response)
+            String uuid = json.uuid
 
-        while(json.notarizationStatus.status == 'IN_PROGRESS') {
-            sh "sleep 60"
-            response = sh(script: "curl ${service}/${uuid}/status", returnStdout: true)
-            json = jsonSlurper.parseText(response)
+            while(json.notarizationStatus.status == 'IN_PROGRESS') {
+                sh "sleep 60"
+                response = sh(script: "curl ${service}/${uuid}/status", returnStdout: true)
+                json = jsonSlurper.parseText(response)
+            }
+
+            if (json.notarizationStatus.status != 'COMPLETE') {
+                error("Failed to notarize ${installer.name}: ${response}")
+            }
+
+            sh "curl -o ${distFolder}/stapled-${installer.name} ${service}/${uuid}/download"
+            sh "rm ${installer.path}"
+            sh "mv ${distFolder}/stapled-${installer.name} ${installer.path}"
         }
-
-        if (json.notarizationStatus.status != 'COMPLETE') {
-            error("Failed to notarize ${installers[0].name}: ${response}")
-        }
-
-        sh "curl -o ${distFolder}/stapled-${installers[0].name} ${service}/${uuid}/download"
-        sh "rm ${installers[0].path}"
-        sh "mv ${distFolder}/stapled-${installers[0].name} ${installers[0].path}"
     } else {
-        error("Error during notarization: installer not found or multiple installers exist: ${installers.size()}")
+        error("Error during notarization: installer not found or multiple installers exist or unexpected OS: ${os} ${installers.size()}")
     }
+    sh "ls -al ${distFolder}"
 }
 
 def updateMetadata(String executable, String yaml, String platform, Boolean updatePaths, String fileExtension, int sleepBetweenRetries) {
