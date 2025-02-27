@@ -249,6 +249,8 @@ spec:
                                 container('theia-dev') {
                                     withCredentials([string(credentialsId: "github-bot-token", variable: 'GITHUB_TOKEN')]) {
                                         script {
+                                            sh "curl -L -o ${distFolder}/TheiaIDE-arm64.dmg https://github.com/eclipse-theia/theia-ide/releases/download/pre-release/TheiaIDE-arm64.dmg"
+                                            sh "ls -al ${distFolder}"
                                             signInstaller('dmg', 'mac')
                                             notarizeInstaller('dmg', 'mac')
                                         }
@@ -267,32 +269,23 @@ spec:
                                     def packageJSON = readJSON file: "package.json"
                                     String version = "${packageJSON.version}"
 
-                                    def notarizedDmg = "${distFolder}/TheiaIDE.dmg"
-
-                                    // We'll mount and then copy the .app out of the DMG
-                                    def mountPoint = "${distFolder}/TheiaIDE-mount"
-                                    def extractedFolder = "${distFolder}/TheiaIDE-extracted"
-                                    def rezippedFile = "${distFolder}/TheiaIDE-rezipped.zip"
-                                    def finalZip = "${distFolder}/TheiaIDE-${version}-mac.zip"
-                                    sh "rm -rf \"${extractedFolder}\" \"${mountPoint}\""
-                                    sh "mkdir -p \"${extractedFolder}\" \"${mountPoint}\""
-                                    sh "hdiutil attach \"${notarizedDmg}\" -mountpoint \"${mountPoint}\""
-
-                                    // Copy the .app from the DMG to a folder we can zip
-                                    sh "ditto \"${mountPoint}/TheiaIDE.app\" \"${extractedFolder}/TheiaIDE.app\""
-
-                                    // Unmount the DMG
-                                    sh "hdiutil detach \"${mountPoint}\""
-
-                                    // Zip with ditto
-                                    sh "ditto -c -k \"${extractedFolder}\" \"${rezippedFile}\""
-
-                                    // Replace the old zip with the newly created one
-                                    sh "rm -f \"${finalZip}\""
-                                    sh "mv \"${rezippedFile}\" \"${finalZip}\""
-
-                                    // Cleanup
-                                    sh "rm -rf \"${extractedFolder}\" \"${mountPoint}\""
+                                    ['x64', 'arm64'].each { arch ->
+                                        def dmgFile = "${distFolder}/TheiaIDE-${arch}.dmg"
+                                        def mountPoint = "${distFolder}/TheiaIDE-mount-${arch}"
+                                        def extractedFolder = "${distFolder}/TheiaIDE-extracted-${arch}"
+                                        def rezippedFile = "${distFolder}/TheiaIDE-rezipped-${arch}.zip"
+                                        def finalZip = arch == 'arm64' ? "${distFolder}/TheiaIDE-${version}-arm64-mac.zip" : "${distFolder}/TheiaIDE-${version}-mac.zip"
+                                        
+                                        sh "rm -rf \"${extractedFolder}\" \"${mountPoint}\""
+                                        sh "mkdir -p \"${extractedFolder}\" \"${mountPoint}\""
+                                        sh "hdiutil attach \"${dmgFile}\" -mountpoint \"${mountPoint}\""
+                                        sh "ditto \"${mountPoint}/TheiaIDE.app\" \"${extractedFolder}/TheiaIDE.app\""
+                                        sh "hdiutil detach \"${mountPoint}\""
+                                        sh "ditto -c -k \"${extractedFolder}\" \"${rezippedFile}\""
+                                        sh "rm -f \"${finalZip}\""
+                                        sh "mv \"${rezippedFile}\" \"${finalZip}\""
+                                        sh "rm -rf \"${extractedFolder}\" \"${mountPoint}\""
+                                    }
                                 }
                                 // archiveArtifacts artifacts: "${distFolder}/*.dmg, ${distFolder}/*.zip", allowEmptyArchive: false
                                 stash includes: "${toStash}", name: 'mac3'
@@ -354,8 +347,10 @@ spec:
                                         script {
                                             def packageJSON = readJSON file: "package.json"
                                             String version = "${packageJSON.version}"
+                                            updateMetadata('TheiaIDE-' + version + '-arm64-mac.zip', 'latest-mac.yml', 'macos', false, '.zip', 1200)
+                                            updateMetadata('TheiaIDE-arm64.dmg', 'latest-mac.yml', 'macos', false, '.dmg', 1200)
                                             updateMetadata('TheiaIDE-' + version + '-mac.zip', 'latest-mac.yml', 'macos', false, '.zip', 1200)
-                                            updateMetadata('TheiaIDE.dmg', 'latest-mac.yml', 'macos', false, '.dmg', 1200)
+                                            updateMetadata('TheiaIDE-x64.dmg', 'latest-mac.yml', 'macos', false, '.dmg', 1200)
                                         }
                                     }
                                 }
@@ -551,6 +546,7 @@ def notarizeInstaller(String ext, String os) {
     } else {
         error("Error during notarization: installer not found or multiple installers exist or unexpected OS: ${os} ${installers.size()}")
     }
+    sh "ls -al ${distFolder}"
 }
 
 def updateMetadata(String executable, String yaml, String platform, Boolean updatePaths, String fileExtension, int sleepBetweenRetries) {
