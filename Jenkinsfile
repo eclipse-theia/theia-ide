@@ -521,7 +521,7 @@ def notarizeInstaller(String ext, String os) {
     String service = 'https://cbi.eclipse.org/macos/xcrun'
     List installers = findFiles(glob: "${distFolder}/*.${ext}")
 
-    if (os == 'mac' && installers.size() != 2) {
+    if (os == 'mac' && installers.size() == 2) {
         for (installer in installers) {
             String response = sh(script: "curl -X POST -F file=@${installer.path} -F \'options={\"primaryBundleId\": \"eclipse.theia\", \"staple\": true};type=application/json\' ${service}/notarize", returnStdout: true)
 
