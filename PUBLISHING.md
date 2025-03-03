@@ -50,7 +50,13 @@ Follow these steps to update dependencies and package versions:
 
 6. If there was a Theia release, review breaking changes, new built-ins, and sample applications, and update code as necessary.
 
-After completing these steps, open a PR with your changes. Merging the PR automatically triggers a preview release.
+7. After completing these steps, open a PR with your changes.
+
+8. The PR will trigger a verification build that generates two zip files with mac artifacts.
+Download these zips and replace them in this pre-release: <https://github.com/eclipse-theia/theia-ide/releases/tag/pre-release>.
+These unsigned dmgs will be used as input for the Jenkins build.
+
+9. Merging the PR automatically triggers a preview release, so make sure step 8 is fully completed before merging.
 
 ## 3. Preview, Testing, and Release Process
 

@@ -1,10 +1,25 @@
 const os = require('os');
 const path = require('path');
 const fs = require('fs');
+const { execSync } = require('child_process');
 const { remote } = require('webdriverio');
 const { expect } = require('chai');
 
 const THEIA_LOAD_TIMEOUT = 15000; // 15 seconds
+
+function isMacArm() {
+    if (os.platform() !== 'darwin'){
+      return false;
+    }
+    try {
+        // Check the architecture using uname -m
+        const arch = execSync('uname -m').toString().trim();
+        return arch === 'arm64';
+    } catch (error) {
+        // Fall back to node's arch property if uname fails
+        return os.arch() === 'arm64';
+    }
+}
 
 function getElectronMainJS() {
     const distFolder = path.join(__dirname, '..', 'dist');
@@ -30,9 +45,10 @@ function getElectronMainJS() {
         'electron-main.js'
         );
     case 'darwin':
+        const macFolder = isMacArm() ? 'mac-arm64' : 'mac';
         return path.join(
         distFolder,
-        'mac',
+        macFolder,
         'TheiaIDE.app',
         'Contents',
         'Resources',
@@ -94,14 +110,17 @@ function getBinaryPath() {
         'TheiaIDE.exe'
       );
     case 'darwin':
-      return path.join(
+      const macFolder = isMacArm() ? 'mac-arm64' : 'mac';
+      const binaryPath = path.join(
         distFolder,
-        'mac',
+        macFolder,
         'TheiaIDE.app',
         'Contents',
         'MacOS',
         'TheiaIDE'
       );
+      console.log(`Using binary path for Mac ${isMacArm() ? 'ARM64' : 'Intel'}: ${binaryPath}`);
+      return binaryPath;
     default:
       return undefined;
   }
