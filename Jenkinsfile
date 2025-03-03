@@ -32,8 +32,8 @@ pipeline {
         // installers. It can sometimes be necessary to run these steps, e.g.
         // when troubleshooting. Set the variable below to 'true' to do so.
         // We will still stop short of publishing anything.
-        THEIA_IDE_JENKINS_RELEASE_DRYRUN = 'false'
-        // THEIA_IDE_JENKINS_RELEASE_DRYRUN = 'true'
+        // THEIA_IDE_JENKINS_RELEASE_DRYRUN = 'false'
+        THEIA_IDE_JENKINS_RELEASE_DRYRUN = 'true'
         msvs_version = '2019'
         GYP_MSVS_VERSION = '2019'
 
@@ -369,6 +369,7 @@ spec:
                                             updateMetadata('mac-x64/TheiaIDE.dmg', 'mac-x64/latest-mac.yml', 'macos', false, '.dmg', 1200)
                                             updateMetadata('mac-arm64/TheiaIDE-' + version + '-arm64-mac.zip', 'mac-arm64/latest-mac.yml', 'macos-arm', false, '.zip', 1200)
                                             updateMetadata('mac-arm64/TheiaIDE.dmg', 'mac-arm64/latest-mac.yml', 'macos-arm', false, '.dmg', 1200)
+                                            archiveArtifacts artifacts: "${distFolder}/**", allowEmptyArchive: false
                                         }
                                     }
                                 }
