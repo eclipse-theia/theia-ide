@@ -3,7 +3,7 @@
   "name": "theia-ide-electron-app",
   "description": "Eclipse Theia IDE product",
   "productName": "Theia IDE",
-  "version": "1.59.1",
+  "version": "1.59.2",
   "main": "scripts/theia-electron-main.js",
   "license": "MIT",
   "author": "Eclipse Theia <theia-dev@eclipse.org>",
@@ -112,9 +112,9 @@
     "@theia/vsx-registry": "1.59.0",
     "@theia/workspace": "1.59.0",
     "fs-extra": "^9.0.1",
-    "theia-ide-launcher-ext": "1.59.1",
-    "theia-ide-product-ext": "1.59.1",
-    "theia-ide-updater-ext": "1.59.1"
+    "theia-ide-launcher-ext": "1.59.2",
+    "theia-ide-product-ext": "1.59.2",
+    "theia-ide-updater-ext": "1.59.2"
   },
   "devDependencies": {
     "@theia/cli": "1.59.0",
@@ -158,6 +158,7 @@
     "update:blockmap": "ts-node scripts/update-blockmap.ts",
     "update:theia": "ts-node ../../scripts/update-theia-version.ts",
     "update:next": "ts-node ../../scripts/update-theia-version.ts next",
+    "sign:directory": "ts-node scripts/sign-directory.ts",
     "test": "mocha --timeout 60000 \"./test/*.spec.js\"",
     "lint": "eslint --ext js,jsx,ts,tsx scripts && eslint --ext js,jsx,ts,tsx test",
     "lint:fix": "eslint --ext js,jsx,ts,tsx scripts --fix && eslint --ext js,jsx,ts,tsx test -fix"
