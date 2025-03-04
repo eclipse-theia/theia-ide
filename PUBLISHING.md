@@ -109,19 +109,20 @@ Publish the Docker image by running the [workflow](https://github.com/eclipse-th
 
 ## 7. Snap Update
 
-After the IDE is promoted to stable, perform these steps for the snap update (ideally on the next business day):
+After the IDE is promoted to stable, perform these steps for the snap update:
 
-1. Visit <https://github.com/eclipse-theia/theia-ide-snap/pulls> to find the PR that updates to **${THEIA_IDE_VERSION}**.
-2. Check out the corresponding branch.
-3. Amend the latest commit with your author details:
+1. Run [this workflow](https://github.com/eclipse-theia/theia-ide-snap/actions/workflows/update.yml) from the `master` branch.
+2. After the build succeeded, visit <https://github.com/eclipse-theia/theia-ide-snap/pulls> to find the PR that updates to **${THEIA_IDE_VERSION}**.
+3. Check out the corresponding branch.
+4. Amend the latest commit with your author details:
 
    ```bash
    git commit --amend --author="Your Name <name@example.com>"
    ```
 
-4. Force push the branch.
-5. Verify that all checks pass, and then `rebase and merge`.
-6. Confirm the master branch build is successful.
+5. Force push the branch.
+6. Verify that all checks pass, and then `rebase and merge`.
+7. Confirm the master branch build is successful.
 
 ## 8. Upgrade Dependencies
 
