@@ -155,51 +155,10 @@ export class TheiaIDEGettingStartedWidget extends GettingStartedWidget {
     }
 
     protected renderAIBanner(): React.ReactNode {
-        return <div className='gs-section'>
-            <div className='flex-grid'>
-                <div className='col'>
-                    <h3 className='gs-section-header'> 🚀 AI Support in the Theia IDE is available! [Experimental] ✨</h3>
-
-                    <div className='gs-action-container'>
-                        Theia IDE now contains experimental AI support, which offers early access to cutting-edge AI capabilities within your IDE.
-                        <br />
-                        Please note that these features are disabled by default, ensuring that users can opt-in at their discretion.
-                        For those who choose to enable AI support, it is important to be aware that these experimental features may generate continuous
-                        requests to the language models (LLMs) you provide access to. This might incur costs that you need to monitor closely.
-                        <br />
-                        For more details, please visit &nbsp;
-                        <a
-                            role={'button'}
-                            tabIndex={0}
-                            onClick={() => this.doOpenExternalLink(this.theiaAIDocUrl)}
-                            onKeyDown={(e: React.KeyboardEvent) => this.doOpenExternalLinkEnter(e, this.theiaAIDocUrl)}>
-                            {'the documentation'}
-                        </a>.
-                        <br />
-                        <br />
-                        🚧 Please note that this feature is currently in development and may undergo frequent changes.
-                        We welcome your feedback, contributions, and sponsorship! To support the ongoing development of the AI capabilities please visit the&nbsp;
-                        <a
-                            role={'button'}
-                            tabIndex={0}
-                            onClick={() => this.doOpenExternalLink(this.ghProjectUrl)}
-                            onKeyDown={(e: React.KeyboardEvent) => this.doOpenExternalLinkEnter(e, this.ghProjectUrl)}>
-                            {'Github Project'}
-                        </a>.
-                        &nbsp;Thank you for being part of our community!
-                    </div>
-                    <div className='gs-action-container'>
-                        <a
-                            role={'button'}
-                            style={{ fontSize: 'var(--theia-ui-font-size2)' }}
-                            tabIndex={0}
-                            onClick={() => this.doOpenAIChatView()}
-                            onKeyDown={(e: React.KeyboardEvent) => this.doOpenAIChatViewEnter(e)}>
-                            {'Open the AI Chat View now to learn how to start! ✨'}
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>;
+        const framework = super.renderAIBanner();
+        if (React.isValidElement<React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement>>(framework)) {
+            return React.cloneElement(framework, { className: 'gs-section' });
+        }
+        return framework;
     }
 }
