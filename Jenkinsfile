@@ -253,6 +253,7 @@ spec:
                                         script {
                                             signInstaller('dmg', 'mac', 'mac-x64')
                                             signInstaller('dmg', 'mac', 'mac-arm64')
+                                            archiveArtifacts artifacts: "${distFolder}/**", allowEmptyArchive: false
                                             notarizeInstaller('dmg', 'mac-x64')
                                             notarizeInstaller('dmg', 'mac-arm64')
                                         }
