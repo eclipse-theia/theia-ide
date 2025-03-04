@@ -131,7 +131,7 @@ spec:
                         script {
                             createMacInstaller()
                         }
-                        stash includes: "${toStash}", name: 'mac'
+                        stash includes: "${toStashDist}", name: 'mac'
                     }
                     post {
                         failure {
@@ -258,7 +258,7 @@ spec:
                                         }
                                     }
                                 }
-                                stash includes: "${toStash}", name: 'mac2'
+                                stash includes: "${toStashDist}", name: 'mac2'
                             }
                         }
                         stage('Recreate Zip with Ditto for correct file permissions') {
@@ -306,7 +306,7 @@ spec:
 
 
                                 }
-                                stash includes: "${toStash}", name: 'mac3'
+                                stash includes: "${toStashDist}", name: 'mac3'
                             }
                         }
                         stage('Update Metadata and Upload Mac') {
@@ -375,7 +375,8 @@ spec:
                                 }
                                 container('jnlp') {
                                     script {
-                                        uploadInstaller('macos')
+                                        uploadInstaller('macos', 'mac-x64')
+                                        uploadInstaller('macos-arm', 'mac-arm64')
                                     }
                                 }
                             }
@@ -521,8 +522,8 @@ def createMacInstaller() {
     sshagent(['projects-storage.eclipse.org-bot-ssh']) {
         def appPathArm64 = "/${pwd()}/applications/electron/dist/mac-arm64/TheiaIDE-dmg-layout/TheiaIDE.app"
         def appPathX64 = "/${pwd()}/applications/electron/dist/mac-x64/TheiaIDE-dmg-layout/TheiaIDE.app"
-        sh "yarn electron sign:directory \"${appPathArm64}\""
-        sh "yarn electron sign:directory \"${appPathX64}\""
+        sh "yarn electron sign:directory -d \"${appPathArm64}\""
+        sh "yarn electron sign:directory -d \"${appPathX64}\""
     }
 
     // Step 8: Remove existing DMG files
@@ -531,6 +532,10 @@ def createMacInstaller() {
     // Step 9: Create the final DMG
     sh 'hdiutil create -volname TheiaIDE -srcfolder applications/electron/dist/mac-arm64/TheiaIDE-dmg-layout -fs HFS+ -format UDZO applications/electron/dist/mac-arm64/TheiaIDE.dmg'
     sh 'hdiutil create -volname TheiaIDE -srcfolder applications/electron/dist/mac-x64/TheiaIDE-dmg-layout -fs HFS+ -format UDZO applications/electron/dist/mac-x64/TheiaIDE.dmg'
+
+    // Step 10: Cleanup TheiaIDE-dmg-layout
+    sh 'rm -rf applications/electron/dist/mac-arm64/TheiaIDE-dmg-layout applications/electron/dist/mac-x64/TheiaIDE-dmg-layout'
+    sh 'ls -al applications/electron/dist/mac-arm64 applications/electron/dist/mac-x64'
 }
 
 def buildInstaller(int sleepBetweenRetries) {
@@ -659,17 +664,18 @@ def updateMetadata(String executable, String yaml, String platform, Boolean upda
     }
 }
 
-def uploadInstaller(String platform) {
+def uploadInstaller(String platform, String arch = '') {
     if (isReleaseBranch()) {
+        String targetFolder = arch ? "${distFolder}/${arch}" : distFolder
         def packageJSON = readJSON file: "package.json"
         String version = "${packageJSON.version}"
         sshagent(['projects-storage.eclipse.org-bot-ssh']) {
             sh "ssh genie.theia@projects-storage.eclipse.org rm -rf /home/data/httpd/download.eclipse.org/theia/ide-preview/${version}/${platform}"
             sh "ssh genie.theia@projects-storage.eclipse.org mkdir -p /home/data/httpd/download.eclipse.org/theia/ide-preview/${version}/${platform}"
-            sh "scp ${distFolder}/*.* genie.theia@projects-storage.eclipse.org:/home/data/httpd/download.eclipse.org/theia/ide-preview/${version}/${platform}"
+            sh "scp ${targetFolder}/*.* genie.theia@projects-storage.eclipse.org:/home/data/httpd/download.eclipse.org/theia/ide-preview/${version}/${platform}"
             sh "ssh genie.theia@projects-storage.eclipse.org rm -rf /home/data/httpd/download.eclipse.org/theia/ide-preview/latest/${platform}"
             sh "ssh genie.theia@projects-storage.eclipse.org mkdir -p /home/data/httpd/download.eclipse.org/theia/ide-preview/latest/${platform}"
-            sh "scp ${distFolder}/*.* genie.theia@projects-storage.eclipse.org:/home/data/httpd/download.eclipse.org/theia/ide-preview/latest/${platform}"
+            sh "scp ${targetFolder}/*.* genie.theia@projects-storage.eclipse.org:/home/data/httpd/download.eclipse.org/theia/ide-preview/latest/${platform}"
         }
     } else {
         echo "Skipped upload for branch ${env.BRANCH_NAME}"
