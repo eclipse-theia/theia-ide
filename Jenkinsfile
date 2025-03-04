@@ -495,17 +495,32 @@ def createMacInstaller() {
     sh 'mkdir -p applications/electron/dist/mac-arm64/TheiaIDE-dmg-mounted applications/electron/dist/mac-x64/TheiaIDE-dmg-mounted'
     sh 'hdiutil attach applications/electron/dist/mac-arm64/TheiaIDE.dmg -mountpoint applications/electron/dist/mac-arm64/TheiaIDE-dmg-mounted'
     sh 'hdiutil attach applications/electron/dist/mac-x64/TheiaIDE.dmg -mountpoint applications/electron/dist/mac-x64/TheiaIDE-dmg-mounted'
-    sh 'cp -R applications/electron/dist/mac-arm64/TheiaIDE-dmg-mounted/TheiaIDE.app applications/electron/dist/mac-arm64/TheiaIDE.app'
-    sh 'cp -R applications/electron/dist/mac-x64/TheiaIDE-dmg-mounted/TheiaIDE.app applications/electron/dist/mac-x64/TheiaIDE.app'
+    sh 'mkdir -p applications/electron/dist/mac-arm64/TheiaIDE-dmg-layout/.background'
+    sh 'mkdir -p applications/electron/dist/mac-x64/TheiaIDE-dmg-layout/.background'
+    sh '''
+        if [ -f applications/electron/dist/mac-arm64/TheiaIDE-dmg-mounted/.DS_Store ]; then
+            cp applications/electron/dist/mac-arm64/TheiaIDE-dmg-mounted/.DS_Store applications/electron/dist/mac-arm64/TheiaIDE-dmg-layout/
+        fi
+    '''
+    sh '''
+        if [ -f applications/electron/dist/mac-x64/TheiaIDE-dmg-mounted/.DS_Store ]; then
+            cp applications/electron/dist/mac-x64/TheiaIDE-dmg-mounted/.DS_Store applications/electron/dist/mac-x64/TheiaIDE-dmg-layout/
+        fi
+    '''
+    sh 'cp -R applications/electron/dist/mac-arm64/TheiaIDE-dmg-mounted/TheiaIDE.app applications/electron/dist/mac-arm64/TheiaIDE-dmg-layout/TheiaIDE.app'
+    sh 'cp -R applications/electron/dist/mac-x64/TheiaIDE-dmg-mounted/TheiaIDE.app applications/electron/dist/mac-x64/TheiaIDE-dmg-layout/TheiaIDE.app'
+    sh 'ln -s /Applications applications/electron/dist/mac-arm64/TheiaIDE-dmg-layout/Applications'
+    sh 'ln -s /Applications applications/electron/dist/mac-x64/TheiaIDE-dmg-layout/Applications'
     sh 'hdiutil detach applications/electron/dist/mac-arm64/TheiaIDE-dmg-mounted'
     sh 'hdiutil detach applications/electron/dist/mac-x64/TheiaIDE-dmg-mounted'
-    sh 'ls -al applications/electron/dist/mac-arm64/TheiaIDE.app applications/electron/dist/mac-x64/TheiaIDE.app'
+    sh 'ls -al applications/electron/dist/mac-arm64/TheiaIDE-dmg-layout applications/electron/dist/mac-x64/TheiaIDE-dmg-layout'
+    sh 'ls -al applications/electron/dist/mac-arm64/TheiaIDE-dmg-layout/TheiaIDE.app applications/electron/dist/mac-x64/TheiaIDE-dmg-layout/TheiaIDE.app'
     
     // Step 7: Sign binaries
     sh 'yarn --frozen-lockfile --force'
     sshagent(['projects-storage.eclipse.org-bot-ssh']) {
-        def appPathArm64 = "/${pwd()}/applications/electron/dist/mac-arm64/TheiaIDE.app"
-        def appPathX64 = "/${pwd()}/applications/electron/dist/mac-x64/TheiaIDE.app"
+        def appPathArm64 = "/${pwd()}/applications/electron/dist/mac-arm64/TheiaIDE-dmg-layout/TheiaIDE.app"
+        def appPathX64 = "/${pwd()}/applications/electron/dist/mac-x64/TheiaIDE-dmg-layout/TheiaIDE.app"
         sh "yarn electron sign:directory \"${appPathArm64}\""
         sh "yarn electron sign:directory \"${appPathX64}\""
     }
@@ -513,9 +528,9 @@ def createMacInstaller() {
     // Step 8: Remove existing DMG files
     sh 'rm -f applications/electron/dist/mac-arm64/TheiaIDE.dmg applications/electron/dist/mac-x64/TheiaIDE.dmg'
 
-    // Step 9: Create a new DMG from the app directory
-    sh 'hdiutil create -volname TheiaIDE -srcfolder applications/electron/dist/mac-arm64/TheiaIDE.app -ov -format UDZO applications/electron/dist/mac-arm64/TheiaIDE.dmg'
-    sh 'hdiutil create -volname TheiaIDE -srcfolder applications/electron/dist/mac-x64/TheiaIDE.app -ov -format UDZO applications/electron/dist/mac-x64/TheiaIDE.dmg'
+    // Step 9: Create the final DMG
+    sh 'hdiutil create -volname TheiaIDE -srcfolder applications/electron/dist/mac-arm64/TheiaIDE-dmg-layout -fs HFS+ -format UDZO applications/electron/dist/mac-arm64/TheiaIDE.dmg'
+    sh 'hdiutil create -volname TheiaIDE -srcfolder applications/electron/dist/mac-x64/TheiaIDE-dmg-layout -fs HFS+ -format UDZO applications/electron/dist/mac-x64/TheiaIDE.dmg'
 }
 
 def buildInstaller(int sleepBetweenRetries) {
