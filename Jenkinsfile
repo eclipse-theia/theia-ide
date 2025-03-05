@@ -527,7 +527,7 @@ def createMacInstaller() {
     sshagent(['projects-storage.eclipse.org-bot-ssh']) {
         def appPathArm64 = "/${pwd()}/applications/electron/dist/mac-arm64/TheiaIDE-dmg-layout/TheiaIDE.app"
         def appPathX64 = "/${pwd()}/applications/electron/dist/mac-x64/TheiaIDE-dmg-layout/TheiaIDE.app"
-        sh "yarn electron sign:directory -d \"${appPathArm64}\""
+        // sh "yarn electron sign:directory -d \"${appPathArm64}\""
         sh "yarn electron sign:directory -d \"${appPathX64}\""
     }
 
