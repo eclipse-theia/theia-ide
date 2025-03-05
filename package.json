@@ -41,7 +41,7 @@
     "build:applications": "yarn build:extensions && lerna run --scope=\"theia-ide*app\" build:prod --concurrency 1",
     "build:applications:dev": "yarn build:extensions && lerna run --scope=\"theia-ide*app\" build --concurrency 1",
     "build:extensions": "lerna run --scope=\"theia-ide*ext\" build",
-    "download:plugins": "theia download:plugins --rate-limit=15 --parallel=false && yarn permissions:writeable",
+    "download:plugins": "theia download:plugins --rate-limit=15 --parallel=false --ignore-errors && yarn permissions:writeable",
     "package:applications": "lerna run --scope=\"theia-ide*app\" package --concurrency 1",
     "package:applications:preview": "lerna run --scope=\"theia-ide*app\" package:preview --concurrency 1",
     "package:applications:prod": "lerna run --scope=\"theia-ide*app\" package:prod --concurrency 1",
