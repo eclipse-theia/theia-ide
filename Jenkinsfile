@@ -252,9 +252,9 @@ spec:
                                     withCredentials([string(credentialsId: "github-bot-token", variable: 'GITHUB_TOKEN')]) {
                                         script {
                                             signInstaller('dmg', 'mac', 'mac-x64')
-                                            signInstaller('dmg', 'mac', 'mac-arm64')
                                             archiveArtifacts artifacts: "${distFolder}/**", allowEmptyArchive: false
                                             notarizeInstaller('dmg', 'mac-x64')
+                                            signInstaller('dmg', 'mac', 'mac-arm64')
                                             notarizeInstaller('dmg', 'mac-arm64')
                                         }
                                     }
@@ -517,8 +517,12 @@ def createMacInstaller() {
     sh 'hdiutil detach applications/electron/dist/mac-x64/TheiaIDE-dmg-mounted'
     sh 'ls -al applications/electron/dist/mac-arm64/TheiaIDE-dmg-layout applications/electron/dist/mac-x64/TheiaIDE-dmg-layout'
     sh 'ls -al applications/electron/dist/mac-arm64/TheiaIDE-dmg-layout/TheiaIDE.app applications/electron/dist/mac-x64/TheiaIDE-dmg-layout/TheiaIDE.app'
+
+    // Step 7: Remove quarantine bits from all files
+    sh 'xattr -d -r com.apple.quarantine applications/electron/dist/mac-arm64/TheiaIDE-dmg-layout || true'
+    sh 'xattr -d -r com.apple.quarantine applications/electron/dist/mac-x64/TheiaIDE-dmg-layout || true'
     
-    // Step 7: Sign binaries
+    // Step 8: Sign binaries
     sh 'yarn --frozen-lockfile --force'
     sshagent(['projects-storage.eclipse.org-bot-ssh']) {
         def appPathArm64 = "/${pwd()}/applications/electron/dist/mac-arm64/TheiaIDE-dmg-layout/TheiaIDE.app"
@@ -527,16 +531,20 @@ def createMacInstaller() {
         sh "yarn electron sign:directory -d \"${appPathX64}\""
     }
 
-    // Step 8: Remove existing DMG files
+    // Step 9: Remove existing DMG files
     sh 'rm -f applications/electron/dist/mac-arm64/TheiaIDE.dmg applications/electron/dist/mac-x64/TheiaIDE.dmg'
 
-    // Step 9: Create the final DMG
+    // Step 10: Create the final DMG
     sh 'hdiutil create -volname TheiaIDE -srcfolder applications/electron/dist/mac-arm64/TheiaIDE-dmg-layout -fs HFS+ -format UDZO applications/electron/dist/mac-arm64/TheiaIDE.dmg'
     sh 'hdiutil create -volname TheiaIDE -srcfolder applications/electron/dist/mac-x64/TheiaIDE-dmg-layout -fs HFS+ -format UDZO applications/electron/dist/mac-x64/TheiaIDE.dmg'
 
-    // Step 10: Cleanup TheiaIDE-dmg-layout
+    // Step 11: Cleanup TheiaIDE-dmg-layout
     sh 'rm -rf applications/electron/dist/mac-arm64/TheiaIDE-dmg-layout applications/electron/dist/mac-x64/TheiaIDE-dmg-layout'
     sh 'ls -al applications/electron/dist/mac-arm64 applications/electron/dist/mac-x64'
+
+    // Step 12: Cleanup files we don't require
+    sh 'find applications/electron/dist/mac-arm64 -type f ! -name "TheiaIDE.dmg" ! -name "latest-mac.yml" -delete'
+    sh 'find applications/electron/dist/mac-x64 -type f ! -name "TheiaIDE.dmg" ! -name "latest-mac.yml" -delete'
 }
 
 def buildInstaller(int sleepBetweenRetries) {
