@@ -56,4 +56,16 @@ async function execute(): Promise<void> {
         return bDepth - aDepth;
     });
     childPaths.forEach((file: string) => signFile(file));
+
+    // Notarize app
+    child_process.spawnSync(notarizeCommand, [
+        path.basename(argv.directory),
+        'eclipse.theia'
+    ], {
+        cwd: path.dirname(argv.directory),
+        maxBuffer: 1024 * 10000,
+        env: process.env,
+        stdio: 'inherit',
+        encoding: 'utf-8'
+    });
 }

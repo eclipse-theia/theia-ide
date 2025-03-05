@@ -540,11 +540,11 @@ def createMacInstaller() {
 
     // Step 11: Cleanup TheiaIDE-dmg-layout
     sh 'rm -rf applications/electron/dist/mac-arm64/TheiaIDE-dmg-layout applications/electron/dist/mac-x64/TheiaIDE-dmg-layout'
-    sh 'ls -al applications/electron/dist/mac-arm64 applications/electron/dist/mac-x64'
 
     // Step 12: Cleanup files we don't require
     sh 'find applications/electron/dist/mac-arm64 -type f ! -name "TheiaIDE.dmg" ! -name "latest-mac.yml" -delete'
     sh 'find applications/electron/dist/mac-x64 -type f ! -name "TheiaIDE.dmg" ! -name "latest-mac.yml" -delete'
+    sh 'ls -al applications/electron/dist/mac-arm64 applications/electron/dist/mac-x64'
 }
 
 def buildInstaller(int sleepBetweenRetries) {
