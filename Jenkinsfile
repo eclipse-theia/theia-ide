@@ -9,6 +9,8 @@ releaseBranch = "master"
 distFolder = "applications/electron/dist"
 
 toStashDist = "${distFolder}/**"
+toStashDist-mac = "${distFolder}/mac-x64/**"
+toStashDist-mac-arm = "${distFolder}/mac-arm64/**"
 toStashDistInstallers = "${distFolder}/*"
 // default folder to stash
 toStash = toStashDistInstallers
