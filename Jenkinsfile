@@ -9,8 +9,8 @@ releaseBranch = "master"
 distFolder = "applications/electron/dist"
 
 toStashDist = "${distFolder}/**"
-toStashDist-mac = "${distFolder}/mac-x64/**"
-toStashDist-mac-arm = "${distFolder}/mac-arm64/**"
+toStashDistMac = "${distFolder}/mac-x64/**"
+toStashDistMacArm = "${distFolder}/mac-arm64/**"
 toStashDistInstallers = "${distFolder}/*"
 // default folder to stash
 toStash = toStashDistInstallers
@@ -260,8 +260,8 @@ spec:
                                         }
                                     }
                                 }
-                                stash includes: "${toStashDist-mac}", name: 'mac2'
-                                stash includes: "${toStashDist-mac-arm}", name: 'mac2-arm'
+                                stash includes: "${toStashDistMac}", name: 'mac2'
+                                stash includes: "${toStashDistMacArm}", name: 'mac2-arm'
                             }
                         }
                         stage('Recreate Zip with Ditto for correct file permissions') {
@@ -314,8 +314,8 @@ spec:
 
 
                                 }
-                                stash includes: "${toStashDist-mac}", name: 'mac3'
-                                stash includes: "${toStashDist-mac-arm}", name: 'mac3-arm'
+                                stash includes: "${toStashDistMac}", name: 'mac3'
+                                stash includes: "${toStashDistMacArm}", name: 'mac3-arm'
                             }
                         }
                         stage('Update Metadata and Upload Mac') {
