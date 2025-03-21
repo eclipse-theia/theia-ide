@@ -258,7 +258,8 @@ spec:
                                         }
                                     }
                                 }
-                                stash includes: "${toStashDist}", name: 'mac2'
+                                stash includes: "${toStashDist-mac}", name: 'mac2'
+                                stash includes: "${toStashDist-mac-arm}", name: 'mac2-arm'
                             }
                         }
                         stage('Recreate Zip with Ditto for correct file permissions') {
@@ -267,6 +268,7 @@ spec:
                             }
                             steps {
                                 unstash 'mac2'
+                                unstash 'mac2-arm'
                                 script {
                                     def packageJSON = readJSON file: "package.json"
                                     String version = "${packageJSON.version}"
@@ -310,7 +312,8 @@ spec:
 
 
                                 }
-                                stash includes: "${toStashDist}", name: 'mac3'
+                                stash includes: "${toStashDist-mac}", name: 'mac3'
+                                stash includes: "${toStashDist-mac-arm}", name: 'mac3-arm'
                             }
                         }
                         stage('Update Metadata and Upload Mac') {
@@ -364,6 +367,7 @@ spec:
                             }
                             steps {
                                 unstash 'mac3'
+                                unstash 'mac3-arm'
                                 container('theia-dev') {
                                     withCredentials([string(credentialsId: "github-bot-token", variable: 'GITHUB_TOKEN')]) {
                                         script {
