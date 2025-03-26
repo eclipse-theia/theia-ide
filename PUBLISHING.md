@@ -48,7 +48,13 @@ Follow these steps to update dependencies and package versions:
    yarn
    ```
 
-6. If there was a Theia release, review breaking changes, new built-ins, and sample applications, and update code as necessary.
+6. Update the code to include everything that should be part of the release:
+   - Implement all tickets that are located in: <https://github.com/eclipse-theia/theia-ide/labels/toDoWithRelease>
+   - If there was a Theia release:
+      - Review breaking changes
+      - Check for new built-ins
+      - Check sample applications changes
+      - Update code as necessary
 
 7. After completing these steps, open a PR with your changes.
 
