@@ -60,6 +60,11 @@ export class TheiaIDEGettingStartedWidget extends GettingStartedWidget {
                 <hr className='gs-hr' />
                 <div className='flex-grid'>
                     <div className='col'>
+                        {this.renderNews()}
+                    </div>
+                </div>
+                <div className='flex-grid'>
+                    <div className='col'>
                         {renderWhatIs(this.windowService)}
                     </div>
                 </div>
