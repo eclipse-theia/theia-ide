@@ -35,6 +35,7 @@ pipeline {
                 script {
                     promote('linux', params.VERSION)
                     promote('macos', params.VERSION)
+                    promote('macos-arm', params.VERSION)
                     promote('windows', params.VERSION)
 
                     // update latest.yaml on windows for differential updater
