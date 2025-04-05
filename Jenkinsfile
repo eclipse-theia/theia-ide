@@ -369,7 +369,6 @@ spec:
                             }
                             steps {
                                 unstash 'mac3'
-                                unstash 'mac3-arm'
                                 container('theia-dev') {
                                     withCredentials([string(credentialsId: "github-bot-token", variable: 'GITHUB_TOKEN')]) {
                                         script {
@@ -377,6 +376,72 @@ spec:
                                             String version = "${packageJSON.version}"
                                             updateMetadata('mac-x64/TheiaIDE-' + version + '-mac.zip', 'mac-x64/latest-mac.yml', 'macos', false, '.zip', 1200)
                                             updateMetadata('mac-x64/TheiaIDE.dmg', 'mac-x64/latest-mac.yml', 'macos', false, '.dmg', 1200)
+                                        }
+                                    }
+                                }
+                                container('jnlp') {
+                                    script {
+                                        uploadInstaller('macos', 'mac-x64')
+                                    }
+                                }
+                            }
+                        }
+                        stage('Update Metadata and Upload Mac-Arm') {
+                            agent {
+                                kubernetes {
+                                    yaml """
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+  - name: theia-dev
+    image: eclipsetheia/theia-blueprint:builder
+    imagePullPolicy: Always
+    command:
+    - cat
+    tty: true
+    resources:
+      limits:
+        memory: "8Gi"
+        cpu: "2"
+      requests:
+        memory: "8Gi"
+        cpu: "2"
+    volumeMounts:
+    - name: global-cache
+      mountPath: /.cache
+    - name: global-yarn
+      mountPath: /.yarn      
+    - name: global-npm
+      mountPath: /.npm      
+    - name: electron-cache
+      mountPath: /.electron-gyp
+  - name: jnlp
+    volumeMounts:
+    - name: volume-known-hosts
+      mountPath: /home/jenkins/.ssh
+  volumes:
+  - name: global-cache
+    emptyDir: {}
+  - name: global-yarn
+    emptyDir: {}
+  - name: global-npm
+    emptyDir: {}
+  - name: electron-cache
+    emptyDir: {}
+  - name: volume-known-hosts
+    configMap:
+      name: known-hosts
+"""
+                                }
+                            }
+                            steps {
+                                unstash 'mac3-arm'
+                                container('theia-dev') {
+                                    withCredentials([string(credentialsId: "github-bot-token", variable: 'GITHUB_TOKEN')]) {
+                                        script {
+                                            def packageJSON = readJSON file: "package.json"
+                                            String version = "${packageJSON.version}"
                                             updateMetadata('mac-arm64/TheiaIDE-' + version + '-arm64-mac.zip', 'mac-arm64/latest-mac.yml', 'macos-arm', false, '.zip', 1200)
                                             updateMetadata('mac-arm64/TheiaIDE.dmg', 'mac-arm64/latest-mac.yml', 'macos-arm', false, '.dmg', 1200)
                                         }
@@ -384,7 +449,6 @@ spec:
                                 }
                                 container('jnlp') {
                                     script {
-                                        uploadInstaller('macos', 'mac-x64')
                                         uploadInstaller('macos-arm', 'mac-arm64')
                                     }
                                 }
