@@ -5,9 +5,16 @@
 
 import groovy.json.JsonSlurper
 
-// Load common Jenkins configuration
-def jenkinsConfig = load 'releng/preview/jenkins.config.groovy'
-def config = jenkinsConfig
+// Define variables at top level
+def jenkinsConfig
+def config
+
+// Load common Jenkins configuration inside a node context
+node {
+    // Load configuration within a node step
+    jenkinsConfig = load 'releng/preview/jenkins.config.groovy'
+    config = jenkinsConfig
+}
 
 // Default folder to stash
 toStash = config.toStashDistInstallers
