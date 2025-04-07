@@ -11,8 +11,10 @@ def config
 
 // Load common Jenkins configuration inside a node context
 node {
-    // Load configuration within a node step
-    jenkinsConfig = load 'releng/preview/jenkins.config.groovy'
+    // Checkout the source code first to ensure the file exists
+    checkout scm
+    // Load configuration with absolute path
+    jenkinsConfig = load "${env.WORKSPACE}/releng/preview/jenkins.config.groovy"
     config = jenkinsConfig
 }
 
