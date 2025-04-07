@@ -28,6 +28,7 @@ pipeline {
     }
     stages {
         stage('Update and Upload') {
+            failFast true
             parallel {
                 stage('Upload Linux') {
                     agent any
