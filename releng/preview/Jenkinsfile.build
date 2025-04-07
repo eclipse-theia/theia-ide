@@ -73,7 +73,6 @@ spec:
                                 }
                             }
                         }
-                        stash includes: "applications/electron/dist/*", name: 'linux'
                         archiveArtifacts artifacts: "applications/electron/dist/*", fingerprint: true
                     }
                     post {
@@ -93,7 +92,6 @@ spec:
                         script {
                             createMacInstaller()
                         }
-                        stash includes: "applications/electron/dist/**", name: 'mac'
                         archiveArtifacts artifacts: "applications/electron/dist/**", fingerprint: true
                     }
                     post {
@@ -118,7 +116,6 @@ spec:
 
                             buildInstaller(60)
                         }
-                        stash includes: "applications/electron/dist/*", name: 'win'
                         archiveArtifacts artifacts: "applications/electron/dist/*", fingerprint: true
                     }
                     post {

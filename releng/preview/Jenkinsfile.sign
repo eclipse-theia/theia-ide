@@ -34,7 +34,6 @@ pipeline {
                                       fingerprintArtifacts: true,
                                       target: '.'
                         script {
-                            stash includes: "applications/electron/dist/*", name: 'linux-signed'
                             archiveArtifacts artifacts: "applications/electron/dist/*", fingerprint: true
                         }
                     }
@@ -108,8 +107,8 @@ spec:
                                         }
                                     }
                                 }
-                                stash includes: "applications/electron/dist/mac-x64/**", name: 'mac2'
-                                stash includes: "applications/electron/dist/mac-arm64/**", name: 'mac2-arm'
+                                stash includes: "applications/electron/dist/mac-x64/**", name: 'mac'
+                                stash includes: "applications/electron/dist/mac-arm64/**", name: 'mac-arm'
                             }
                         }
                         stage('Recreate Zip with Ditto for correct file permissions') {
@@ -118,8 +117,8 @@ spec:
                             }
                             steps {
                                 checkout scm
-                                unstash 'mac2'
-                                unstash 'mac2-arm'
+                                unstash 'mac'
+                                unstash 'mac-arm'
                                 script {
                                     def packageJSON = readJSON file: "package.json"
                                     String version = "${packageJSON.version}"
@@ -155,8 +154,6 @@ spec:
                                         sh "rm -rf \"${extractedFolder}\" \"${mountPoint}\""
                                     }
                                 }
-                                stash includes: "applications/electron/dist/mac-x64/**", name: 'mac3'
-                                stash includes: "applications/electron/dist/mac-arm64/**", name: 'mac3-arm'
                                 archiveArtifacts artifacts: "applications/electron/dist/mac-x64/**", fingerprint: true
                                 archiveArtifacts artifacts: "applications/electron/dist/mac-arm64/**", fingerprint: true
                             }
@@ -227,7 +224,6 @@ spec:
                                 }
                             }
                         }
-                        stash includes: "applications/electron/dist/*", name: 'win-signed'
                         archiveArtifacts artifacts: "applications/electron/dist/*", fingerprint: true
                     }
                 }
