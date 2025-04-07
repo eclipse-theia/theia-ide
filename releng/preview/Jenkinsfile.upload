@@ -1,5 +1,6 @@
 /**
  * This Jenkinsfile handles updating metadata and uploading the Theia installers
+ * It's designed to be run automatically after the sign job
  */
 
 import groovy.json.JsonSlurper
@@ -27,9 +28,6 @@ pipeline {
     }
     stages {
         stage('Update and Upload') {
-            when {
-                expression { jenkinsConfig.shouldExecutePipeline() }
-            }
             parallel {
                 stage('Upload Linux') {
                     agent any

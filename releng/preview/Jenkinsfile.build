@@ -1,5 +1,6 @@
 /**
  * This Jenkinsfile builds Theia across the major OS platforms
+ * It's designed to be run only manually
  */
 
 import groovy.json.JsonSlurper
@@ -29,9 +30,6 @@ pipeline {
     }
     stages {
         stage('Build') {
-            when {
-                expression { jenkinsConfig.shouldExecutePipeline() }
-            }
             parallel {
                 stage('Create Linux Installer') {
                     agent {

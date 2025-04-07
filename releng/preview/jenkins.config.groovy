@@ -15,9 +15,6 @@ def config = [
     toStashDistMacArm: "applications/electron/dist/mac-arm64/**",
     toStashDistInstallers: "applications/electron/dist/*",
     
-    // Jenkins PR detection regex
-    jenkinsRelatedRegex: "(?i).*jenkins.*",
-    
     // Environment variables
     environmentVars: [
         THEIA_IDE_JENKINS_CI: 'true',
@@ -136,15 +133,6 @@ def isDryRunRelease() {
 
 def isRelease() {
     return isDryRunRelease() || isReleaseBranch()
-}
-
-// Check if current pipeline should be executed based on branch or PR info
-def shouldExecutePipeline() {
-    return isReleaseBranch() || 
-           env.CHANGE_BRANCH ==~ /${config.jenkinsRelatedRegex}/ ||
-           env.CHANGE_TITLE ==~ /${config.jenkinsRelatedRegex}/ ||
-           env.BRANCH_NAME ==~ /PR-(\d)+/ ||
-           isDryRunRelease()
 }
 
 // Return the configuration

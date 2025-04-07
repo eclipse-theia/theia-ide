@@ -1,5 +1,6 @@
 /**
  * This Jenkinsfile handles signing and notarizing Theia installers
+ * It's designed to be run automatically after the build job
  */
 
 import groovy.json.JsonSlurper
@@ -29,9 +30,6 @@ pipeline {
     }
     stages {
         stage('Sign and Notarize') {
-            when {
-                expression { jenkinsConfig.shouldExecutePipeline() }
-            }
             parallel {
                 stage('Process Linux') {
                     agent any
