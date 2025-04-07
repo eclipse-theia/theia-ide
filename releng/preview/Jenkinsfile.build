@@ -8,6 +8,7 @@ import groovy.json.JsonSlurper
 // Define variables at top level
 def jenkinsConfig
 def config
+def toStash
 
 // Load common Jenkins configuration inside a node context
 node {
@@ -16,10 +17,9 @@ node {
     // Load configuration with absolute path
     jenkinsConfig = load "${env.WORKSPACE}/releng/preview/jenkins.config.groovy"
     config = jenkinsConfig
+    // Set toStash after config is loaded
+    toStash = config.toStashDistInstallers
 }
-
-// Default folder to stash
-toStash = config.toStashDistInstallers
 
 pipeline {
     agent none
