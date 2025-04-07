@@ -5,22 +5,6 @@
 
 import groovy.json.JsonSlurper
 
-// Define variables at top level
-def jenkinsConfig
-def config
-def toStash
-
-// Load common Jenkins configuration inside a node context
-node {
-    // Checkout the source code first to ensure the file exists
-    checkout scm
-    // Load configuration with absolute path
-    jenkinsConfig = load "${env.WORKSPACE}/releng/preview/jenkins.config.groovy"
-    config = jenkinsConfig
-    // Set toStash after config is loaded
-    toStash = config.toStashDistInstallers
-}
-
 pipeline {
     agent none
     options {
@@ -31,15 +15,15 @@ pipeline {
         string(name: 'BUILD_NUMBER_PARAM', defaultValue: '', description: 'The build number from the upstream sign job')
     }
     environment {
-        THEIA_IDE_JENKINS_CI = "${config.environmentVars.THEIA_IDE_JENKINS_CI}"
-        NODE_OPTIONS = "${config.environmentVars.NODE_OPTIONS}"
+        THEIA_IDE_JENKINS_CI = 'true'
+        NODE_OPTIONS = '--max_old_space_size=4096'
     }
     stages {
         stage('Check if Upload is Required') {
             agent any
             steps {
                 script {
-                    if (jenkinsConfig.isDryRun()) {
+                    if (isDryRun()) {
                         echo "This is a dry run (not on the release branch: ${env.BRANCH_NAME}). Skipping upload phase."
                         currentBuild.result = 'SUCCESS'
                         return
@@ -49,7 +33,7 @@ pipeline {
         }
         stage('Update and Upload') {
             when {
-                expression { !jenkinsConfig.isDryRun() }
+                expression { !isDryRun() }
             }
             failFast true
             parallel {
@@ -60,7 +44,7 @@ pipeline {
                         echo "Fetching artifacts from sign job #${params.BUILD_NUMBER_PARAM}"
                         copyArtifacts projectName: 'theia-ide-sign-notarize', 
                                       selector: specific("${params.BUILD_NUMBER_PARAM}"),
-                                      filter: "${toStash}",
+                                      filter: "applications/electron/dist/*",
                                       fingerprintArtifacts: true,
                                       target: '.'
                         script {
@@ -71,7 +55,50 @@ pipeline {
                 stage('Update Metadata and Upload Mac') {
                     agent {
                         kubernetes {
-                            yaml "${config.podTemplates.withKnownHosts}"
+                            yaml """
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+  - name: theia-dev
+    image: eclipsetheia/theia-blueprint:builder
+    imagePullPolicy: Always
+    command:
+    - cat
+    tty: true
+    resources:
+      limits:
+        memory: "8Gi"
+        cpu: "2"
+      requests:
+        memory: "8Gi"
+        cpu: "2"
+    volumeMounts:
+    - name: global-cache
+      mountPath: /.cache
+    - name: global-yarn
+      mountPath: /.yarn      
+    - name: global-npm
+      mountPath: /.npm      
+    - name: electron-cache
+      mountPath: /.electron-gyp
+  - name: jnlp
+    volumeMounts:
+    - name: volume-known-hosts
+      mountPath: /home/jenkins/.ssh
+  volumes:
+  - name: global-cache
+    emptyDir: {}
+  - name: global-yarn
+    emptyDir: {}
+  - name: global-npm
+    emptyDir: {}
+  - name: electron-cache
+    emptyDir: {}
+  - name: volume-known-hosts
+    configMap:
+      name: known-hosts
+"""
                         }
                     }
                     steps {
@@ -79,7 +106,7 @@ pipeline {
                         echo "Fetching artifacts from sign job #${params.BUILD_NUMBER_PARAM}"
                         copyArtifacts projectName: 'theia-ide-sign-notarize', 
                                       selector: specific("${params.BUILD_NUMBER_PARAM}"),
-                                      filter: "${config.toStashDistMac}",
+                                      filter: "applications/electron/dist/mac-x64/**",
                                       fingerprintArtifacts: true,
                                       target: '.'
                         container('theia-dev') {
@@ -102,7 +129,50 @@ pipeline {
                 stage('Update Metadata and Upload Mac-Arm') {
                     agent {
                         kubernetes {
-                            yaml "${config.podTemplates.withKnownHosts}"
+                            yaml """
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+  - name: theia-dev
+    image: eclipsetheia/theia-blueprint:builder
+    imagePullPolicy: Always
+    command:
+    - cat
+    tty: true
+    resources:
+      limits:
+        memory: "8Gi"
+        cpu: "2"
+      requests:
+        memory: "8Gi"
+        cpu: "2"
+    volumeMounts:
+    - name: global-cache
+      mountPath: /.cache
+    - name: global-yarn
+      mountPath: /.yarn      
+    - name: global-npm
+      mountPath: /.npm      
+    - name: electron-cache
+      mountPath: /.electron-gyp
+  - name: jnlp
+    volumeMounts:
+    - name: volume-known-hosts
+      mountPath: /home/jenkins/.ssh
+  volumes:
+  - name: global-cache
+    emptyDir: {}
+  - name: global-yarn
+    emptyDir: {}
+  - name: global-npm
+    emptyDir: {}
+  - name: electron-cache
+    emptyDir: {}
+  - name: volume-known-hosts
+    configMap:
+      name: known-hosts
+"""
                         }
                     }
                     steps {
@@ -110,7 +180,7 @@ pipeline {
                         echo "Fetching artifacts from sign job #${params.BUILD_NUMBER_PARAM}"
                         copyArtifacts projectName: 'theia-ide-sign-notarize', 
                                       selector: specific("${params.BUILD_NUMBER_PARAM}"),
-                                      filter: "${config.toStashDistMacArm}",
+                                      filter: "applications/electron/dist/mac-arm64/**",
                                       fingerprintArtifacts: true,
                                       target: '.'
                         container('theia-dev') {
@@ -133,7 +203,50 @@ pipeline {
                 stage('Update Metadata and Upload Windows') {
                     agent {
                         kubernetes {
-                            yaml "${config.podTemplates.withKnownHosts}"
+                            yaml """
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+  - name: theia-dev
+    image: eclipsetheia/theia-blueprint:builder
+    imagePullPolicy: Always
+    command:
+    - cat
+    tty: true
+    resources:
+      limits:
+        memory: "8Gi"
+        cpu: "2"
+      requests:
+        memory: "8Gi"
+        cpu: "2"
+    volumeMounts:
+    - name: global-cache
+      mountPath: /.cache
+    - name: global-yarn
+      mountPath: /.yarn      
+    - name: global-npm
+      mountPath: /.npm      
+    - name: electron-cache
+      mountPath: /.electron-gyp
+  - name: jnlp
+    volumeMounts:
+    - name: volume-known-hosts
+      mountPath: /home/jenkins/.ssh
+  volumes:
+  - name: global-cache
+    emptyDir: {}
+  - name: global-yarn
+    emptyDir: {}
+  - name: global-npm
+    emptyDir: {}
+  - name: electron-cache
+    emptyDir: {}
+  - name: volume-known-hosts
+    configMap:
+      name: known-hosts
+"""
                         }
                     }
                     steps {
@@ -141,7 +254,7 @@ pipeline {
                         echo "Fetching artifacts from sign job #${params.BUILD_NUMBER_PARAM}"
                         copyArtifacts projectName: 'theia-ide-sign-notarize', 
                                      selector: specific("${params.BUILD_NUMBER_PARAM}"),
-                                     filter: "${toStash}",
+                                     filter: "applications/electron/dist/*",
                                      fingerprintArtifacts: true,
                                      target: '.'
                         container('theia-dev') {
@@ -168,7 +281,7 @@ pipeline {
 }
 
 def updateMetadata(String executable, String yaml, String platform, Boolean updatePaths, String fileExtension, int sleepBetweenRetries) {
-    if (!jenkinsConfig.isRelease()) {
+    if (!isRelease()) {
         echo "This is not a release, so skipping updating metadata for branch ${env.BRANCH_NAME}"
         return
     }
@@ -191,8 +304,8 @@ def updateMetadata(String executable, String yaml, String platform, Boolean upda
 }
 
 def uploadInstaller(String platform, String arch = '') {
-    if (jenkinsConfig.isReleaseBranch()) {
-        String targetFolder = arch ? "${config.distFolder}/${arch}" : config.distFolder
+    if (isReleaseBranch()) {
+        String targetFolder = arch ? "applications/electron/dist/${arch}" : "applications/electron/dist"
         def packageJSON = readJSON file: "package.json"
         String version = "${packageJSON.version}"
         
@@ -242,7 +355,7 @@ def getUpdatableVersions() {
  * and update the latest.yml file for older versions.
  */
 def copyInstallerAndUpdateLatestYml(String platform, String installer, String extension, String yaml, String updatableVersions) {
-    if (jenkinsConfig.isReleaseBranch()) {
+    if (isReleaseBranch()) {
         def packageJSON = readJSON file: "package.json"
         String version = "${packageJSON.version}"
         
@@ -268,4 +381,17 @@ def copyInstallerAndUpdateLatestYml(String platform, String installer, String ex
     } else {
         echo "Skipped copying installer for branch ${env.BRANCH_NAME}"
     }
+}
+
+// Helper functions for branch and release status
+def isReleaseBranch() {
+    return (env.BRANCH_NAME == "master")
+}
+
+def isDryRun() {
+    return !isReleaseBranch()
+}
+
+def isRelease() {
+    return !isDryRun()
 }

@@ -5,22 +5,6 @@
 
 import groovy.json.JsonSlurper
 
-// Define variables at top level
-def jenkinsConfig
-def config
-def toStash
-
-// Load common Jenkins configuration inside a node context
-node {
-    // Checkout the source code first to ensure the file exists
-    checkout scm
-    // Load configuration with absolute path
-    jenkinsConfig = load "${env.WORKSPACE}/releng/preview/jenkins.config.groovy"
-    config = jenkinsConfig
-    // Set toStash after config is loaded
-    toStash = config.toStashDistInstallers
-}
-
 pipeline {
     agent none
     options {
@@ -31,10 +15,10 @@ pipeline {
         string(name: 'BUILD_NUMBER_PARAM', defaultValue: '', description: 'The build number from the upstream build job')
     }
     environment {
-        THEIA_IDE_JENKINS_CI = "${config.environmentVars.THEIA_IDE_JENKINS_CI}"
-        msvs_version = "${config.windowsEnvVars.msvs_version}"
-        GYP_MSVS_VERSION = "${config.windowsEnvVars.GYP_MSVS_VERSION}"
-        NODE_OPTIONS = "${config.environmentVars.NODE_OPTIONS}"
+        THEIA_IDE_JENKINS_CI = 'true'
+        msvs_version = '2019'
+        GYP_MSVS_VERSION = '2019'
+        NODE_OPTIONS = '--max_old_space_size=4096'
     }
     stages {
         stage('Sign and Notarize') {
@@ -47,12 +31,12 @@ pipeline {
                         echo "Fetching artifacts from build #${params.BUILD_NUMBER_PARAM}"
                         copyArtifacts projectName: 'theia-ide-build', 
                                       selector: specific("${params.BUILD_NUMBER_PARAM}"),
-                                      filter: "${toStash}",
+                                      filter: "applications/electron/dist/*",
                                       fingerprintArtifacts: true,
                                       target: '.'
                         script {
-                            stash includes: "${toStash}", name: 'linux-signed'
-                            archiveArtifacts artifacts: "${toStash}", fingerprint: true
+                            stash includes: "applications/electron/dist/*", name: 'linux-signed'
+                            archiveArtifacts artifacts: "applications/electron/dist/*", fingerprint: true
                         }
                     }
                 }
@@ -61,7 +45,50 @@ pipeline {
                         stage('Sign and Notarize Mac') {
                             agent {
                                 kubernetes {
-                                    yaml "${config.podTemplates.withKnownHosts}"
+                                    yaml """
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+  - name: theia-dev
+    image: eclipsetheia/theia-blueprint:builder
+    imagePullPolicy: Always
+    command:
+    - cat
+    tty: true
+    resources:
+      limits:
+        memory: "8Gi"
+        cpu: "2"
+      requests:
+        memory: "8Gi"
+        cpu: "2"
+    volumeMounts:
+    - name: global-cache
+      mountPath: /.cache
+    - name: global-yarn
+      mountPath: /.yarn      
+    - name: global-npm
+      mountPath: /.npm      
+    - name: electron-cache
+      mountPath: /.electron-gyp
+  - name: jnlp
+    volumeMounts:
+    - name: volume-known-hosts
+      mountPath: /home/jenkins/.ssh
+  volumes:
+  - name: global-cache
+    emptyDir: {}
+  - name: global-yarn
+    emptyDir: {}
+  - name: global-npm
+    emptyDir: {}
+  - name: electron-cache
+    emptyDir: {}
+  - name: volume-known-hosts
+    configMap:
+      name: known-hosts
+"""
                                 }
                             }
                             steps {
@@ -69,7 +96,7 @@ pipeline {
                                 echo "Fetching artifacts from build #${params.BUILD_NUMBER_PARAM}"
                                 copyArtifacts projectName: 'theia-ide-build', 
                                              selector: specific("${params.BUILD_NUMBER_PARAM}"),
-                                             filter: "${config.toStashDist}",
+                                             filter: "applications/electron/dist/**",
                                              fingerprintArtifacts: true,
                                              target: '.'
                                 container('theia-dev') {
@@ -82,8 +109,8 @@ pipeline {
                                         }
                                     }
                                 }
-                                stash includes: "${config.toStashDistMac}", name: 'mac2'
-                                stash includes: "${config.toStashDistMacArm}", name: 'mac2-arm'
+                                stash includes: "applications/electron/dist/mac-x64/**", name: 'mac2'
+                                stash includes: "applications/electron/dist/mac-arm64/**", name: 'mac2-arm'
                             }
                         }
                         stage('Recreate Zip with Ditto for correct file permissions') {
@@ -100,7 +127,7 @@ pipeline {
 
                                     def architectures = ['mac-x64', 'mac-arm64']
                                     architectures.each { arch -> 
-                                        String targetFolder = "${config.distFolder}/${arch}"
+                                        String targetFolder = "applications/electron/dist/${arch}"
                                         def notarizedDmg = "${targetFolder}/TheiaIDE.dmg"
                                         def mountPoint = "${targetFolder}/TheiaIDE-mount"
                                         def extractedFolder = "${targetFolder}/TheiaIDE-extracted"
@@ -129,10 +156,10 @@ pipeline {
                                         sh "rm -rf \"${extractedFolder}\" \"${mountPoint}\""
                                     }
                                 }
-                                stash includes: "${config.toStashDistMac}", name: 'mac3'
-                                stash includes: "${config.toStashDistMacArm}", name: 'mac3-arm'
-                                archiveArtifacts artifacts: "${config.toStashDistMac}", fingerprint: true
-                                archiveArtifacts artifacts: "${config.toStashDistMacArm}", fingerprint: true
+                                stash includes: "applications/electron/dist/mac-x64/**", name: 'mac3'
+                                stash includes: "applications/electron/dist/mac-arm64/**", name: 'mac3-arm'
+                                archiveArtifacts artifacts: "applications/electron/dist/mac-x64/**", fingerprint: true
+                                archiveArtifacts artifacts: "applications/electron/dist/mac-arm64/**", fingerprint: true
                             }
                         }
                     }
@@ -140,7 +167,50 @@ pipeline {
                 stage('Sign Windows') {
                     agent {
                         kubernetes {
-                            yaml "${config.podTemplates.withKnownHosts}"
+                            yaml """
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+  - name: theia-dev
+    image: eclipsetheia/theia-blueprint:builder
+    imagePullPolicy: Always
+    command:
+    - cat
+    tty: true
+    resources:
+      limits:
+        memory: "8Gi"
+        cpu: "2"
+      requests:
+        memory: "8Gi"
+        cpu: "2"
+    volumeMounts:
+    - name: global-cache
+      mountPath: /.cache
+    - name: global-yarn
+      mountPath: /.yarn      
+    - name: global-npm
+      mountPath: /.npm      
+    - name: electron-cache
+      mountPath: /.electron-gyp
+  - name: jnlp
+    volumeMounts:
+    - name: volume-known-hosts
+      mountPath: /home/jenkins/.ssh
+  volumes:
+  - name: global-cache
+    emptyDir: {}
+  - name: global-yarn
+    emptyDir: {}
+  - name: global-npm
+    emptyDir: {}
+  - name: electron-cache
+    emptyDir: {}
+  - name: volume-known-hosts
+    configMap:
+      name: known-hosts
+"""
                         }
                     }
                     steps {
@@ -148,7 +218,7 @@ pipeline {
                         echo "Fetching artifacts from build #${params.BUILD_NUMBER_PARAM}"
                         copyArtifacts projectName: 'theia-ide-build', 
                                      selector: specific("${params.BUILD_NUMBER_PARAM}"),
-                                     filter: "${toStash}",
+                                     filter: "applications/electron/dist/*",
                                      fingerprintArtifacts: true,
                                      target: '.'
                         container('theia-dev') {
@@ -158,8 +228,8 @@ pipeline {
                                 }
                             }
                         }
-                        stash includes: "${toStash}", name: 'win-signed'
-                        archiveArtifacts artifacts: "${toStash}", fingerprint: true
+                        stash includes: "applications/electron/dist/*", name: 'win-signed'
+                        archiveArtifacts artifacts: "applications/electron/dist/*", fingerprint: true
                     }
                 }
             }
@@ -168,7 +238,7 @@ pipeline {
     post {
         success {
             script {
-                if (jenkinsConfig.isDryRun()) {
+                if (isDryRun()) {
                     echo "Skipping upload step because this is a dry run (not on the release branch: ${env.BRANCH_NAME})"
                 } else {
                     build job: 'theia-ide-upload', 
@@ -181,21 +251,21 @@ pipeline {
 }
 
 def signInstaller(String ext, String os, String arch = '') {
-    if (!jenkinsConfig.isRelease()) {
+    if (!isRelease()) {
         echo "This is not a release, so skipping installer signing for branch ${env.BRANCH_NAME}"
         return
     }
 
     // Adjust the dist folder to include architecture if supplied
-    String targetFolder = arch ? "${config.distFolder}/${arch}" : config.distFolder
+    String targetFolder = arch ? "applications/electron/dist/${arch}" : "applications/electron/dist"
     List installers = findFiles(glob: "${targetFolder}/*.${ext}")
 
     // Get the appropriate signing service URL
     String url
     if (os == 'mac') {
-        url = config.signingServices.mac
+        url = 'https://cbi.eclipse.org/macos/codesign/sign'
     } else if (os == 'windows') {
-        url = config.signingServices.windows
+        url = 'https://cbi.eclipse.org/authenticode/sign'
     } else {
         error("Error during signing: unsupported OS: ${os}")
     }
@@ -210,15 +280,15 @@ def signInstaller(String ext, String os, String arch = '') {
 }
 
 def notarizeInstaller(String ext, String arch = '') {
-    if (!jenkinsConfig.isRelease()) {
+    if (!isRelease()) {
         echo "This is not a release, so skipping installer notarizing for branch ${env.BRANCH_NAME}"
         return
     }
 
-    String service = config.signingServices.notarize
+    String service = 'https://cbi.eclipse.org/macos/xcrun'
 
     // Adjust the dist folder to include architecture if supplied
-    String targetFolder = arch ? "${config.distFolder}/${arch}" : config.distFolder
+    String targetFolder = arch ? "applications/electron/dist/${arch}" : "applications/electron/dist"
     List installers = findFiles(glob: "${targetFolder}/*.${ext}")
 
     if (installers.size() == 1) {
@@ -250,4 +320,17 @@ def notarizeInstaller(String ext, String arch = '') {
     } else {
         error("Error during notarization: installer not found or multiple installers exist: ${installers.size()}")
     }
+}
+
+// Helper functions for branch and release status
+def isReleaseBranch() {
+    return (env.BRANCH_NAME == "master")
+}
+
+def isDryRun() {
+    return !isReleaseBranch()
+}
+
+def isRelease() {
+    return !isDryRun()
 }

@@ -5,22 +5,6 @@
 
 import groovy.json.JsonSlurper
 
-// Define variables at top level
-def jenkinsConfig
-def config
-def toStash
-
-// Load common Jenkins configuration inside a node context
-node {
-    // Checkout the source code first to ensure the file exists
-    checkout scm
-    // Load configuration with absolute path
-    jenkinsConfig = load "${env.WORKSPACE}/releng/preview/jenkins.config.groovy"
-    config = jenkinsConfig
-    // Set toStash after config is loaded
-    toStash = config.toStashDistInstallers
-}
-
 pipeline {
     agent none
     options {
@@ -28,10 +12,10 @@ pipeline {
         disableConcurrentBuilds()
     }
     environment {
-        THEIA_IDE_JENKINS_CI = "${config.environmentVars.THEIA_IDE_JENKINS_CI}"
-        msvs_version = "${config.windowsEnvVars.msvs_version}"
-        GYP_MSVS_VERSION = "${config.windowsEnvVars.GYP_MSVS_VERSION}"
-        NODE_OPTIONS = "${config.environmentVars.NODE_OPTIONS}"
+        THEIA_IDE_JENKINS_CI = 'true'
+        msvs_version = '2019'
+        GYP_MSVS_VERSION = '2019'
+        NODE_OPTIONS = '--max_old_space_size=4096'
         
         // Store the build number for downstream jobs
         BUILD_NUMBER_PARAM = "${BUILD_NUMBER}"
@@ -43,7 +27,43 @@ pipeline {
                 stage('Create Linux Installer') {
                     agent {
                         kubernetes {
-                            yaml "${config.podTemplates.standard}"
+                            yaml """
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+  - name: theia-dev
+    image: eclipsetheia/theia-blueprint:builder
+    imagePullPolicy: Always
+    command:
+    - cat
+    tty: true
+    resources:
+      limits:
+        memory: "8Gi"
+        cpu: "2"
+      requests:
+        memory: "8Gi"
+        cpu: "2"
+    volumeMounts:
+    - name: global-cache
+      mountPath: /.cache
+    - name: global-yarn
+      mountPath: /.yarn      
+    - name: global-npm
+      mountPath: /.npm      
+    - name: electron-cache
+      mountPath: /.electron-gyp
+  volumes:
+  - name: global-cache
+    emptyDir: {}
+  - name: global-yarn
+    emptyDir: {}
+  - name: global-npm
+    emptyDir: {}
+  - name: electron-cache
+    emptyDir: {}
+"""
                         }
                     }
                     steps {
@@ -54,8 +74,8 @@ pipeline {
                                 }
                             }
                         }
-                        stash includes: "${toStash}", name: 'linux'
-                        archiveArtifacts artifacts: "${toStash}", fingerprint: true
+                        stash includes: "applications/electron/dist/*", name: 'linux'
+                        archiveArtifacts artifacts: "applications/electron/dist/*", fingerprint: true
                     }
                     post {
                         failure {
@@ -74,8 +94,8 @@ pipeline {
                         script {
                             createMacInstaller()
                         }
-                        stash includes: "${config.toStashDist}", name: 'mac'
-                        archiveArtifacts artifacts: "${config.toStashDist}", fingerprint: true
+                        stash includes: "applications/electron/dist/**", name: 'mac'
+                        archiveArtifacts artifacts: "applications/electron/dist/**", fingerprint: true
                     }
                     post {
                         failure {
@@ -99,8 +119,8 @@ pipeline {
 
                             buildInstaller(60)
                         }
-                        stash includes: "${toStash}", name: 'win'
-                        archiveArtifacts artifacts: "${toStash}", fingerprint: true
+                        stash includes: "applications/electron/dist/*", name: 'win'
+                        archiveArtifacts artifacts: "applications/electron/dist/*", fingerprint: true
                     }
                     post {
                         failure {
@@ -141,38 +161,38 @@ def createMacInstaller() {
     checkout scm
 
     // Step 1: Ensure directory exists and download the zip files
-    sh "mkdir -p ${config.distFolder}"
+    sh "mkdir -p applications/electron/dist"
     
     // Step 2: Download and extract zip files for both architectures
     def architectures = ['mac-arm64', 'mac-x64']
     architectures.each { arch ->
-        sh "curl -L -o ${config.distFolder}/${arch}.zip https://github.com/eclipse-theia/theia-ide/releases/download/pre-release/${arch}.zip"
-        sh "unzip ${config.distFolder}/${arch}.zip -d ${config.distFolder}/${arch}"
-        sh "rm ${config.distFolder}/${arch}.zip"
+        sh "curl -L -o applications/electron/dist/${arch}.zip https://github.com/eclipse-theia/theia-ide/releases/download/pre-release/${arch}.zip"
+        sh "unzip applications/electron/dist/${arch}.zip -d applications/electron/dist/${arch}"
+        sh "rm applications/electron/dist/${arch}.zip"
     }
     
-    sh "ls -al ${config.distFolder}/mac-arm64 ${config.distFolder}/mac-x64"
+    sh "ls -al applications/electron/dist/mac-arm64 applications/electron/dist/mac-x64"
 
     // Step 3: Unpack DMG files for signing
     architectures.each { arch ->
-        def mountPoint = "${config.distFolder}/${arch}/TheiaIDE-dmg-mounted"
+        def mountPoint = "applications/electron/dist/${arch}/TheiaIDE-dmg-mounted"
         sh "rm -rf ${mountPoint}"
         sh "mkdir -p ${mountPoint}"
-        sh "hdiutil attach ${config.distFolder}/${arch}/TheiaIDE.dmg -mountpoint ${mountPoint}"
+        sh "hdiutil attach applications/electron/dist/${arch}/TheiaIDE.dmg -mountpoint ${mountPoint}"
         
         // Create DMG layout structure
-        sh "mkdir -p ${config.distFolder}/${arch}/TheiaIDE-dmg-layout/.background"
+        sh "mkdir -p applications/electron/dist/${arch}/TheiaIDE-dmg-layout/.background"
         
         // Copy DS_Store if exists
         sh """
             if [ -f ${mountPoint}/.DS_Store ]; then
-                cp ${mountPoint}/.DS_Store ${config.distFolder}/${arch}/TheiaIDE-dmg-layout/
+                cp ${mountPoint}/.DS_Store applications/electron/dist/${arch}/TheiaIDE-dmg-layout/
             fi
         """
         
         // Copy app and create Applications symlink
-        sh "cp -R ${mountPoint}/TheiaIDE.app ${config.distFolder}/${arch}/TheiaIDE-dmg-layout/TheiaIDE.app"
-        sh "ln -s /Applications ${config.distFolder}/${arch}/TheiaIDE-dmg-layout/Applications"
+        sh "cp -R ${mountPoint}/TheiaIDE.app applications/electron/dist/${arch}/TheiaIDE-dmg-layout/TheiaIDE.app"
+        sh "ln -s /Applications applications/electron/dist/${arch}/TheiaIDE-dmg-layout/Applications"
         
         // Detach mounted DMG
         sh "hdiutil detach ${mountPoint}"
@@ -180,15 +200,15 @@ def createMacInstaller() {
 
     // Step 4: Remove quarantine bits from all files
     architectures.each { arch ->
-        sh "xattr -d -r com.apple.quarantine ${config.distFolder}/${arch}/TheiaIDE-dmg-layout || true"
+        sh "xattr -d -r com.apple.quarantine applications/electron/dist/${arch}/TheiaIDE-dmg-layout || true"
     }
     
     // Step 5: Sign binaries if this is a release
-    if (jenkinsConfig.isRelease()) {
+    if (isRelease()) {
         sh 'yarn --frozen-lockfile --force'
         sshagent(['projects-storage.eclipse.org-bot-ssh']) {
             architectures.each { arch ->
-                def appPath = "/${pwd()}/${config.distFolder}/${arch}/TheiaIDE-dmg-layout/TheiaIDE.app"
+                def appPath = "/${pwd()}/applications/electron/dist/${arch}/TheiaIDE-dmg-layout/TheiaIDE.app"
                 sh "yarn electron sign:directory -d \"${appPath}\""
             }
         }
@@ -198,15 +218,15 @@ def createMacInstaller() {
 
     // Step 6: Create the final DMG files
     architectures.each { arch ->
-        sh "rm -f ${config.distFolder}/${arch}/TheiaIDE.dmg"
-        sh "hdiutil create -volname TheiaIDE -srcfolder ${config.distFolder}/${arch}/TheiaIDE-dmg-layout -fs HFS+ -format UDZO ${config.distFolder}/${arch}/TheiaIDE.dmg"
-        sh "rm -rf ${config.distFolder}/${arch}/TheiaIDE-dmg-layout"
+        sh "rm -f applications/electron/dist/${arch}/TheiaIDE.dmg"
+        sh "hdiutil create -volname TheiaIDE -srcfolder applications/electron/dist/${arch}/TheiaIDE-dmg-layout -fs HFS+ -format UDZO applications/electron/dist/${arch}/TheiaIDE.dmg"
+        sh "rm -rf applications/electron/dist/${arch}/TheiaIDE-dmg-layout"
         
         // Cleanup files we don't require
-        sh "find ${config.distFolder}/${arch} -type f ! -name \"TheiaIDE.dmg\" ! -name \"latest-mac.yml\" -delete"
+        sh "find applications/electron/dist/${arch} -type f ! -name \"TheiaIDE.dmg\" ! -name \"latest-mac.yml\" -delete"
     }
     
-    sh "ls -al ${config.distFolder}/mac-arm64 ${config.distFolder}/mac-x64"
+    sh "ls -al applications/electron/dist/mac-arm64 applications/electron/dist/mac-x64"
 }
 
 def buildInstaller(int sleepBetweenRetries) {
@@ -218,7 +238,7 @@ def buildInstaller(int sleepBetweenRetries) {
     // Prepare build command based on release status
     buildPackageCmd = 'yarn --frozen-lockfile --force && yarn build:extensions && yarn electron build'
     
-    if (jenkinsConfig.isRelease()) {
+    if (isRelease()) {
         buildPackageCmd += ":prod"
     }
 
@@ -238,7 +258,7 @@ def buildInstaller(int sleepBetweenRetries) {
 
     // Package the built application
     sshagent(['projects-storage.eclipse.org-bot-ssh']) {
-        if (jenkinsConfig.isRelease()) {
+        if (isRelease()) {
             sh 'yarn download:plugins && yarn electron package:prod'
         } else {
             // ATM the plugins are not useful for non-releases, so
@@ -246,4 +266,17 @@ def buildInstaller(int sleepBetweenRetries) {
             sh 'yarn electron package:preview'
         }
     }
+}
+
+// Helper functions for branch and release status
+def isReleaseBranch() {
+    return (env.BRANCH_NAME == "master")
+}
+
+def isDryRun() {
+    return !isReleaseBranch()
+}
+
+def isRelease() {
+    return !isDryRun()
 }
