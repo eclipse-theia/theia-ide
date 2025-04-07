@@ -22,7 +22,6 @@ pipeline {
     }
     stages {
         stage('Build') {
-            failFast true
             parallel {
                 stage('Create Linux Installer') {
                     agent {

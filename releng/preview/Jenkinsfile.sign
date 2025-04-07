@@ -22,7 +22,6 @@ pipeline {
     }
     stages {
         stage('Sign and Notarize') {
-            failFast true
             parallel {
                 stage('Process Linux') {
                     agent any

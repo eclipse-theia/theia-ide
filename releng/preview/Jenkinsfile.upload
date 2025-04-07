@@ -35,7 +35,6 @@ pipeline {
             when {
                 expression { !isDryRun() }
             }
-            failFast true
             parallel {
                 stage('Upload Linux') {
                     agent any
