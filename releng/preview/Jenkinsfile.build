@@ -1,0 +1,309 @@
+/**
+ * This Jenkinsfile builds Theia across the major OS platforms
+ * It's designed to be run only manually
+ */
+
+import groovy.json.JsonSlurper
+
+// Set permissions to allow the sign job to copy artifacts from this build
+properties([
+    copyArtifactPermission('theia-ide-sign-notarize'),
+    copyArtifactPermission('theia-ide-upload')
+])
+
+pipeline {
+    agent none
+    
+    // Store important values for later use
+    environment {
+        STORED_GIT_BRANCH = "${env.GIT_BRANCH ?: env.BRANCH_NAME ?: 'unknown'}"
+        THEIA_IDE_JENKINS_CI = 'true'
+        msvs_version = '2019'
+        GYP_MSVS_VERSION = '2019'
+        npm_config_msvs_version = '2019'
+        NODE_OPTIONS = '--max_old_space_size=4096'
+    }
+    options {
+        timeout(time: 5, unit: 'HOURS')
+        disableConcurrentBuilds()
+    }
+    parameters {
+        booleanParam(name: 'DRY_RUN', defaultValue: true, description: 'If true, treat this as a dry run (no deployment of artifacts)')
+        booleanParam(name: 'IS_PR', defaultValue: true, description: 'If true, treat this as a PR (only run this stage)')
+    }
+    stages {
+        stage('Build') {
+            parallel {
+                stage('Linux: Create Installer') {
+                    agent {
+                        kubernetes {
+                            yaml """
+apiVersion: v1
+kind: Pod
+spec:
+  podRetention: never()
+  containers:
+  - name: theia-dev
+    image: eclipsetheia/theia-blueprint:builder
+    imagePullPolicy: Always
+    command:
+    - cat
+    tty: true
+    resources:
+      limits:
+        memory: "8000Mi"
+        cpu: "2000m"
+      requests:
+        memory: "512Mi"
+        cpu: "200m"
+    volumeMounts:
+    - name: global-cache
+      mountPath: /.cache
+    - name: global-yarn
+      mountPath: /.yarn      
+    - name: global-npm
+      mountPath: /.npm      
+    - name: electron-cache
+      mountPath: /.electron-gyp
+  volumes:
+  - name: global-cache
+    emptyDir: {}
+  - name: global-yarn
+    emptyDir: {}
+  - name: global-npm
+    emptyDir: {}
+  - name: electron-cache
+    emptyDir: {}
+"""
+                        }
+                    }
+                    steps {
+                        container('theia-dev') {
+                            withCredentials([string(credentialsId: "github-bot-token", variable: 'GITHUB_TOKEN')]) {
+                                script {
+                                    buildInstaller(120)
+                                }
+                            }
+                        }
+                        // Move Linux artifacts to linux folder for archiving
+                        sh "mkdir -p applications/electron/dist/linux"
+                        sh "find applications/electron/dist -maxdepth 1 -type f -not -path '*/\\.*' -exec mv {} applications/electron/dist/linux/ \\;"
+                        archiveArtifacts artifacts: "applications/electron/dist/linux/*", fingerprint: true
+                    }
+                    post {
+                        failure {
+                            error("Linux installer creation failed, aborting...")
+                        }
+                    }
+                }
+                stage('Mac: Create Installer') {
+                    options {
+                        skipDefaultCheckout true
+                    }
+                    agent {
+                        label 'macos'
+                    }
+                    steps {
+                        nodejs(nodeJSInstallationName: 'node_22.x') {
+                            script {
+                                createMacInstaller()
+                            }
+                        }
+                        archiveArtifacts artifacts: "applications/electron/dist/**", fingerprint: true
+                    }
+                    post {
+                        failure {
+                            error("Mac installer creation failed, aborting...")
+                        }
+                    }
+                }
+                stage('Windows: Create Installer') {
+                    agent {
+                        label 'windows'
+                    }
+                    steps {                 
+                        nodejs(nodeJSInstallationName: 'node_22.x') {
+                            sh "node --version"
+                            sh "npx node-gyp@9.4.1 install 22.15.1"
+
+                            // analyze memory usage
+                            bat "wmic ComputerSystem get TotalPhysicalMemory"
+                            bat "wmic OS get FreePhysicalMemory"
+                            bat "tasklist"
+
+                            buildInstaller(60)
+                        }
+                        // Move Windows artifacts to windows folder for archiving
+                        sh "mkdir -p applications/electron/dist/windows"
+                        sh "find applications/electron/dist -maxdepth 1 -type f -not -path '*/\\.*' -exec mv {} applications/electron/dist/windows/ \\;"
+                        archiveArtifacts artifacts: "applications/electron/dist/windows/*", fingerprint: true
+                    }
+                    post {
+                        failure {
+                        error("Windows installer creation failed, aborting...")
+                        }
+                    }
+                }
+            }
+        }
+    }
+    post {
+        success {
+            script {
+                if (isPR()) {
+                    echo "This is a PR build. Skipping triggering of sign and notarize job."
+                } else {
+                    echo "This is NOT a PR build. Preparing to trigger sign and notarize job."
+                    echo "DRY_RUN parameter value: ${params.DRY_RUN}"
+                    
+                    build job: 'theia-ide-sign-notarize', 
+                            parameters: [
+                                string(name: 'BUILD_NUMBER_PARAM', value: "${BUILD_NUMBER}"),
+                                booleanParam(name: 'DRY_RUN', value: params.DRY_RUN)
+                            ],
+                            wait: false
+                    
+                    echo "Triggered sign and notarize job successfully"
+                }
+            }
+        }
+    }
+}
+
+def detachVolume(String mountpoint) {
+    try {
+        sh "hdiutil detach \"${mountpoint}\" -force"
+    } catch (Exception ex) {
+        echo "Failed to detach ${mountpoint}: ${ex}"
+    }
+}
+
+def createMacInstaller() {
+    // Step 0: Clean up previously mounted DMG files and checkout scm
+    def mountPoints = [
+        "/${pwd()}/applications/electron/dist/mac-arm64/TheiaIDE-dmg-mounted",
+        "/${pwd()}/applications/electron/dist/mac-x64/TheiaIDE-dmg-mounted",
+        "/${pwd()}/applications/electron/dist/mac-arm64/TheiaIDE-mount",
+        "/${pwd()}/applications/electron/dist/mac-x64/TheiaIDE-mount"
+    ]
+    
+    mountPoints.each { point -> detachVolume(point) }
+    checkout scm
+
+    // Step 1: Ensure directory exists and download the zip files
+    sh "mkdir -p applications/electron/dist"
+    
+    // Step 2: Download and extract zip files for both architectures
+    def architectures = ['mac-arm64', 'mac-x64']
+    architectures.each { arch ->
+        sh "curl -L -o applications/electron/dist/${arch}.zip https://github.com/eclipse-theia/theia-ide/releases/download/pre-release/${arch}.zip"
+        sh "unzip -o applications/electron/dist/${arch}.zip -d applications/electron/dist/${arch}"
+        sh "rm applications/electron/dist/${arch}.zip"
+    }
+    
+    sh "ls -al applications/electron/dist/mac-arm64 applications/electron/dist/mac-x64"
+
+    // Step 3: Unpack DMG files for signing
+    architectures.each { arch ->
+        def mountPoint = "applications/electron/dist/${arch}/TheiaIDE-dmg-mounted"
+        sh "rm -rf ${mountPoint}"
+        sh "mkdir -p ${mountPoint}"
+        sh "hdiutil attach applications/electron/dist/${arch}/TheiaIDE.dmg -mountpoint ${mountPoint}"
+        
+        // Create DMG layout structure
+        sh "mkdir -p applications/electron/dist/${arch}/TheiaIDE-dmg-layout/.background"
+        
+        // Copy DS_Store if exists
+        sh """
+            if [ -f ${mountPoint}/.DS_Store ]; then
+                cp ${mountPoint}/.DS_Store applications/electron/dist/${arch}/TheiaIDE-dmg-layout/
+            fi
+        """
+        
+        // Copy app and create Applications symlink
+        sh "cp -R ${mountPoint}/TheiaIDE.app applications/electron/dist/${arch}/TheiaIDE-dmg-layout/TheiaIDE.app"
+        sh "ln -s /Applications applications/electron/dist/${arch}/TheiaIDE-dmg-layout/Applications"
+        
+        // Detach mounted DMG
+        sh "hdiutil detach ${mountPoint}"
+    }
+
+    // Step 4: Remove quarantine bits from all files
+    architectures.each { arch ->
+        sh "xattr -d -r com.apple.quarantine applications/electron/dist/${arch}/TheiaIDE-dmg-layout || true"
+    }
+    
+    // Step 5: Sign binaries if this is not a dry run
+    if (!isDryRun()) {
+        sh 'yarn --frozen-lockfile --force'
+        sshagent(['projects-storage.eclipse.org-bot-ssh']) {
+            architectures.each { arch ->
+                def appPath = "/${pwd()}/applications/electron/dist/${arch}/TheiaIDE-dmg-layout/TheiaIDE.app"
+                sh "yarn electron sign:directory -d \"${appPath}\""
+            }
+        }
+    } else {
+        echo "This is a dry run, so skipping binary signing"
+    }
+
+    // Step 6: Create the final DMG files
+    architectures.each { arch ->
+        sh "rm -f applications/electron/dist/${arch}/TheiaIDE.dmg"
+        sh "hdiutil create -volname TheiaIDE -srcfolder applications/electron/dist/${arch}/TheiaIDE-dmg-layout -fs HFS+ -format UDZO applications/electron/dist/${arch}/TheiaIDE.dmg"
+        sh "rm -rf applications/electron/dist/${arch}/TheiaIDE-dmg-layout"
+        
+        // Cleanup files we don't require
+        sh "find applications/electron/dist/${arch} -type f ! -name \"TheiaIDE.dmg\" ! -name \"latest-mac.yml\" -delete"
+    }
+    
+    sh "ls -al applications/electron/dist/mac-arm64 applications/electron/dist/mac-x64"
+}
+
+def buildInstaller(int sleepBetweenRetries) {
+    int maxRetry = 1
+    String buildPackageCmd
+
+    checkout scm
+
+    // Prepare build command based on dry run status
+    buildPackageCmd = 'yarn --frozen-lockfile --force && yarn build:extensions && yarn electron build'
+    
+    if (!isDryRun()) {
+        buildPackageCmd += ":prod"
+    }
+
+    sh 'node --version'
+    sh 'printenv && yarn cache dir'
+    
+    // Execute build with retry capability
+    try {
+        sh(script: buildPackageCmd)
+    } catch (error) {
+        retry(maxRetry) {
+            sleep(sleepBetweenRetries)
+            echo 'yarn failed - Retrying'
+            sh(script: buildPackageCmd)
+        }
+    }
+
+    // Package the built application
+    sshagent(['projects-storage.eclipse.org-bot-ssh']) {
+        if (!isDryRun()) {
+            sh 'yarn download:plugins && yarn electron package:prod'
+        } else {
+            // ATM the plugins are not useful for dry runs, so
+            // let's skip fetching them
+            sh 'yarn electron package:preview'
+        }
+    }
+}
+
+// Helper function for dry run status
+def isDryRun() {
+    return params.DRY_RUN
+}
+
+// Helper function for dPR status
+def isPR() {
+    return params.IS_PR
+}

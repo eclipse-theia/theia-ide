@@ -1,0 +1,324 @@
+/**
+ * This Jenkinsfile handles signing and notarizing Theia installers
+ * It's designed to be run automatically after the build job
+ */
+
+import groovy.json.JsonSlurper
+
+// Set permissions to allow the upload job to copy artifacts from this build
+properties([
+    copyArtifactPermission('theia-ide-upload')
+])
+
+pipeline {
+    agent none
+    options {
+        timeout(time: 5, unit: 'HOURS')
+        disableConcurrentBuilds()
+    }
+    parameters {
+        string(name: 'BUILD_NUMBER_PARAM', defaultValue: '', description: 'The build number from the upstream build job')
+        booleanParam(name: 'DRY_RUN', defaultValue: true, description: 'If true, treat this as a dry run (no deployment of artifacts)')
+    }
+    environment {
+        THEIA_IDE_JENKINS_CI = 'true'
+        msvs_version = '2019'
+        GYP_MSVS_VERSION = '2019'
+        NODE_OPTIONS = '--max_old_space_size=4096'
+    }
+    stages {
+        stage('Sign and Notarize') {
+            parallel {
+                stage('Mac') {
+                    stages {
+                        stage('Mac: Sign and Notarize') {
+                            agent {
+                                kubernetes {
+                                    yaml """
+apiVersion: v1
+kind: Pod
+spec:
+  podRetention: never()
+  containers:
+  - name: theia-dev
+    image: eclipsetheia/theia-blueprint:builder
+    imagePullPolicy: Always
+    command:
+    - cat
+    tty: true
+    resources:
+      limits:
+        memory: "8000Mi"
+        cpu: "2000m"
+      requests:
+        memory: "512Mi"
+        cpu: "200m"
+    volumeMounts:
+    - name: global-cache
+      mountPath: /.cache
+    - name: global-yarn
+      mountPath: /.yarn      
+    - name: global-npm
+      mountPath: /.npm      
+    - name: electron-cache
+      mountPath: /.electron-gyp
+  - name: jnlp
+    volumeMounts:
+    - name: volume-known-hosts
+      mountPath: /home/jenkins/.ssh
+  volumes:
+  - name: global-cache
+    emptyDir: {}
+  - name: global-yarn
+    emptyDir: {}
+  - name: global-npm
+    emptyDir: {}
+  - name: electron-cache
+    emptyDir: {}
+  - name: volume-known-hosts
+    configMap:
+      name: known-hosts
+"""
+                                }
+                            }
+                            steps {
+                                checkout scm
+                                echo "Fetching artifacts from 'theia-ide-release' build #${params.BUILD_NUMBER_PARAM}"
+
+                                copyArtifacts(
+                                    projectName: "theia-ide-release",
+                                    selector: specific("${params.BUILD_NUMBER_PARAM}"),
+                                    filter: 'applications/electron/dist/**',
+                                    target: '.',
+                                    fingerprintArtifacts: true
+                                )
+                                
+                                container('theia-dev') {
+                                    withCredentials([string(credentialsId: "github-bot-token", variable: 'GITHUB_TOKEN')]) {
+                                        script {
+                                            signInstaller('dmg', 'mac', 'mac-x64')
+                                            notarizeInstaller('dmg', 'mac-x64')
+                                            signInstaller('dmg', 'mac', 'mac-arm64')
+                                            notarizeInstaller('dmg', 'mac-arm64')
+                                        }
+                                    }
+                                }
+                                stash includes: "applications/electron/dist/mac-x64/**", name: 'mac'
+                                stash includes: "applications/electron/dist/mac-arm64/**", name: 'mac-arm'
+                            }
+                        }
+                        stage('Mac: Recreate Zip with Ditto for correct file permissions') {
+                            agent {
+                                label 'macos'
+                            }
+                            steps {
+                                checkout scm
+                                unstash 'mac'
+                                unstash 'mac-arm'
+                                script {
+                                    def packageJSON = readJSON file: "package.json"
+                                    String version = "${packageJSON.version}"
+
+                                    def architectures = ['mac-x64', 'mac-arm64']
+                                    architectures.each { arch -> 
+                                        String targetFolder = "applications/electron/dist/${arch}"
+                                        def notarizedDmg = "${targetFolder}/TheiaIDE.dmg"
+                                        def mountPoint = "${targetFolder}/TheiaIDE-mount"
+                                        def extractedFolder = "${targetFolder}/TheiaIDE-extracted"
+                                        def rezippedFile = "${targetFolder}/TheiaIDE-rezipped.zip"
+                                        def archSuffix = arch == 'mac-arm64' ? '-arm64' : ''
+                                        def finalZip = "${targetFolder}/TheiaIDE-${version}${archSuffix}-mac.zip"
+                                        
+                                        // Clean and prepare
+                                        sh "rm -rf \"${extractedFolder}\" \"${mountPoint}\""
+                                        sh "mkdir -p \"${extractedFolder}\" \"${mountPoint}\""
+                                        
+                                        // Mount DMG
+                                        sh "hdiutil attach \"${notarizedDmg}\" -mountpoint \"${mountPoint}\""
+                                        sleep 5
+                                        
+                                        // Copy .app and check contents
+                                        sh "ditto \"${mountPoint}/TheiaIDE.app\" \"${extractedFolder}/TheiaIDE.app\""
+                                        sh "hdiutil detach \"${mountPoint}\""
+                                        
+                                        // Create zip with ditto for proper permissions
+                                        sh "ditto -c -k \"${extractedFolder}\" \"${rezippedFile}\""
+                                        sh "rm -f \"${finalZip}\""
+                                        sh "mv \"${rezippedFile}\" \"${finalZip}\""
+                                        
+                                        // Cleanup
+                                        sh "rm -rf \"${extractedFolder}\" \"${mountPoint}\""
+                                    }
+                                }
+                                archiveArtifacts artifacts: "applications/electron/dist/mac-x64/**", fingerprint: true
+                                archiveArtifacts artifacts: "applications/electron/dist/mac-arm64/**", fingerprint: true
+                            }
+                        }
+                    }
+                }
+                stage('Windows: Sign') {
+                    agent {
+                        kubernetes {
+                            yaml """
+apiVersion: v1
+kind: Pod
+spec:
+  podRetention: never()
+  containers:
+  - name: theia-dev
+    image: eclipsetheia/theia-blueprint:builder
+    imagePullPolicy: Always
+    command:
+    - cat
+    tty: true
+    resources:
+      limits:
+        memory: "8000Mi"
+        cpu: "2000m"
+      requests:
+        memory: "512Mi"
+        cpu: "200m"
+    volumeMounts:
+    - name: global-cache
+      mountPath: /.cache
+    - name: global-yarn
+      mountPath: /.yarn      
+    - name: global-npm
+      mountPath: /.npm      
+    - name: electron-cache
+      mountPath: /.electron-gyp
+  - name: jnlp
+    volumeMounts:
+    - name: volume-known-hosts
+      mountPath: /home/jenkins/.ssh
+  volumes:
+  - name: global-cache
+    emptyDir: {}
+  - name: global-yarn
+    emptyDir: {}
+  - name: global-npm
+    emptyDir: {}
+  - name: electron-cache
+    emptyDir: {}
+  - name: volume-known-hosts
+    configMap:
+      name: known-hosts
+"""
+                        }
+                    }
+                    steps {
+                        checkout scm
+                        echo "Fetching artifacts from 'theia-ide-release' build #${params.BUILD_NUMBER_PARAM}"
+                        
+                        copyArtifacts(
+                            projectName: "theia-ide-release",
+                            selector: specific("${params.BUILD_NUMBER_PARAM}"),
+                            filter: 'applications/electron/dist/windows/*',
+                            fingerprintArtifacts: true
+                        )
+                        
+                        container('theia-dev') {
+                            withCredentials([string(credentialsId: "github-bot-token", variable: 'GITHUB_TOKEN')]) {
+                                script {
+                                    signInstaller('exe', 'windows', 'windows')
+                                }
+                            }
+                        }
+                        // Archive signed Windows artifacts
+                        archiveArtifacts artifacts: "applications/electron/dist/windows/*", fingerprint: true
+                    }
+                }
+            }
+        }
+    }
+    post {
+        success {
+            script {
+                build job: 'theia-ide-upload', 
+                        parameters: [
+                            string(name: 'BUILD_NUMBER_PARAM', value: "${params.BUILD_NUMBER_PARAM}"),
+                            string(name: 'SIGN_NUMBER_PARAM', value: "${BUILD_NUMBER}"),
+                            booleanParam(name: 'DRY_RUN', value: params.DRY_RUN)
+                        ],
+                        wait: false
+            }
+        }
+    }
+}
+
+def signInstaller(String ext, String os, String arch = '') {
+    if (isDryRun()) {
+        echo "This is a dry run, so skipping installer signing"
+        return
+    }
+
+    // Adjust the dist folder to include architecture if supplied
+    String targetFolder = arch ? "applications/electron/dist/${arch}" : "applications/electron/dist"
+    List installers = findFiles(glob: "${targetFolder}/*.${ext}")
+
+    // Get the appropriate signing service URL
+    String url
+    if (os == 'mac') {
+        url = 'https://cbi.eclipse.org/macos/codesign/sign'
+    } else if (os == 'windows') {
+        url = 'https://cbi.eclipse.org/authenticode/sign'
+    } else {
+        error("Error during signing: unsupported OS: ${os}")
+    }
+
+    if (installers.size() == 1) {
+        sh "curl -o ${targetFolder}/signed-${installers[0].name} -F file=@${installers[0].path} ${url}"
+        sh "rm ${installers[0].path}"
+        sh "mv ${targetFolder}/signed-${installers[0].name} ${installers[0].path}"
+    } else {
+        error("Error during signing: installer not found or multiple installers exist: ${installers.size()}")
+    }
+}
+
+def notarizeInstaller(String ext, String arch = '') {
+    if (isDryRun()) {
+        echo "This is a dry run, so skipping installer notarizing"
+        return
+    }
+
+    String service = 'https://cbi.eclipse.org/macos/xcrun'
+
+    // Adjust the dist folder to include architecture if supplied
+    String targetFolder = arch ? "applications/electron/dist/${arch}" : "applications/electron/dist"
+    List installers = findFiles(glob: "${targetFolder}/*.${ext}")
+
+    if (installers.size() == 1) {
+        // Submit for notarization
+        String response = sh(
+            script: "curl -X POST -F file=@${installers[0].path} -F \'options={\"primaryBundleId\": \"eclipse.theia\", \"staple\": true};type=application/json\' ${service}/notarize", 
+            returnStdout: true
+        )
+
+        def jsonSlurper = new JsonSlurper()
+        def json = jsonSlurper.parseText(response)
+        String uuid = json.uuid
+
+        // Poll for completion
+        while(json.notarizationStatus.status == 'IN_PROGRESS') {
+            sh "sleep 60"
+            response = sh(script: "curl ${service}/${uuid}/status", returnStdout: true)
+            json = jsonSlurper.parseText(response)
+        }
+
+        if (json.notarizationStatus.status != 'COMPLETE') {
+            error("Failed to notarize ${installers[0].name}: ${response}")
+        }
+
+        // Download notarized file
+        sh "curl -o ${targetFolder}/stapled-${installers[0].name} ${service}/${uuid}/download"
+        sh "rm ${installers[0].path}"
+        sh "mv ${targetFolder}/stapled-${installers[0].name} ${installers[0].path}"
+    } else {
+        error("Error during notarization: installer not found or multiple installers exist: ${installers.size()}")
+    }
+}
+
+// Helper function for dry run status
+def isDryRun() {
+    return params.DRY_RUN
+}
