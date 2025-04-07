@@ -5,20 +5,12 @@
 /* groovylint-disable NestedBlockDepth */
 import groovy.json.JsonSlurper
 
-releaseBranch = "master"
-distFolder = "applications/electron/dist"
+// Load common Jenkins configuration
+def jenkinsConfig = load 'jenkins.config.groovy'
+def config = jenkinsConfig
 
-toStashDist = "${distFolder}/**"
-toStashDistMac = "${distFolder}/mac-x64/**"
-toStashDistMacArm = "${distFolder}/mac-arm64/**"
-toStashDistInstallers = "${distFolder}/*"
-// default folder to stash
-toStash = toStashDistInstallers
-
-// Attempt to detect whether a PR is Jenkins-related, by looking-for
-// the word "jenkins" (case insensitive) in PR branch name and/or
-// the PR title
-jenkinsRelatedRegex = "(?i).*jenkins.*"
+// Default folder to stash
+toStash = config.toStashDistInstallers
 
 pipeline {
     agent none
@@ -30,19 +22,11 @@ pipeline {
         string(name: 'BUILD_NUMBER_PARAM', defaultValue: '', description: 'The build number from the upstream build job')
     }
     environment {
-        THEIA_IDE_JENKINS_CI = 'true'
-
-        // to save time and resources, we skip some release-related steps
-        // when not in the process of releasing. e.g. signing/notarizing the
-        // installers. It can sometimes be necessary to run these steps, e.g.
-        // when troubleshooting. Set the variable below to 'true' to do so.
-        // We will still stop short of publishing anything.
-        THEIA_IDE_JENKINS_RELEASE_DRYRUN = 'false'
-        // THEIA_IDE_JENKINS_RELEASE_DRYRUN = 'true'
-        msvs_version = '2019'
-        GYP_MSVS_VERSION = '2019'
-
-        NODE_OPTIONS = '--max_old_space_size=4096'
+        THEIA_IDE_JENKINS_CI = "${config.environmentVars.THEIA_IDE_JENKINS_CI}"
+        THEIA_IDE_JENKINS_RELEASE_DRYRUN = "${config.environmentVars.THEIA_IDE_JENKINS_RELEASE_DRYRUN}"
+        msvs_version = "${config.windowsEnvVars.msvs_version}"
+        GYP_MSVS_VERSION = "${config.windowsEnvVars.GYP_MSVS_VERSION}"
+        NODE_OPTIONS = "${config.environmentVars.NODE_OPTIONS}"
     }
     stages {
         stage('Sign and Notarize') {
@@ -52,13 +36,13 @@ pipeline {
             when {
                 anyOf {
                     expression {
-                        env.JOB_BASE_NAME ==~ /$releaseBranch/
+                        env.JOB_BASE_NAME ==~ /${config.releaseBranch}/
                     }
                     expression { 
-                        env.CHANGE_BRANCH ==~ /$jenkinsRelatedRegex/
+                        env.CHANGE_BRANCH ==~ /${config.jenkinsRelatedRegex}/
                     }
                     expression {
-                        env.CHANGE_TITLE ==~ /$jenkinsRelatedRegex/
+                        env.CHANGE_TITLE ==~ /${config.jenkinsRelatedRegex}/
                     }
                     expression {
                         env.THEIA_IDE_JENKINS_RELEASE_DRYRUN == 'true'
@@ -87,50 +71,7 @@ pipeline {
                         stage('Sign and Notarize Mac') {
                             agent {
                                 kubernetes {
-                                    yaml """
-apiVersion: v1
-kind: Pod
-spec:
-  containers:
-  - name: theia-dev
-    image: eclipsetheia/theia-blueprint:builder
-    imagePullPolicy: Always
-    command:
-    - cat
-    tty: true
-    resources:
-      limits:
-        memory: "8Gi"
-        cpu: "2"
-      requests:
-        memory: "8Gi"
-        cpu: "2"
-    volumeMounts:
-    - name: global-cache
-      mountPath: /.cache
-    - name: global-yarn
-      mountPath: /.yarn      
-    - name: global-npm
-      mountPath: /.npm      
-    - name: electron-cache
-      mountPath: /.electron-gyp
-  - name: jnlp
-    volumeMounts:
-    - name: volume-known-hosts
-      mountPath: /home/jenkins/.ssh
-  volumes:
-  - name: global-cache
-    emptyDir: {}
-  - name: global-yarn
-    emptyDir: {}
-  - name: global-npm
-    emptyDir: {}
-  - name: electron-cache
-    emptyDir: {}
-  - name: volume-known-hosts
-    configMap:
-      name: known-hosts
-"""
+                                    yaml "${config.podTemplates.withKnownHosts}"
                                 }
                             }
                             steps {
@@ -138,7 +79,7 @@ spec:
                                 echo "Fetching artifacts from build #${params.BUILD_NUMBER_PARAM}"
                                 copyArtifacts projectName: 'theia-ide-build', 
                                              selector: specific("${params.BUILD_NUMBER_PARAM}"),
-                                             filter: "${toStashDist}",
+                                             filter: "${config.toStashDist}",
                                              fingerprintArtifacts: true,
                                              target: '.'
                                 container('theia-dev') {
@@ -151,8 +92,8 @@ spec:
                                         }
                                     }
                                 }
-                                stash includes: "${toStashDistMac}", name: 'mac2'
-                                stash includes: "${toStashDistMacArm}", name: 'mac2-arm'
+                                stash includes: "${config.toStashDistMac}", name: 'mac2'
+                                stash includes: "${config.toStashDistMacArm}", name: 'mac2-arm'
                             }
                         }
                         stage('Recreate Zip with Ditto for correct file permissions') {
@@ -170,7 +111,7 @@ spec:
                                     def architectures = ['mac-x64', 'mac-arm64']
                                     architectures.each { arch -> 
 
-                                        String targetFolder = "${distFolder}/${arch}"
+                                        String targetFolder = "${config.distFolder}/${arch}"
                                         def notarizedDmg = "${targetFolder}/TheiaIDE.dmg"
 
                                         // We'll mount and then copy the .app out of the DMG
@@ -204,10 +145,10 @@ spec:
                                         sh "rm -rf \"${extractedFolder}\" \"${mountPoint}\""
                                     }
                                 }
-                                stash includes: "${toStashDistMac}", name: 'mac3'
-                                stash includes: "${toStashDistMacArm}", name: 'mac3-arm'
-                                archiveArtifacts artifacts: "${toStashDistMac}", fingerprint: true
-                                archiveArtifacts artifacts: "${toStashDistMacArm}", fingerprint: true
+                                stash includes: "${config.toStashDistMac}", name: 'mac3'
+                                stash includes: "${config.toStashDistMacArm}", name: 'mac3-arm'
+                                archiveArtifacts artifacts: "${config.toStashDistMac}", fingerprint: true
+                                archiveArtifacts artifacts: "${config.toStashDistMacArm}", fingerprint: true
                             }
                         }
                     }
@@ -215,50 +156,7 @@ spec:
                 stage('Sign Windows') {
                     agent {
                         kubernetes {
-                            yaml """
-apiVersion: v1
-kind: Pod
-spec:
-  containers:
-  - name: theia-dev
-    image: eclipsetheia/theia-blueprint:builder
-    imagePullPolicy: Always
-    command:
-    - cat
-    tty: true
-    resources:
-      limits:
-        memory: "8Gi"
-        cpu: "2"
-      requests:
-        memory: "8Gi"
-        cpu: "2"
-    volumeMounts:
-    - name: global-cache
-      mountPath: /.cache
-    - name: global-yarn
-      mountPath: /.yarn      
-    - name: global-npm
-      mountPath: /.npm      
-    - name: electron-cache
-      mountPath: /.electron-gyp
-  - name: jnlp
-    volumeMounts:
-    - name: volume-known-hosts
-      mountPath: /home/jenkins/.ssh
-  volumes:
-  - name: global-cache
-    emptyDir: {}
-  - name: global-yarn
-    emptyDir: {}
-  - name: global-npm
-    emptyDir: {}
-  - name: electron-cache
-    emptyDir: {}
-  - name: volume-known-hosts
-    configMap:
-      name: known-hosts
-"""
+                            yaml "${config.podTemplates.withKnownHosts}"
                         }
                     }
                     steps {
@@ -293,20 +191,21 @@ spec:
 }
 
 def signInstaller(String ext, String os, String arch = '') {
-    if (!isRelease()) {
+    if (!jenkinsConfig.isRelease()) {
         echo "This is not a release, so skipping installer signing for branch ${env.BRANCH_NAME}"
         return
     }
 
     // Adjust the dist folder to include architecture if supplied
-    String targetFolder = arch ? "${distFolder}/${arch}" : distFolder
+    String targetFolder = arch ? "${config.distFolder}/${arch}" : config.distFolder
     List installers = findFiles(glob: "${targetFolder}/*.${ext}")
 
-    // https://wiki.eclipse.org/IT_Infrastructure_Doc#Web_service
+    // Get the appropriate signing service URL
+    String url
     if (os == 'mac') {
-        url = 'https://cbi.eclipse.org/macos/codesign/sign'
+        url = config.signingServices.mac
     } else if (os == 'windows') {
-        url = 'https://cbi.eclipse.org/authenticode/sign'
+        url = config.signingServices.windows
     } else {
         error("Error during signing: unsupported OS: ${os}")
     }
@@ -321,15 +220,15 @@ def signInstaller(String ext, String os, String arch = '') {
 }
 
 def notarizeInstaller(String ext, String arch = '') {
-    if (!isRelease()) {
+    if (!jenkinsConfig.isRelease()) {
         echo "This is not a release, so skipping installer notarizing for branch ${env.BRANCH_NAME}"
         return
     }
 
-    String service = 'https://cbi.eclipse.org/macos/xcrun'
+    String service = config.signingServices.notarize
 
     // Adjust the dist folder to include architecture if supplied
-    String targetFolder = arch ? "${distFolder}/${arch}" : distFolder
+    String targetFolder = arch ? "${config.distFolder}/${arch}" : config.distFolder
     List installers = findFiles(glob: "${targetFolder}/*.${ext}")
 
     if (installers.size() == 1) {
@@ -355,16 +254,4 @@ def notarizeInstaller(String ext, String arch = '') {
     } else {
         error("Error during notarization: installer not found or multiple installers exist: ${installers.size()}")
     }
-}
-
-def isReleaseBranch() {
-    return (env.BRANCH_NAME == releaseBranch)
-}
-
-def isDryRunRelease() {
-    return env.THEIA_IDE_JENKINS_RELEASE_DRYRUN == 'true'
-}
-
-def isRelease() {
-    return isDryRunRelease() || isReleaseBranch()
 }
