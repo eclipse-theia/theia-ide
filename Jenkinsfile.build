@@ -1,0 +1,332 @@
+/**
+ * This Jenkinsfile builds Theia across the major OS platforms
+ */
+
+/* groovylint-disable NestedBlockDepth */
+import groovy.json.JsonSlurper
+
+releaseBranch = "master"
+distFolder = "applications/electron/dist"
+
+toStashDist = "${distFolder}/**"
+toStashDistMac = "${distFolder}/mac-x64/**"
+toStashDistMacArm = "${distFolder}/mac-arm64/**"
+toStashDistInstallers = "${distFolder}/*"
+// default folder to stash
+toStash = toStashDistInstallers
+
+// Attempt to detect whether a PR is Jenkins-related, by looking-for
+// the word "jenkins" (case insensitive) in PR branch name and/or
+// the PR title
+jenkinsRelatedRegex = "(?i).*jenkins.*"
+
+pipeline {
+    agent none
+    options {
+        timeout(time: 5, unit: 'HOURS')
+        disableConcurrentBuilds()
+    }
+    environment {
+        THEIA_IDE_JENKINS_CI = 'true'
+
+        // to save time and resources, we skip some release-related steps
+        // when not in the process of releasing. e.g. signing/notarizing the
+        // installers. It can sometimes be necessary to run these steps, e.g.
+        // when troubleshooting. Set the variable below to 'true' to do so.
+        // We will still stop short of publishing anything.
+        THEIA_IDE_JENKINS_RELEASE_DRYRUN = 'false'
+        // THEIA_IDE_JENKINS_RELEASE_DRYRUN = 'true'
+        msvs_version = '2019'
+        GYP_MSVS_VERSION = '2019'
+
+        NODE_OPTIONS = '--max_old_space_size=4096'
+        
+        // Store the build number for downstream jobs
+        BUILD_NUMBER_PARAM = "${BUILD_NUMBER}"
+    }
+    stages {
+        stage('Build') {
+            when {
+                anyOf {
+                    expression {
+                        env.JOB_BASE_NAME ==~ /$releaseBranch/
+                    }
+                    expression { 
+                        env.CHANGE_BRANCH ==~ /$jenkinsRelatedRegex/
+                    }
+                    expression {
+                        env.CHANGE_TITLE ==~ /$jenkinsRelatedRegex/
+                    }
+                    expression {
+                        // PR branch? 
+                        env.BRANCH_NAME ==~ /PR-(\d)+/
+                    }
+                    expression {
+                        env.THEIA_IDE_JENKINS_RELEASE_DRYRUN == 'true'
+                    }
+                }
+            }
+            parallel {
+                stage('Create Linux Installer') {
+                    agent {
+                        kubernetes {
+                            yaml """
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+  - name: theia-dev
+    image: eclipsetheia/theia-blueprint:builder
+    imagePullPolicy: Always
+    command:
+    - cat
+    tty: true
+    resources:
+      limits:
+        memory: "8Gi"
+        cpu: "2"
+      requests:
+        memory: "8Gi"
+        cpu: "2"
+    volumeMounts:
+    - name: global-cache
+      mountPath: /.cache
+    - name: global-yarn
+      mountPath: /.yarn      
+    - name: global-npm
+      mountPath: /.npm      
+    - name: electron-cache
+      mountPath: /.electron-gyp
+  volumes:
+  - name: global-cache
+    emptyDir: {}
+  - name: global-yarn
+    emptyDir: {}
+  - name: global-npm
+    emptyDir: {}
+  - name: electron-cache
+    emptyDir: {}
+"""
+                        }
+                    }
+                    steps {
+                        container('theia-dev') {
+                            withCredentials([string(credentialsId: "github-bot-token", variable: 'GITHUB_TOKEN')]) {
+                                script {
+                                    buildInstaller(120)
+                                }
+                            }
+                        }
+                        stash includes: "${toStash}", name: 'linux'
+                        archiveArtifacts artifacts: "${toStash}", fingerprint: true
+                    }
+                    post {
+                        failure {
+                            error("Linux installer creation failed, aborting...")
+                        }
+                    }
+                }
+                stage('Create Mac Installer') {
+                    options {
+                        skipDefaultCheckout true
+                    }
+                    agent {
+                        label 'macos'
+                    }
+                    steps {
+                        script {
+                            createMacInstaller()
+                        }
+                        stash includes: "${toStashDist}", name: 'mac'
+                        archiveArtifacts artifacts: "${toStashDist}", fingerprint: true
+                    }
+                    post {
+                        failure {
+                            error("Mac installer creation failed, aborting...")
+                        }
+                    }
+                }
+                stage('Create Windows Installer') {
+                    agent {
+                        label 'windows'
+                    }
+                    steps {                 
+                        nodejs(nodeJSInstallationName: 'node_20.x') {
+                            sh "node --version"
+                            sh "npx node-gyp@9.4.1 install 20.11.1"
+
+                            // analyze memory usage
+                            bat "wmic ComputerSystem get TotalPhysicalMemory"
+                            bat "wmic OS get FreePhysicalMemory"
+                            bat "tasklist"
+
+                            buildInstaller(60)
+                        }
+                        stash includes: "${toStash}", name: 'win'
+                        archiveArtifacts artifacts: "${toStash}", fingerprint: true
+                    }
+                    post {
+                        failure {
+                            error("Windows installer creation failed, aborting...")
+                        }
+                    }
+                }
+            }
+        }
+    }
+    post {
+        success {
+            build job: 'theia-ide-sign-notarize', 
+                  parameters: [string(name: 'BUILD_NUMBER_PARAM', value: "${BUILD_NUMBER}")],
+                  wait: false
+        }
+    }
+}
+
+def detachVolume(String mountpoint) {
+    try {
+        sh "hdiutil detach \"${mountpoint}\" -force"
+    } catch (Exception ex) {
+        echo "Failed to detach ${mountpoint}: ${ex}"
+    }
+}
+
+def createMacInstaller() {
+    // Step 0: Clean up any previously mounted DMG files and only then checkout scm
+    def pathToMacArm64 = "/${pwd()}/applications/electron/dist/mac-arm64/TheiaIDE-dmg-mounted"
+    def pathToMacX64 = "/${pwd()}/applications/electron/dist/mac-x64/TheiaIDE-dmg-mounted"
+    def path2ToMacArm64 = "/${pwd()}/applications/electron/dist/mac-arm64/TheiaIDE-mount"
+    def path2ToMacX64 = "/${pwd()}/applications/electron/dist/mac-x64/TheiaIDE-mount"
+    detachVolume(pathToMacArm64)
+    detachVolume(pathToMacX64)
+    detachVolume(path2ToMacArm64)
+    detachVolume(path2ToMacX64)
+    checkout scm
+
+    // Step 1: Ensure the directory exists
+    sh 'mkdir -p applications/electron/dist'
+
+    // Step 2: Download the zip files
+    sh 'curl -L -o applications/electron/dist/mac-arm64.zip https://github.com/eclipse-theia/theia-ide/releases/download/pre-release/mac-arm64.zip'
+    sh 'curl -L -o applications/electron/dist/mac-x64.zip https://github.com/eclipse-theia/theia-ide/releases/download/pre-release/mac-x64.zip'
+
+    // Step 3: Extract the zip files
+    sh 'unzip applications/electron/dist/mac-arm64.zip -d applications/electron/dist/mac-arm64'
+    sh 'unzip applications/electron/dist/mac-x64.zip -d applications/electron/dist/mac-x64'
+
+    // Step 4: Delete the zip files
+    sh 'rm applications/electron/dist/mac-arm64.zip applications/electron/dist/mac-x64.zip'
+
+    // Step 5: List contents to verify
+    sh 'ls -al applications/electron/dist/mac-arm64 applications/electron/dist/mac-x64'
+
+    // Step 6: Unpack DMG files for signing
+    sh 'rm -rf applications/electron/dist/mac-arm64/TheiaIDE-dmg-mounted applications/electron/dist/mac-x64/TheiaIDE-dmg-mounted'
+    sh 'mkdir -p applications/electron/dist/mac-arm64/TheiaIDE-dmg-mounted applications/electron/dist/mac-x64/TheiaIDE-dmg-mounted'
+    sh 'hdiutil attach applications/electron/dist/mac-arm64/TheiaIDE.dmg -mountpoint applications/electron/dist/mac-arm64/TheiaIDE-dmg-mounted'
+    sh 'hdiutil attach applications/electron/dist/mac-x64/TheiaIDE.dmg -mountpoint applications/electron/dist/mac-x64/TheiaIDE-dmg-mounted'
+    sh 'mkdir -p applications/electron/dist/mac-arm64/TheiaIDE-dmg-layout/.background'
+    sh 'mkdir -p applications/electron/dist/mac-x64/TheiaIDE-dmg-layout/.background'
+    sh '''
+        if [ -f applications/electron/dist/mac-arm64/TheiaIDE-dmg-mounted/.DS_Store ]; then
+            cp applications/electron/dist/mac-arm64/TheiaIDE-dmg-mounted/.DS_Store applications/electron/dist/mac-arm64/TheiaIDE-dmg-layout/
+        fi
+    '''
+    sh '''
+        if [ -f applications/electron/dist/mac-x64/TheiaIDE-dmg-mounted/.DS_Store ]; then
+            cp applications/electron/dist/mac-x64/TheiaIDE-dmg-mounted/.DS_Store applications/electron/dist/mac-x64/TheiaIDE-dmg-layout/
+        fi
+    '''
+    sh 'cp -R applications/electron/dist/mac-arm64/TheiaIDE-dmg-mounted/TheiaIDE.app applications/electron/dist/mac-arm64/TheiaIDE-dmg-layout/TheiaIDE.app'
+    sh 'cp -R applications/electron/dist/mac-x64/TheiaIDE-dmg-mounted/TheiaIDE.app applications/electron/dist/mac-x64/TheiaIDE-dmg-layout/TheiaIDE.app'
+    sh 'ln -s /Applications applications/electron/dist/mac-arm64/TheiaIDE-dmg-layout/Applications'
+    sh 'ln -s /Applications applications/electron/dist/mac-x64/TheiaIDE-dmg-layout/Applications'
+    sh 'hdiutil detach applications/electron/dist/mac-arm64/TheiaIDE-dmg-mounted'
+    sh 'hdiutil detach applications/electron/dist/mac-x64/TheiaIDE-dmg-mounted'
+    sh 'ls -al applications/electron/dist/mac-arm64/TheiaIDE-dmg-layout applications/electron/dist/mac-x64/TheiaIDE-dmg-layout'
+    sh 'ls -al applications/electron/dist/mac-arm64/TheiaIDE-dmg-layout/TheiaIDE.app applications/electron/dist/mac-x64/TheiaIDE-dmg-layout/TheiaIDE.app'
+
+    // Step 7: Remove quarantine bits from all files
+    sh 'xattr -d -r com.apple.quarantine applications/electron/dist/mac-arm64/TheiaIDE-dmg-layout || true'
+    sh 'xattr -d -r com.apple.quarantine applications/electron/dist/mac-x64/TheiaIDE-dmg-layout || true'
+    
+    // Step 8: Sign binaries - only when it's a release
+    if (isRelease()) {
+        sh 'yarn --frozen-lockfile --force'
+        sshagent(['projects-storage.eclipse.org-bot-ssh']) {
+            def appPathArm64 = "/${pwd()}/applications/electron/dist/mac-arm64/TheiaIDE-dmg-layout/TheiaIDE.app"
+            def appPathX64 = "/${pwd()}/applications/electron/dist/mac-x64/TheiaIDE-dmg-layout/TheiaIDE.app"
+            sh "yarn electron sign:directory -d \"${appPathArm64}\""
+            sh "yarn electron sign:directory -d \"${appPathX64}\""
+        }
+    } else {
+        echo "This is not a release, so skipping binary signing for branch ${env.BRANCH_NAME}"
+    }
+    sh 'ls -al applications/electron/dist/mac-arm64/TheiaIDE-dmg-layout applications/electron/dist/mac-x64/TheiaIDE-dmg-layout'
+    sh 'ls -al applications/electron/dist/mac-arm64/TheiaIDE-dmg-layout/TheiaIDE.app applications/electron/dist/mac-x64/TheiaIDE-dmg-layout/TheiaIDE.app'
+
+    // Step 9: Remove existing DMG files
+    sh 'rm -f applications/electron/dist/mac-arm64/TheiaIDE.dmg applications/electron/dist/mac-x64/TheiaIDE.dmg'
+
+    // Step 10: Create the final DMG
+    sh 'hdiutil create -volname TheiaIDE -srcfolder applications/electron/dist/mac-arm64/TheiaIDE-dmg-layout -fs HFS+ -format UDZO applications/electron/dist/mac-arm64/TheiaIDE.dmg'
+    sh 'hdiutil create -volname TheiaIDE -srcfolder applications/electron/dist/mac-x64/TheiaIDE-dmg-layout -fs HFS+ -format UDZO applications/electron/dist/mac-x64/TheiaIDE.dmg'
+
+    // Step 11: Cleanup TheiaIDE-dmg-layout
+    sh 'rm -rf applications/electron/dist/mac-arm64/TheiaIDE-dmg-layout applications/electron/dist/mac-x64/TheiaIDE-dmg-layout'
+
+    // Step 12: Cleanup files we don't require
+    sh 'find applications/electron/dist/mac-arm64 -type f ! -name "TheiaIDE.dmg" ! -name "latest-mac.yml" -delete'
+    sh 'find applications/electron/dist/mac-x64 -type f ! -name "TheiaIDE.dmg" ! -name "latest-mac.yml" -delete'
+    sh 'ls -al applications/electron/dist/mac-arm64 applications/electron/dist/mac-x64'
+}
+
+def buildInstaller(int sleepBetweenRetries) {
+    int maxRetry = 1
+    String buildPackageCmd
+
+    checkout scm
+
+    // only build the Electron app for now
+    buildPackageCmd = 'yarn --frozen-lockfile --force && \
+        yarn build:extensions && yarn electron build'
+
+    if (isRelease()) {
+        // when not a release, build dev to save time
+        buildPackageCmd += ":prod"
+    }
+
+    sh 'node --version'
+    sh 'printenv && yarn cache dir'
+    try {
+        sh(script: buildPackageCmd)
+    } catch (error) {
+        retry(maxRetry) {
+            sleep(sleepBetweenRetries)
+            echo 'yarn failed - Retrying'
+            sh(script: buildPackageCmd)
+        }
+    }
+
+    sshagent(['projects-storage.eclipse.org-bot-ssh']) {
+        if (isRelease()) {
+            sh 'yarn download:plugins && yarn electron package:prod'
+        } else {
+            // ATM the plugins are not useful for non-releases, so
+            // let's skip ketching them
+            sh 'yarn electron package:preview'
+        }
+    }
+}
+
+def isReleaseBranch() {
+    return (env.BRANCH_NAME == releaseBranch)
+}
+
+def isDryRunRelease() {
+    return env.THEIA_IDE_JENKINS_RELEASE_DRYRUN == 'true'
+}
+
+def isRelease() {
+    return isDryRunRelease() || isReleaseBranch()
+}
