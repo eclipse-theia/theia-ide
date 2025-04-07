@@ -138,5 +138,14 @@ def isRelease() {
     return isDryRunRelease() || isReleaseBranch()
 }
 
+// Check if current pipeline should be executed based on branch or PR info
+def shouldExecutePipeline() {
+    return isReleaseBranch() || 
+           env.CHANGE_BRANCH ==~ /${config.jenkinsRelatedRegex}/ ||
+           env.CHANGE_TITLE ==~ /${config.jenkinsRelatedRegex}/ ||
+           env.BRANCH_NAME ==~ /PR-(\d)+/ ||
+           isDryRunRelease()
+}
+
 // Return the configuration
 return this

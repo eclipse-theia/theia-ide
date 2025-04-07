@@ -2,7 +2,6 @@
  * This Jenkinsfile handles updating metadata and uploading the Theia installers
  */
 
-/* groovylint-disable NestedBlockDepth */
 import groovy.json.JsonSlurper
 
 // Load common Jenkins configuration
@@ -28,24 +27,8 @@ pipeline {
     }
     stages {
         stage('Update and Upload') {
-            // only proceed when merging on the release branch or if the
-            // PR seems Jenkins-related. Note: for PRs, we do not by default
-            // run this stage since it will be of little practical value.
             when {
-                anyOf {
-                    expression {
-                        env.JOB_BASE_NAME ==~ /${config.releaseBranch}/
-                    }
-                    expression { 
-                        env.CHANGE_BRANCH ==~ /${config.jenkinsRelatedRegex}/
-                    }
-                    expression {
-                        env.CHANGE_TITLE ==~ /${config.jenkinsRelatedRegex}/
-                    }
-                    expression {
-                        env.THEIA_IDE_JENKINS_RELEASE_DRYRUN == 'true'
-                    }
-                }
+                expression { jenkinsConfig.shouldExecutePipeline() }
             }
             parallel {
                 stage('Upload Linux') {
@@ -170,7 +153,7 @@ def updateMetadata(String executable, String yaml, String platform, Boolean upda
 
     int maxRetry = 4
     try {
-        // make sure the npm dependencies are available to the update scripts
+        // Install dependencies and update metadata
         sh "yarn install --force"
         sh "yarn electron update:blockmap -e ${executable}"
         sh "yarn electron update:checksum -e ${executable} -y ${yaml} -p ${platform} -u ${updatePaths} -f ${fileExtension}"
@@ -180,7 +163,7 @@ def updateMetadata(String executable, String yaml, String platform, Boolean upda
             echo "yarn failed - Retrying"
             sh "yarn install --force"
             sh "yarn electron update:blockmap -e ${executable}"
-        sh "yarn electron update:checksum -e ${executable} -y ${yaml} -p ${platform} -u ${updatePaths} -f ${fileExtension}"
+            sh "yarn electron update:checksum -e ${executable} -y ${yaml} -p ${platform} -u ${updatePaths} -f ${fileExtension}"
         }
     }
 }
@@ -190,10 +173,14 @@ def uploadInstaller(String platform, String arch = '') {
         String targetFolder = arch ? "${config.distFolder}/${arch}" : config.distFolder
         def packageJSON = readJSON file: "package.json"
         String version = "${packageJSON.version}"
+        
         sshagent(['projects-storage.eclipse.org-bot-ssh']) {
+            // Remove and recreate version-specific folder
             sh "ssh genie.theia@projects-storage.eclipse.org rm -rf /home/data/httpd/download.eclipse.org/theia/ide-preview/${version}/${platform}"
             sh "ssh genie.theia@projects-storage.eclipse.org mkdir -p /home/data/httpd/download.eclipse.org/theia/ide-preview/${version}/${platform}"
             sh "scp ${targetFolder}/*.* genie.theia@projects-storage.eclipse.org:/home/data/httpd/download.eclipse.org/theia/ide-preview/${version}/${platform}"
+            
+            // Remove and recreate latest folder
             sh "ssh genie.theia@projects-storage.eclipse.org rm -rf /home/data/httpd/download.eclipse.org/theia/ide-preview/latest/${platform}"
             sh "ssh genie.theia@projects-storage.eclipse.org mkdir -p /home/data/httpd/download.eclipse.org/theia/ide-preview/latest/${platform}"
             sh "scp ${targetFolder}/*.* genie.theia@projects-storage.eclipse.org:/home/data/httpd/download.eclipse.org/theia/ide-preview/latest/${platform}"
@@ -204,9 +191,8 @@ def uploadInstaller(String platform, String arch = '') {
 }
 
 /**
- * List all directories in the ide-preview directory. 
- * Only takes the ones with a version identifier name. 
- * Only take version numbers lower than the current version. 
+ * List all directories in the ide-preview directory that represent versions.
+ * Only include version numbers lower than the current version.
  */
 def getUpdatableVersions() {
     def packageJSON = readJSON file: "package.json"
@@ -230,29 +216,32 @@ def getUpdatableVersions() {
 }
 
 /**
- * Currently we have the windows updater available twice with different names. 
- * We want to have a name without the versions for providing a stable download link. 
- * Due to a bug in the nsis-updater the downloaded exe for an update needs to have a different name than initially however.
+ * For Windows, create a versioned copy of the installer for updates
+ * and update the latest.yml file for older versions.
  */
-def copyInstallerAndUpdateLatestYml(String platform, String installer, String extension, String yaml, String UPDATABLE_VERSIONS) {
+def copyInstallerAndUpdateLatestYml(String platform, String installer, String extension, String yaml, String updatableVersions) {
     if (jenkinsConfig.isReleaseBranch()) {
         def packageJSON = readJSON file: "package.json"
         String version = "${packageJSON.version}"
+        
         sshagent(['projects-storage.eclipse.org-bot-ssh']) {
+            // Create versioned copies of installer and blockmap files
             sh "ssh genie.theia@projects-storage.eclipse.org cp /home/data/httpd/download.eclipse.org/theia/ide-preview/latest/${platform}/${installer}.${extension} /home/data/httpd/download.eclipse.org/theia/ide-preview/latest/${platform}/${installer}-${version}.${extension}"
             sh "ssh genie.theia@projects-storage.eclipse.org cp /home/data/httpd/download.eclipse.org/theia/ide-preview/${version}/${platform}/${installer}.${extension} /home/data/httpd/download.eclipse.org/theia/ide-preview/${version}/${platform}/${installer}-${version}.${extension}"
             sh "ssh genie.theia@projects-storage.eclipse.org cp /home/data/httpd/download.eclipse.org/theia/ide-preview/latest/${platform}/${installer}.${extension}.blockmap /home/data/httpd/download.eclipse.org/theia/ide-preview/latest/${platform}/${installer}-${version}.${extension}.blockmap"
             sh "ssh genie.theia@projects-storage.eclipse.org cp /home/data/httpd/download.eclipse.org/theia/ide-preview/${version}/${platform}/${installer}.${extension}.blockmap /home/data/httpd/download.eclipse.org/theia/ide-preview/${version}/${platform}/${installer}-${version}.${extension}.blockmap"
         }
-        if (UPDATABLE_VERSIONS.length() != 0) {
-            for (oldVersion in UPDATABLE_VERSIONS.split(",")) {
+        
+        // Update latest.yml for older versions to enable auto-updates
+        if (updatableVersions.length() > 0) {
+            for (oldVersion in updatableVersions.split(",")) {
                 sshagent(['projects-storage.eclipse.org-bot-ssh']) {
                     sh "ssh genie.theia@projects-storage.eclipse.org rm -f /home/data/httpd/download.eclipse.org/theia/ide-preview/${oldVersion}/${platform}/${yaml}"
                     sh "ssh genie.theia@projects-storage.eclipse.org cp /home/data/httpd/download.eclipse.org/theia/ide-preview/${version}/${platform}/${yaml} /home/data/httpd/download.eclipse.org/theia/ide-preview/${oldVersion}/${platform}/${yaml}"
                 }
             }
         } else {
-            echo "No updateable versions"
+            echo "No updateable versions found"
         }
     } else {
         echo "Skipped copying installer for branch ${env.BRANCH_NAME}"

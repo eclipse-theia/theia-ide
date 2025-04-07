@@ -2,7 +2,6 @@
  * This Jenkinsfile builds Theia across the major OS platforms
  */
 
-/* groovylint-disable NestedBlockDepth */
 import groovy.json.JsonSlurper
 
 // Load common Jenkins configuration
@@ -31,24 +30,7 @@ pipeline {
     stages {
         stage('Build') {
             when {
-                anyOf {
-                    expression {
-                        env.JOB_BASE_NAME ==~ /${config.releaseBranch}/
-                    }
-                    expression { 
-                        env.CHANGE_BRANCH ==~ /${config.jenkinsRelatedRegex}/
-                    }
-                    expression {
-                        env.CHANGE_TITLE ==~ /${config.jenkinsRelatedRegex}/
-                    }
-                    expression {
-                        // PR branch? 
-                        env.BRANCH_NAME ==~ /PR-(\d)+/
-                    }
-                    expression {
-                        env.THEIA_IDE_JENKINS_RELEASE_DRYRUN == 'true'
-                    }
-                }
+                expression { jenkinsConfig.shouldExecutePipeline() }
             }
             parallel {
                 stage('Create Linux Installer') {
@@ -140,92 +122,83 @@ def detachVolume(String mountpoint) {
 }
 
 def createMacInstaller() {
-    // Step 0: Clean up any previously mounted DMG files and only then checkout scm
-    def pathToMacArm64 = "/${pwd()}/applications/electron/dist/mac-arm64/TheiaIDE-dmg-mounted"
-    def pathToMacX64 = "/${pwd()}/applications/electron/dist/mac-x64/TheiaIDE-dmg-mounted"
-    def path2ToMacArm64 = "/${pwd()}/applications/electron/dist/mac-arm64/TheiaIDE-mount"
-    def path2ToMacX64 = "/${pwd()}/applications/electron/dist/mac-x64/TheiaIDE-mount"
-    detachVolume(pathToMacArm64)
-    detachVolume(pathToMacX64)
-    detachVolume(path2ToMacArm64)
-    detachVolume(path2ToMacX64)
+    // Step 0: Clean up previously mounted DMG files and checkout scm
+    def mountPoints = [
+        "/${pwd()}/applications/electron/dist/mac-arm64/TheiaIDE-dmg-mounted",
+        "/${pwd()}/applications/electron/dist/mac-x64/TheiaIDE-dmg-mounted",
+        "/${pwd()}/applications/electron/dist/mac-arm64/TheiaIDE-mount",
+        "/${pwd()}/applications/electron/dist/mac-x64/TheiaIDE-mount"
+    ]
+    
+    mountPoints.each { point -> detachVolume(point) }
     checkout scm
 
-    // Step 1: Ensure the directory exists
+    // Step 1: Ensure directory exists and download the zip files
     sh "mkdir -p ${config.distFolder}"
-
-    // Step 2: Download the zip files
-    sh "curl -L -o ${config.distFolder}/mac-arm64.zip https://github.com/eclipse-theia/theia-ide/releases/download/pre-release/mac-arm64.zip"
-    sh "curl -L -o ${config.distFolder}/mac-x64.zip https://github.com/eclipse-theia/theia-ide/releases/download/pre-release/mac-x64.zip"
-
-    // Step 3: Extract the zip files
-    sh "unzip ${config.distFolder}/mac-arm64.zip -d ${config.distFolder}/mac-arm64"
-    sh "unzip ${config.distFolder}/mac-x64.zip -d ${config.distFolder}/mac-x64"
-
-    // Step 4: Delete the zip files
-    sh "rm ${config.distFolder}/mac-arm64.zip ${config.distFolder}/mac-x64.zip"
-
-    // Step 5: List contents to verify
+    
+    // Step 2: Download and extract zip files for both architectures
+    def architectures = ['mac-arm64', 'mac-x64']
+    architectures.each { arch ->
+        sh "curl -L -o ${config.distFolder}/${arch}.zip https://github.com/eclipse-theia/theia-ide/releases/download/pre-release/${arch}.zip"
+        sh "unzip ${config.distFolder}/${arch}.zip -d ${config.distFolder}/${arch}"
+        sh "rm ${config.distFolder}/${arch}.zip"
+    }
+    
     sh "ls -al ${config.distFolder}/mac-arm64 ${config.distFolder}/mac-x64"
 
-    // Step 6: Unpack DMG files for signing
-    sh "rm -rf ${config.distFolder}/mac-arm64/TheiaIDE-dmg-mounted ${config.distFolder}/mac-x64/TheiaIDE-dmg-mounted"
-    sh "mkdir -p ${config.distFolder}/mac-arm64/TheiaIDE-dmg-mounted ${config.distFolder}/mac-x64/TheiaIDE-dmg-mounted"
-    sh "hdiutil attach ${config.distFolder}/mac-arm64/TheiaIDE.dmg -mountpoint ${config.distFolder}/mac-arm64/TheiaIDE-dmg-mounted"
-    sh "hdiutil attach ${config.distFolder}/mac-x64/TheiaIDE.dmg -mountpoint ${config.distFolder}/mac-x64/TheiaIDE-dmg-mounted"
-    sh "mkdir -p ${config.distFolder}/mac-arm64/TheiaIDE-dmg-layout/.background"
-    sh "mkdir -p ${config.distFolder}/mac-x64/TheiaIDE-dmg-layout/.background"
-    sh """
-        if [ -f ${config.distFolder}/mac-arm64/TheiaIDE-dmg-mounted/.DS_Store ]; then
-            cp ${config.distFolder}/mac-arm64/TheiaIDE-dmg-mounted/.DS_Store ${config.distFolder}/mac-arm64/TheiaIDE-dmg-layout/
-        fi
-    """
-    sh """
-        if [ -f ${config.distFolder}/mac-x64/TheiaIDE-dmg-mounted/.DS_Store ]; then
-            cp ${config.distFolder}/mac-x64/TheiaIDE-dmg-mounted/.DS_Store ${config.distFolder}/mac-x64/TheiaIDE-dmg-layout/
-        fi
-    """
-    sh "cp -R ${config.distFolder}/mac-arm64/TheiaIDE-dmg-mounted/TheiaIDE.app ${config.distFolder}/mac-arm64/TheiaIDE-dmg-layout/TheiaIDE.app"
-    sh "cp -R ${config.distFolder}/mac-x64/TheiaIDE-dmg-mounted/TheiaIDE.app ${config.distFolder}/mac-x64/TheiaIDE-dmg-layout/TheiaIDE.app"
-    sh "ln -s /Applications ${config.distFolder}/mac-arm64/TheiaIDE-dmg-layout/Applications"
-    sh "ln -s /Applications ${config.distFolder}/mac-x64/TheiaIDE-dmg-layout/Applications"
-    sh "hdiutil detach ${config.distFolder}/mac-arm64/TheiaIDE-dmg-mounted"
-    sh "hdiutil detach ${config.distFolder}/mac-x64/TheiaIDE-dmg-mounted"
-    sh "ls -al ${config.distFolder}/mac-arm64/TheiaIDE-dmg-layout ${config.distFolder}/mac-x64/TheiaIDE-dmg-layout"
-    sh "ls -al ${config.distFolder}/mac-arm64/TheiaIDE-dmg-layout/TheiaIDE.app ${config.distFolder}/mac-x64/TheiaIDE-dmg-layout/TheiaIDE.app"
+    // Step 3: Unpack DMG files for signing
+    architectures.each { arch ->
+        def mountPoint = "${config.distFolder}/${arch}/TheiaIDE-dmg-mounted"
+        sh "rm -rf ${mountPoint}"
+        sh "mkdir -p ${mountPoint}"
+        sh "hdiutil attach ${config.distFolder}/${arch}/TheiaIDE.dmg -mountpoint ${mountPoint}"
+        
+        // Create DMG layout structure
+        sh "mkdir -p ${config.distFolder}/${arch}/TheiaIDE-dmg-layout/.background"
+        
+        // Copy DS_Store if exists
+        sh """
+            if [ -f ${mountPoint}/.DS_Store ]; then
+                cp ${mountPoint}/.DS_Store ${config.distFolder}/${arch}/TheiaIDE-dmg-layout/
+            fi
+        """
+        
+        // Copy app and create Applications symlink
+        sh "cp -R ${mountPoint}/TheiaIDE.app ${config.distFolder}/${arch}/TheiaIDE-dmg-layout/TheiaIDE.app"
+        sh "ln -s /Applications ${config.distFolder}/${arch}/TheiaIDE-dmg-layout/Applications"
+        
+        // Detach mounted DMG
+        sh "hdiutil detach ${mountPoint}"
+    }
 
-    // Step 7: Remove quarantine bits from all files
-    sh "xattr -d -r com.apple.quarantine ${config.distFolder}/mac-arm64/TheiaIDE-dmg-layout || true"
-    sh "xattr -d -r com.apple.quarantine ${config.distFolder}/mac-x64/TheiaIDE-dmg-layout || true"
+    // Step 4: Remove quarantine bits from all files
+    architectures.each { arch ->
+        sh "xattr -d -r com.apple.quarantine ${config.distFolder}/${arch}/TheiaIDE-dmg-layout || true"
+    }
     
-    // Step 8: Sign binaries - only when it's a release
+    // Step 5: Sign binaries if this is a release
     if (jenkinsConfig.isRelease()) {
         sh 'yarn --frozen-lockfile --force'
         sshagent(['projects-storage.eclipse.org-bot-ssh']) {
-            def appPathArm64 = "/${pwd()}/${config.distFolder}/mac-arm64/TheiaIDE-dmg-layout/TheiaIDE.app"
-            def appPathX64 = "/${pwd()}/${config.distFolder}/mac-x64/TheiaIDE-dmg-layout/TheiaIDE.app"
-            sh "yarn electron sign:directory -d \"${appPathArm64}\""
-            sh "yarn electron sign:directory -d \"${appPathX64}\""
+            architectures.each { arch ->
+                def appPath = "/${pwd()}/${config.distFolder}/${arch}/TheiaIDE-dmg-layout/TheiaIDE.app"
+                sh "yarn electron sign:directory -d \"${appPath}\""
+            }
         }
     } else {
         echo "This is not a release, so skipping binary signing for branch ${env.BRANCH_NAME}"
     }
-    sh "ls -al ${config.distFolder}/mac-arm64/TheiaIDE-dmg-layout ${config.distFolder}/mac-x64/TheiaIDE-dmg-layout"
-    sh "ls -al ${config.distFolder}/mac-arm64/TheiaIDE-dmg-layout/TheiaIDE.app ${config.distFolder}/mac-x64/TheiaIDE-dmg-layout/TheiaIDE.app"
 
-    // Step 9: Remove existing DMG files
-    sh "rm -f ${config.distFolder}/mac-arm64/TheiaIDE.dmg ${config.distFolder}/mac-x64/TheiaIDE.dmg"
-
-    // Step 10: Create the final DMG
-    sh "hdiutil create -volname TheiaIDE -srcfolder ${config.distFolder}/mac-arm64/TheiaIDE-dmg-layout -fs HFS+ -format UDZO ${config.distFolder}/mac-arm64/TheiaIDE.dmg"
-    sh "hdiutil create -volname TheiaIDE -srcfolder ${config.distFolder}/mac-x64/TheiaIDE-dmg-layout -fs HFS+ -format UDZO ${config.distFolder}/mac-x64/TheiaIDE.dmg"
-
-    // Step 11: Cleanup TheiaIDE-dmg-layout
-    sh "rm -rf ${config.distFolder}/mac-arm64/TheiaIDE-dmg-layout ${config.distFolder}/mac-x64/TheiaIDE-dmg-layout"
-
-    // Step 12: Cleanup files we don't require
-    sh "find ${config.distFolder}/mac-arm64 -type f ! -name \"TheiaIDE.dmg\" ! -name \"latest-mac.yml\" -delete"
-    sh "find ${config.distFolder}/mac-x64 -type f ! -name \"TheiaIDE.dmg\" ! -name \"latest-mac.yml\" -delete"
+    // Step 6: Create the final DMG files
+    architectures.each { arch ->
+        sh "rm -f ${config.distFolder}/${arch}/TheiaIDE.dmg"
+        sh "hdiutil create -volname TheiaIDE -srcfolder ${config.distFolder}/${arch}/TheiaIDE-dmg-layout -fs HFS+ -format UDZO ${config.distFolder}/${arch}/TheiaIDE.dmg"
+        sh "rm -rf ${config.distFolder}/${arch}/TheiaIDE-dmg-layout"
+        
+        // Cleanup files we don't require
+        sh "find ${config.distFolder}/${arch} -type f ! -name \"TheiaIDE.dmg\" ! -name \"latest-mac.yml\" -delete"
+    }
+    
     sh "ls -al ${config.distFolder}/mac-arm64 ${config.distFolder}/mac-x64"
 }
 
@@ -235,17 +208,17 @@ def buildInstaller(int sleepBetweenRetries) {
 
     checkout scm
 
-    // only build the Electron app for now
-    buildPackageCmd = 'yarn --frozen-lockfile --force && \
-        yarn build:extensions && yarn electron build'
-
+    // Prepare build command based on release status
+    buildPackageCmd = 'yarn --frozen-lockfile --force && yarn build:extensions && yarn electron build'
+    
     if (jenkinsConfig.isRelease()) {
-        // when not a release, build dev to save time
         buildPackageCmd += ":prod"
     }
 
     sh 'node --version'
     sh 'printenv && yarn cache dir'
+    
+    // Execute build with retry capability
     try {
         sh(script: buildPackageCmd)
     } catch (error) {
@@ -256,12 +229,13 @@ def buildInstaller(int sleepBetweenRetries) {
         }
     }
 
+    // Package the built application
     sshagent(['projects-storage.eclipse.org-bot-ssh']) {
         if (jenkinsConfig.isRelease()) {
             sh 'yarn download:plugins && yarn electron package:prod'
         } else {
             // ATM the plugins are not useful for non-releases, so
-            // let's skip ketching them
+            // let's skip fetching them
             sh 'yarn electron package:preview'
         }
     }
