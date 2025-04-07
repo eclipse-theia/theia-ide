@@ -18,7 +18,6 @@ def config = [
     // Environment variables
     environmentVars: [
         THEIA_IDE_JENKINS_CI: 'true',
-        THEIA_IDE_JENKINS_RELEASE_DRYRUN: 'false',
         NODE_OPTIONS: '--max_old_space_size=4096'
     ],
     
@@ -127,12 +126,12 @@ def isReleaseBranch() {
     return (env.BRANCH_NAME == config.releaseBranch)
 }
 
-def isDryRunRelease() {
-    return env.THEIA_IDE_JENKINS_RELEASE_DRYRUN == 'true'
+def isDryRun() {
+    return !isReleaseBranch()
 }
 
 def isRelease() {
-    return isDryRunRelease() || isReleaseBranch()
+    return !isDryRun()
 }
 
 // Return the configuration

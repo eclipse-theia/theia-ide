@@ -23,11 +23,25 @@ pipeline {
     }
     environment {
         THEIA_IDE_JENKINS_CI = "${config.environmentVars.THEIA_IDE_JENKINS_CI}"
-        THEIA_IDE_JENKINS_RELEASE_DRYRUN = "${config.environmentVars.THEIA_IDE_JENKINS_RELEASE_DRYRUN}"
         NODE_OPTIONS = "${config.environmentVars.NODE_OPTIONS}"
     }
     stages {
+        stage('Check if Upload is Required') {
+            agent any
+            steps {
+                script {
+                    if (jenkinsConfig.isDryRun()) {
+                        echo "This is a dry run (not on the release branch: ${env.BRANCH_NAME}). Skipping upload phase."
+                        currentBuild.result = 'SUCCESS'
+                        return
+                    }
+                }
+            }
+        }
         stage('Update and Upload') {
+            when {
+                expression { !jenkinsConfig.isDryRun() }
+            }
             failFast true
             parallel {
                 stage('Upload Linux') {

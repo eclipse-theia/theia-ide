@@ -23,7 +23,6 @@ pipeline {
     }
     environment {
         THEIA_IDE_JENKINS_CI = "${config.environmentVars.THEIA_IDE_JENKINS_CI}"
-        THEIA_IDE_JENKINS_RELEASE_DRYRUN = "${config.environmentVars.THEIA_IDE_JENKINS_RELEASE_DRYRUN}"
         msvs_version = "${config.windowsEnvVars.msvs_version}"
         GYP_MSVS_VERSION = "${config.windowsEnvVars.GYP_MSVS_VERSION}"
         NODE_OPTIONS = "${config.environmentVars.NODE_OPTIONS}"
@@ -159,9 +158,15 @@ pipeline {
     }
     post {
         success {
-            build job: 'theia-ide-upload', 
+            script {
+                if (jenkinsConfig.isDryRun()) {
+                    echo "Skipping upload step because this is a dry run (not on the release branch: ${env.BRANCH_NAME})"
+                } else {
+                    build job: 'theia-ide-upload', 
                   parameters: [string(name: 'BUILD_NUMBER_PARAM', value: "${BUILD_NUMBER}")],
-                  wait: false
+                          wait: false
+                }
+            }
         }
     }
 }

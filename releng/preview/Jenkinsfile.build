@@ -20,7 +20,6 @@ pipeline {
     }
     environment {
         THEIA_IDE_JENKINS_CI = "${config.environmentVars.THEIA_IDE_JENKINS_CI}"
-        THEIA_IDE_JENKINS_RELEASE_DRYRUN = "${config.environmentVars.THEIA_IDE_JENKINS_RELEASE_DRYRUN}"
         msvs_version = "${config.windowsEnvVars.msvs_version}"
         GYP_MSVS_VERSION = "${config.windowsEnvVars.GYP_MSVS_VERSION}"
         NODE_OPTIONS = "${config.environmentVars.NODE_OPTIONS}"
