@@ -6,7 +6,7 @@
 import groovy.json.JsonSlurper
 
 // Load common Jenkins configuration
-def jenkinsConfig = load 'jenkins.config.groovy'
+def jenkinsConfig = load 'releng/preview/jenkins.config.groovy'
 def config = jenkinsConfig
 
 // Default folder to stash
