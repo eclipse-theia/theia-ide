@@ -18,10 +18,12 @@ import { isOSX, isWindows } from '@theia/core';
 
 const STABLE_CHANNEL_WINDOWS = 'https://download.eclipse.org/theia/ide/version/windows';
 const STABLE_CHANNEL_MACOS = 'https://download.eclipse.org/theia/ide/latest/macos';
+const STABLE_CHANNEL_MACOS_ARM = 'https://download.eclipse.org/theia/ide/latest/macos-arm';
 const STABLE_CHANNEL_LINUX = 'https://download.eclipse.org/theia/ide/latest/linux';
 
 const PREVIEW_CHANNEL_WINDOWS = 'https://download.eclipse.org/theia/ide-preview/version/windows';
 const PREVIEW_CHANNEL_MACOS = 'https://download.eclipse.org/theia/ide-preview/latest/macos';
+const PREVIEW_CHANNEL_MACOS_ARM = 'https://download.eclipse.org/theia/ide-preview/latest/macos-arm/';
 const PREVIEW_CHANNEL_LINUX = 'https://download.eclipse.org/theia/ide-preview/latest/linux';
 
 const { autoUpdater } = require('electron-updater');
@@ -130,7 +132,11 @@ export class TheiaUpdaterImpl implements TheiaUpdater, ElectronMainApplicationCo
             const curVersion = autoUpdater.currentVersion.toString();
             return (channel === 'preview') ? PREVIEW_CHANNEL_WINDOWS.replace('version', curVersion) : STABLE_CHANNEL_WINDOWS.replace('version', curVersion);
         } else if (isOSX) {
-            return (channel === 'preview') ? PREVIEW_CHANNEL_MACOS : STABLE_CHANNEL_MACOS;
+            if (process.arch === 'arm64') {
+                return (channel === 'preview') ? PREVIEW_CHANNEL_MACOS_ARM : STABLE_CHANNEL_MACOS_ARM;
+            } else {
+                return (channel === 'preview') ? PREVIEW_CHANNEL_MACOS : STABLE_CHANNEL_MACOS;
+            }
         } else {
             return (channel === 'preview') ? PREVIEW_CHANNEL_LINUX : STABLE_CHANNEL_LINUX;
         }
