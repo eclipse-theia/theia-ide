@@ -19,9 +19,6 @@ pipeline {
         msvs_version = '2019'
         GYP_MSVS_VERSION = '2019'
         NODE_OPTIONS = '--max_old_space_size=4096'
-        
-        // Store the build number for downstream jobs
-        BUILD_NUMBER_PARAM = "${BUILD_NUMBER}"
     }
     stages {
         stage('Build') {
