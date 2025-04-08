@@ -75,8 +75,11 @@ spec:
     tty: true
     resources:
       limits:
-        memory: "8Gi"
-        cpu: "2"
+        memory: "8704Mi"
+        cpu: "2300m"
+      requests:
+        memory: "512Mi"
+        cpu: "200m"
     volumeMounts:
     - name: global-cache
       mountPath: /.cache
@@ -152,8 +155,11 @@ spec:
     tty: true
     resources:
       limits:
-        memory: "8Gi"
-        cpu: "2"
+        memory: "8704Mi"
+        cpu: "2300m"
+      requests:
+        memory: "512Mi"
+        cpu: "200m"
     volumeMounts:
     - name: global-cache
       mountPath: /.cache
@@ -229,8 +235,11 @@ spec:
     tty: true
     resources:
       limits:
-        memory: "8Gi"
-        cpu: "2"
+        memory: "8704Mi"
+        cpu: "2300m"
+      requests:
+        memory: "512Mi"
+        cpu: "200m"
     volumeMounts:
     - name: global-cache
       mountPath: /.cache
