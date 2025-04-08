@@ -135,9 +135,15 @@ spec:
     }
     post {
         success {
-            build job: 'theia-ide-sign-notarize', 
-                  parameters: [string(name: 'BUILD_NUMBER_PARAM', value: "${BUILD_NUMBER}")],
-                  wait: false
+            script {
+                if (isPR()) {
+                    echo "This is a PR build. Skipping triggering of sign and notarize job."
+                } else {
+                    build job: 'theia-ide-sign-notarize', 
+                          parameters: [string(name: 'BUILD_NUMBER_PARAM', value: "${BUILD_NUMBER}")],
+                          wait: false
+                }
+            }
         }
     }
 }
@@ -281,4 +287,8 @@ def isDryRun() {
 
 def isRelease() {
     return !isDryRun()
+}
+
+def isPR() {
+    return !isReleaseBranch()
 }
