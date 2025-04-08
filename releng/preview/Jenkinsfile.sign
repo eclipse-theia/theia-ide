@@ -319,7 +319,7 @@ def notarizeInstaller(String ext, String arch = '') {
 
 // Helper functions for branch and release status
 def isReleaseBranch() {
-    return (env.BRANCH_NAME == "master")
+    return (env.BRANCH_NAME == "sg/improvePublishing")
 }
 
 def isDryRun() {
