@@ -13,6 +13,7 @@ pipeline {
     }
     parameters {
         string(name: 'BUILD_NUMBER_PARAM', defaultValue: '', description: 'The build number from the upstream sign job')
+        booleanParam(name: 'DRY_RUN', defaultValue: true, description: 'If true, treat this as a dry run (no deployment of artifacts)')
     }
     environment {
         THEIA_IDE_JENKINS_CI = 'true'
@@ -24,7 +25,7 @@ pipeline {
             steps {
                 script {
                     if (isDryRun()) {
-                        echo "This is a dry run (not on the release branch: ${env.BRANCH_NAME}). Skipping upload phase."
+                        echo "This is a dry run. Skipping upload phase."
                         currentBuild.result = 'SUCCESS'
                         return
                     }
@@ -280,8 +281,8 @@ spec:
 }
 
 def updateMetadata(String executable, String yaml, String platform, Boolean updatePaths, String fileExtension, int sleepBetweenRetries) {
-    if (!isRelease()) {
-        echo "This is not a release, so skipping updating metadata for branch ${env.BRANCH_NAME}"
+    if (isDryRun()) {
+        echo "This is a dry run, so skipping updating metadata"
         return
     }
 
@@ -303,7 +304,7 @@ def updateMetadata(String executable, String yaml, String platform, Boolean upda
 }
 
 def uploadInstaller(String platform, String arch = '') {
-    if (isReleaseBranch()) {
+    if (!isDryRun()) {
         String targetFolder = arch ? "applications/electron/dist/${arch}" : "applications/electron/dist"
         def packageJSON = readJSON file: "package.json"
         String version = "${packageJSON.version}"
@@ -320,7 +321,7 @@ def uploadInstaller(String platform, String arch = '') {
             sh "scp ${targetFolder}/*.* genie.theia@projects-storage.eclipse.org:/home/data/httpd/download.eclipse.org/theia/ide-preview/latest/${platform}"
         }
     } else {
-        echo "Skipped upload for branch ${env.BRANCH_NAME}"
+        echo "Skipped upload for dry run"
     }
 }
 
@@ -354,7 +355,7 @@ def getUpdatableVersions() {
  * and update the latest.yml file for older versions.
  */
 def copyInstallerAndUpdateLatestYml(String platform, String installer, String extension, String yaml, String updatableVersions) {
-    if (isReleaseBranch()) {
+    if (!isDryRun()) {
         def packageJSON = readJSON file: "package.json"
         String version = "${packageJSON.version}"
         
@@ -378,7 +379,7 @@ def copyInstallerAndUpdateLatestYml(String platform, String installer, String ex
             echo "No updateable versions found"
         }
     } else {
-        echo "Skipped copying installer for branch ${env.BRANCH_NAME}"
+        echo "Skipped copying installer for dry run"
     }
 }
 
@@ -387,10 +388,7 @@ def isReleaseBranch() {
     return (env.BRANCH_NAME == "sg/improvePublishing")
 }
 
+// Helper function for dry run status
 def isDryRun() {
-    return !isReleaseBranch()
-}
-
-def isRelease() {
-    return !isDryRun()
+    return params.DRY_RUN || !isReleaseBranch()
 }

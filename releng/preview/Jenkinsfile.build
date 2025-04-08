@@ -11,6 +11,9 @@ pipeline {
         timeout(time: 5, unit: 'HOURS')
         disableConcurrentBuilds()
     }
+    parameters {
+        booleanParam(name: 'DRY_RUN', defaultValue: true, description: 'If true, treat this as a dry run (no deployment of artifacts)')
+    }
     environment {
         THEIA_IDE_JENKINS_CI = 'true'
         msvs_version = '2019'
@@ -140,7 +143,10 @@ spec:
                     echo "This is a PR build. Skipping triggering of sign and notarize job."
                 } else {
                     build job: 'theia-ide-sign-notarize', 
-                          parameters: [string(name: 'BUILD_NUMBER_PARAM', value: "${BUILD_NUMBER}")],
+                          parameters: [
+                              string(name: 'BUILD_NUMBER_PARAM', value: "${BUILD_NUMBER}"),
+                              booleanParam(name: 'DRY_RUN', value: params.DRY_RUN)
+                          ],
                           wait: false
                 }
             }
@@ -211,8 +217,8 @@ def createMacInstaller() {
         sh "xattr -d -r com.apple.quarantine applications/electron/dist/${arch}/TheiaIDE-dmg-layout || true"
     }
     
-    // Step 5: Sign binaries if this is a release
-    if (isRelease()) {
+    // Step 5: Sign binaries if this is not a dry run
+    if (!isDryRun()) {
         sh 'yarn --frozen-lockfile --force'
         sshagent(['projects-storage.eclipse.org-bot-ssh']) {
             architectures.each { arch ->
@@ -221,7 +227,7 @@ def createMacInstaller() {
             }
         }
     } else {
-        echo "This is not a release, so skipping binary signing for branch ${env.BRANCH_NAME}"
+        echo "This is a dry run, so skipping binary signing"
     }
 
     // Step 6: Create the final DMG files
@@ -243,10 +249,10 @@ def buildInstaller(int sleepBetweenRetries) {
 
     checkout scm
 
-    // Prepare build command based on release status
+    // Prepare build command based on dry run status
     buildPackageCmd = 'yarn --frozen-lockfile --force && yarn build:extensions && yarn electron build'
     
-    if (isRelease()) {
+    if (!isDryRun()) {
         buildPackageCmd += ":prod"
     }
 
@@ -266,10 +272,10 @@ def buildInstaller(int sleepBetweenRetries) {
 
     // Package the built application
     sshagent(['projects-storage.eclipse.org-bot-ssh']) {
-        if (isRelease()) {
+        if (!isDryRun()) {
             sh 'yarn download:plugins && yarn electron package:prod'
         } else {
-            // ATM the plugins are not useful for non-releases, so
+            // ATM the plugins are not useful for dry runs, so
             // let's skip fetching them
             sh 'yarn electron package:preview'
         }
@@ -281,14 +287,12 @@ def isReleaseBranch() {
     return (env.BRANCH_NAME == "sg/improvePublishing")
 }
 
+// Helper function for dry run status
 def isDryRun() {
-    return !isReleaseBranch()
+    return params.DRY_RUN || !isReleaseBranch()
 }
 
-def isRelease() {
-    return !isDryRun()
-}
-
+// Check if this is a PR build
 def isPR() {
     return !isReleaseBranch()
 }

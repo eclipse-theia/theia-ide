@@ -13,6 +13,7 @@ pipeline {
     }
     parameters {
         string(name: 'BUILD_NUMBER_PARAM', defaultValue: '', description: 'The build number from the upstream build job')
+        booleanParam(name: 'DRY_RUN', defaultValue: true, description: 'If true, treat this as a dry run (no deployment of artifacts)')
     }
     environment {
         THEIA_IDE_JENKINS_CI = 'true'
@@ -235,10 +236,13 @@ spec:
         success {
             script {
                 if (isDryRun()) {
-                    echo "Skipping upload step because this is a dry run (not on the release branch: ${env.BRANCH_NAME})"
+                    echo "Skipping upload step because this is a dry run"
                 } else {
                     build job: 'theia-ide-upload', 
-                  parameters: [string(name: 'BUILD_NUMBER_PARAM', value: "${BUILD_NUMBER}")],
+                          parameters: [
+                              string(name: 'BUILD_NUMBER_PARAM', value: "${BUILD_NUMBER}"),
+                              booleanParam(name: 'DRY_RUN', value: params.DRY_RUN)
+                          ],
                           wait: false
                 }
             }
@@ -247,8 +251,8 @@ spec:
 }
 
 def signInstaller(String ext, String os, String arch = '') {
-    if (!isRelease()) {
-        echo "This is not a release, so skipping installer signing for branch ${env.BRANCH_NAME}"
+    if (isDryRun()) {
+        echo "This is a dry run, so skipping installer signing"
         return
     }
 
@@ -276,8 +280,8 @@ def signInstaller(String ext, String os, String arch = '') {
 }
 
 def notarizeInstaller(String ext, String arch = '') {
-    if (!isRelease()) {
-        echo "This is not a release, so skipping installer notarizing for branch ${env.BRANCH_NAME}"
+    if (isDryRun()) {
+        echo "This is a dry run, so skipping installer notarizing"
         return
     }
 
@@ -323,10 +327,7 @@ def isReleaseBranch() {
     return (env.BRANCH_NAME == "sg/improvePublishing")
 }
 
+// Helper function for dry run status
 def isDryRun() {
-    return !isReleaseBranch()
-}
-
-def isRelease() {
-    return !isDryRun()
+    return params.DRY_RUN || !isReleaseBranch()
 }
