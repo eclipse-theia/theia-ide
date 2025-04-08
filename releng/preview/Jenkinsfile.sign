@@ -44,9 +44,6 @@ spec:
       limits:
         memory: "8Gi"
         cpu: "2"
-      requests:
-        memory: "8Gi"
-        cpu: "2"
     volumeMounts:
     - name: global-cache
       mountPath: /.cache
@@ -78,11 +75,17 @@ spec:
                             steps {
                                 checkout scm
                                 echo "Fetching artifacts from build #${params.BUILD_NUMBER_PARAM}"
-                                copyArtifacts projectName: 'theia-ide-build', 
-                                             selector: specific("${params.BUILD_NUMBER_PARAM}"),
-                                             filter: "applications/electron/dist/**",
-                                             fingerprintArtifacts: true,
-                                             target: '.'
+                                
+                                // Use downloadArtifacts function instead of copyArtifacts plugin
+                                script {
+                                    downloadArtifacts(
+                                        jobName: 'theia-ide-build',
+                                        buildNumber: "${params.BUILD_NUMBER_PARAM}",
+                                        artifactPath: 'applications/electron/dist/**',
+                                        targetDir: '.'
+                                    )
+                                }
+                                
                                 container('theia-dev') {
                                     withCredentials([string(credentialsId: "github-bot-token", variable: 'GITHUB_TOKEN')]) {
                                         script {
@@ -164,9 +167,6 @@ spec:
       limits:
         memory: "8Gi"
         cpu: "2"
-      requests:
-        memory: "8Gi"
-        cpu: "2"
     volumeMounts:
     - name: global-cache
       mountPath: /.cache
@@ -198,11 +198,17 @@ spec:
                     steps {
                         checkout scm
                         echo "Fetching artifacts from build #${params.BUILD_NUMBER_PARAM}"
-                        copyArtifacts projectName: 'theia-ide-build', 
-                                     selector: specific("${params.BUILD_NUMBER_PARAM}"),
-                                     filter: "applications/electron/dist/windows/*",
-                                     fingerprintArtifacts: true,
-                                     target: '.'
+                        
+                        // Use downloadArtifacts function instead of copyArtifacts plugin
+                        script {
+                            downloadArtifacts(
+                                jobName: 'theia-ide-build',
+                                buildNumber: "${params.BUILD_NUMBER_PARAM}",
+                                artifactPath: 'applications/electron/dist/windows/*',
+                                targetDir: '.'
+                            )
+                        }
+                        
                         container('theia-dev') {
                             withCredentials([string(credentialsId: "github-bot-token", variable: 'GITHUB_TOKEN')]) {
                                 script {
@@ -233,6 +239,67 @@ spec:
                 }
             }
         }
+    }
+}
+
+/**
+ * Downloads artifacts from a Jenkins job using curl
+ *
+ * @param jobName The name of the Jenkins job
+ * @param buildNumber The build number to download from (can be 'lastSuccessful' or a specific number)
+ * @param artifactPath The path to the artifact within the job
+ * @param targetDir The directory to save the downloaded artifacts to
+ */
+def downloadArtifacts(Map params) {
+    // Extract parameters
+    String jobName = params.jobName
+    String buildNumber = params.buildNumber ?: 'lastSuccessful'
+    String artifactPath = params.artifactPath
+    String targetDir = params.targetDir ?: '.'
+    
+    // Create target directory if it doesn't exist
+    sh "mkdir -p ${targetDir}"
+    
+    // Handle wildcard patterns in artifact path
+    if (artifactPath.contains('*')) {
+        // When there's a wildcard, we need to download the artifact index first
+        sh """
+            curl -L -o artifact-index.json \
+            "${JENKINS_URL}job/${jobName}/${buildNumber}/api/json?tree=artifacts[relativePath]"
+        """
+        
+        // Parse the JSON to get artifact paths
+        def jsonSlurper = new JsonSlurper()
+        def artifactIndex = jsonSlurper.parse(new File("${pwd()}/artifact-index.json"))
+        
+        // Convert wildcard pattern to regex pattern
+        String regexPattern = artifactPath.replace('*', '.*').replace('?', '.?')
+        
+        // Filter artifacts matching the pattern and download them
+        artifactIndex.artifacts.each { artifact ->
+            if (artifact.relativePath =~ regexPattern) {
+                // Get the directory structure for this artifact
+                String artifactDir = new File(artifact.relativePath).parent
+                if (artifactDir) {
+                    sh "mkdir -p ${targetDir}/${artifactDir}"
+                }
+                
+                // Download the artifact
+                sh """
+                    curl -L -o ${targetDir}/${artifact.relativePath} \
+                    "${JENKINS_URL}job/${jobName}/${buildNumber}/artifact/${artifact.relativePath}"
+                """
+            }
+        }
+        
+        // Clean up the index file
+        sh "rm artifact-index.json"
+    } else {
+        // For single artifacts without wildcards, download directly
+        sh """
+            curl -L -o ${targetDir}/${artifactPath.tokenize('/')[-1]} \
+            "${JENKINS_URL}job/${jobName}/${buildNumber}/artifact/${artifactPath}"
+        """
     }
 }
 

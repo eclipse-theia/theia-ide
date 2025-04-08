@@ -41,9 +41,6 @@ spec:
       limits:
         memory: "8Gi"
         cpu: "2"
-      requests:
-        memory: "8Gi"
-        cpu: "2"
     volumeMounts:
     - name: global-cache
       mountPath: /.cache
