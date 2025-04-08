@@ -43,9 +43,9 @@ pipeline {
                         echo "Fetching artifacts from sign job #${params.BUILD_NUMBER_PARAM}"
                         copyArtifacts projectName: 'theia-ide-sign-notarize', 
                                       selector: specific("${params.BUILD_NUMBER_PARAM}"),
-                                      filter: "applications/electron/dist/*",
+                                      filter: "applications/electron/dist/linux/*",
                                       fingerprintArtifacts: true,
-                                      target: '.'
+                                      target: 'applications/electron/dist/'
                         script {
                             uploadInstaller('linux')
                         }
@@ -253,9 +253,9 @@ spec:
                         echo "Fetching artifacts from sign job #${params.BUILD_NUMBER_PARAM}"
                         copyArtifacts projectName: 'theia-ide-sign-notarize', 
                                      selector: specific("${params.BUILD_NUMBER_PARAM}"),
-                                     filter: "applications/electron/dist/*",
+                                     filter: "applications/electron/dist/windows/*",
                                      fingerprintArtifacts: true,
-                                     target: '.'
+                                     target: 'applications/electron/dist/'
                         container('theia-dev') {
                             withCredentials([string(credentialsId: "github-bot-token", variable: 'GITHUB_TOKEN')]) {
                                 script {

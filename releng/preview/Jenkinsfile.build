@@ -73,7 +73,10 @@ spec:
                                 }
                             }
                         }
-                        archiveArtifacts artifacts: "applications/electron/dist/*", fingerprint: true
+                        // Move Linux artifacts to linux folder for archiving
+                        sh "mkdir -p applications/electron/dist/linux"
+                        sh "find applications/electron/dist -maxdepth 1 -type f -not -path '*/\\.*' -exec mv {} applications/electron/dist/linux/ \\;"
+                        archiveArtifacts artifacts: "applications/electron/dist/linux/*", fingerprint: true
                     }
                     post {
                         failure {
@@ -116,7 +119,10 @@ spec:
 
                             buildInstaller(60)
                         }
-                        archiveArtifacts artifacts: "applications/electron/dist/*", fingerprint: true
+                        // Move Windows artifacts to windows folder for archiving
+                        sh "mkdir -p applications/electron/dist/windows"
+                        sh "find applications/electron/dist -maxdepth 1 -type f -not -path '*/\\.*' -exec mv {} applications/electron/dist/windows/ \\;"
+                        archiveArtifacts artifacts: "applications/electron/dist/windows/*", fingerprint: true
                     }
                     post {
                         failure {

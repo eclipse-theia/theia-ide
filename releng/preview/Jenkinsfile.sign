@@ -30,11 +30,11 @@ pipeline {
                         echo "Fetching artifacts from build #${params.BUILD_NUMBER_PARAM}"
                         copyArtifacts projectName: 'theia-ide-build', 
                                       selector: specific("${params.BUILD_NUMBER_PARAM}"),
-                                      filter: "applications/electron/dist/*",
+                                      filter: "applications/electron/dist/linux/*",
                                       fingerprintArtifacts: true,
                                       target: '.'
                         script {
-                            archiveArtifacts artifacts: "applications/electron/dist/*", fingerprint: true
+                            archiveArtifacts artifacts: "applications/electron/dist/linux/*", fingerprint: true
                         }
                     }
                 }
@@ -214,17 +214,18 @@ spec:
                         echo "Fetching artifacts from build #${params.BUILD_NUMBER_PARAM}"
                         copyArtifacts projectName: 'theia-ide-build', 
                                      selector: specific("${params.BUILD_NUMBER_PARAM}"),
-                                     filter: "applications/electron/dist/*",
+                                     filter: "applications/electron/dist/windows/*",
                                      fingerprintArtifacts: true,
                                      target: '.'
                         container('theia-dev') {
                             withCredentials([string(credentialsId: "github-bot-token", variable: 'GITHUB_TOKEN')]) {
                                 script {
-                                    signInstaller('exe', 'windows')
+                                    signInstaller('exe', 'windows', 'windows')
                                 }
                             }
                         }
-                        archiveArtifacts artifacts: "applications/electron/dist/*", fingerprint: true
+                        // Archive signed Windows artifacts
+                        archiveArtifacts artifacts: "applications/electron/dist/windows/*", fingerprint: true
                     }
                 }
             }
