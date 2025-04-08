@@ -12,7 +12,8 @@ pipeline {
         disableConcurrentBuilds()
     }
     parameters {
-        string(name: 'BUILD_NUMBER_PARAM', defaultValue: '', description: 'The build number from the upstream sign job')
+        string(name: 'BUILD_NUMBER_PARAM', defaultValue: '', description: 'The build number from the upstream build job')
+        string(name: 'SIGN_NUMBER_PARAM', defaultValue: '', description: 'The build number from the upstream sign job')
         booleanParam(name: 'DRY_RUN', defaultValue: true, description: 'If true, treat this as a dry run (no deployment of artifacts)')
     }
     environment {
@@ -41,12 +42,12 @@ pipeline {
                     agent any
                     steps {
                         checkout scm
-                        echo "Fetching artifacts from sign job #${params.BUILD_NUMBER_PARAM}"
-                        copyArtifacts projectName: 'theia-ide-sign-notarize', 
+                        echo "Fetching Linux artifacts from build job #${params.BUILD_NUMBER_PARAM}"
+                        copyArtifacts projectName: 'theia-ide-build', 
                                       selector: specific("${params.BUILD_NUMBER_PARAM}"),
                                       filter: "applications/electron/dist/linux/*",
                                       fingerprintArtifacts: true,
-                                      target: 'applications/electron/dist/'
+                                      target: '.'
                         script {
                             uploadInstaller('linux')
                         }
@@ -103,9 +104,9 @@ spec:
                     }
                     steps {
                         checkout scm
-                        echo "Fetching artifacts from sign job #${params.BUILD_NUMBER_PARAM}"
+                        echo "Fetching Mac artifacts from sign job #${params.SIGN_NUMBER_PARAM}"
                         copyArtifacts projectName: 'theia-ide-sign-notarize', 
-                                      selector: specific("${params.BUILD_NUMBER_PARAM}"),
+                                      selector: specific("${params.SIGN_NUMBER_PARAM}"),
                                       filter: "applications/electron/dist/mac-x64/**",
                                       fingerprintArtifacts: true,
                                       target: '.'
@@ -177,9 +178,9 @@ spec:
                     }
                     steps {
                         checkout scm
-                        echo "Fetching artifacts from sign job #${params.BUILD_NUMBER_PARAM}"
+                        echo "Fetching Mac-Arm artifacts from sign job #${params.SIGN_NUMBER_PARAM}"
                         copyArtifacts projectName: 'theia-ide-sign-notarize', 
-                                      selector: specific("${params.BUILD_NUMBER_PARAM}"),
+                                      selector: specific("${params.SIGN_NUMBER_PARAM}"),
                                       filter: "applications/electron/dist/mac-arm64/**",
                                       fingerprintArtifacts: true,
                                       target: '.'
@@ -251,12 +252,12 @@ spec:
                     }
                     steps {
                         checkout scm
-                        echo "Fetching artifacts from sign job #${params.BUILD_NUMBER_PARAM}"
+                        echo "Fetching Windows artifacts from sign job #${params.SIGN_NUMBER_PARAM}"
                         copyArtifacts projectName: 'theia-ide-sign-notarize', 
-                                     selector: specific("${params.BUILD_NUMBER_PARAM}"),
-                                     filter: "applications/electron/dist/windows/*",
-                                     fingerprintArtifacts: true,
-                                     target: 'applications/electron/dist/'
+                                      selector: specific("${params.SIGN_NUMBER_PARAM}"),
+                                      filter: "applications/electron/dist/windows/*",
+                                      fingerprintArtifacts: true,
+                                      target: '.'
                         container('theia-dev') {
                             withCredentials([string(credentialsId: "github-bot-token", variable: 'GITHUB_TOKEN')]) {
                                 script {

@@ -24,21 +24,6 @@ pipeline {
     stages {
         stage('Sign and Notarize') {
             parallel {
-                stage('Process Linux') {
-                    agent any
-                    steps {
-                        checkout scm
-                        echo "Fetching artifacts from build #${params.BUILD_NUMBER_PARAM}"
-                        copyArtifacts projectName: 'theia-ide-build', 
-                                      selector: specific("${params.BUILD_NUMBER_PARAM}"),
-                                      filter: "applications/electron/dist/linux/*",
-                                      fingerprintArtifacts: true,
-                                      target: '.'
-                        script {
-                            archiveArtifacts artifacts: "applications/electron/dist/linux/*", fingerprint: true
-                        }
-                    }
-                }
                 stage('Sign, Notarize Mac') {
                     stages {
                         stage('Sign and Notarize Mac') {
@@ -240,7 +225,8 @@ spec:
                 } else {
                     build job: 'theia-ide-upload', 
                           parameters: [
-                              string(name: 'BUILD_NUMBER_PARAM', value: "${BUILD_NUMBER}"),
+                              string(name: 'BUILD_NUMBER_PARAM', value: "${params.BUILD_NUMBER_PARAM}"),
+                              string(name: 'SIGN_NUMBER_PARAM', value: "${BUILD_NUMBER}"),
                               booleanParam(name: 'DRY_RUN', value: params.DRY_RUN)
                           ],
                           wait: false
