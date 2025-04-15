@@ -7,7 +7,7 @@ import groovy.json.JsonSlurper
 
 // Set permissions to allow the sign job to copy artifacts from this build
 properties([
-    copyArtifactPermission('theia-ide-sign-notarize')
+    copyArtifactPermission('theia-ide-sign-notarize'),
     copyArtifactPermission('theia-ide-upload')
 ])
 
