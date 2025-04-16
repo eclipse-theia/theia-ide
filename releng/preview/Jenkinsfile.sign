@@ -18,6 +18,7 @@ pipeline {
     }
     parameters {
         string(name: 'BUILD_NUMBER_PARAM', defaultValue: '', description: 'The build number from the upstream build job')
+        string(name: 'BUILD_JOB_NAME', defaultValue: 'theia-ide-build', description: 'The name of the build job that created the artifacts')
         booleanParam(name: 'DRY_RUN', defaultValue: true, description: 'If true, treat this as a dry run (no deployment of artifacts)')
     }
     environment {
@@ -82,10 +83,10 @@ spec:
                             }
                             steps {
                                 checkout scm
-                                echo "Fetching artifacts from build #${params.BUILD_NUMBER_PARAM}"
+                                echo "Fetching artifacts from ${params.BUILD_JOB_NAME} build #${params.BUILD_NUMBER_PARAM}"
 
                                 copyArtifacts(
-                                    projectName: 'theia-ide-build',
+                                    projectName: "${params.BUILD_JOB_NAME}",
                                     selector: specific("${params.BUILD_NUMBER_PARAM}"),
                                     filter: 'applications/electron/dist/**',
                                     target: '.',
@@ -206,10 +207,10 @@ spec:
                     }
                     steps {
                         checkout scm
-                        echo "Fetching artifacts from build #${params.BUILD_NUMBER_PARAM}"
+                        echo "Fetching artifacts from ${params.BUILD_JOB_NAME} build #${params.BUILD_NUMBER_PARAM}"
                         
                         copyArtifacts(
-                            projectName: 'theia-ide-build',
+                            projectName: "${params.BUILD_JOB_NAME}",
                             selector: specific("${params.BUILD_NUMBER_PARAM}"),
                             filter: 'applications/electron/dist/windows/*',
                             fingerprintArtifacts: true

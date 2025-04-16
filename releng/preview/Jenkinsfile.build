@@ -148,6 +148,7 @@ spec:
                     build job: 'theia-ide-sign-notarize', 
                           parameters: [
                               string(name: 'BUILD_NUMBER_PARAM', value: "${BUILD_NUMBER}"),
+                              string(name: 'BUILD_JOB_NAME', value: "${env.JOB_NAME}"),
                               booleanParam(name: 'DRY_RUN', value: params.DRY_RUN)
                           ],
                           wait: false
