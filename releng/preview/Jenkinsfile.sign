@@ -39,6 +39,7 @@ pipeline {
 apiVersion: v1
 kind: Pod
 spec:
+  podRetention: never()
   containers:
   - name: theia-dev
     image: eclipsetheia/theia-blueprint:builder
@@ -163,6 +164,7 @@ spec:
 apiVersion: v1
 kind: Pod
 spec:
+  podRetention: never()
   containers:
   - name: theia-dev
     image: eclipsetheia/theia-blueprint:builder
