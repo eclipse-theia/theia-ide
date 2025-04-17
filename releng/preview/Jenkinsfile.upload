@@ -21,22 +21,7 @@ pipeline {
         NODE_OPTIONS = '--max_old_space_size=4096'
     }
     stages {
-        stage('Check if Upload is Required') {
-            agent any
-            steps {
-                script {
-                    if (isDryRun()) {
-                        echo "This is a dry run. Skipping upload phase."
-                        currentBuild.result = 'SUCCESS'
-                        return
-                    }
-                }
-            }
-        }
         stage('Update and Upload') {
-            when {
-                expression { !isDryRun() }
-            }
             parallel {
                 stage('Upload Linux') {
                     agent any

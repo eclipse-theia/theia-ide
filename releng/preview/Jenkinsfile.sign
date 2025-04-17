@@ -234,17 +234,13 @@ spec:
     post {
         success {
             script {
-                if (isDryRun()) {
-                    echo "Skipping upload step because this is a dry run"
-                } else {
-                    build job: 'theia-ide-upload', 
-                          parameters: [
-                              string(name: 'BUILD_NUMBER_PARAM', value: "${params.BUILD_NUMBER_PARAM}"),
-                              string(name: 'SIGN_NUMBER_PARAM', value: "${BUILD_NUMBER}"),
-                              booleanParam(name: 'DRY_RUN', value: params.DRY_RUN)
-                          ],
-                          wait: false
-                }
+                build job: 'theia-ide-upload', 
+                        parameters: [
+                            string(name: 'BUILD_NUMBER_PARAM', value: "${params.BUILD_NUMBER_PARAM}"),
+                            string(name: 'SIGN_NUMBER_PARAM', value: "${BUILD_NUMBER}"),
+                            booleanParam(name: 'DRY_RUN', value: params.DRY_RUN)
+                        ],
+                        wait: false
             }
         }
     }
