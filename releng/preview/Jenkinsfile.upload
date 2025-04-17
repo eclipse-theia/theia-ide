@@ -45,7 +45,7 @@ pipeline {
                         echo "Fetching Linux artifacts from build job #${params.BUILD_NUMBER_PARAM}"
                         
                         copyArtifacts(
-                            projectName: 'theia-ide-build',
+                            projectName: 'theia-ide-release',
                             selector: specific("${params.BUILD_NUMBER_PARAM}"),
                             filter: 'applications/electron/dist/linux/*',
                             target: '.',
@@ -405,7 +405,7 @@ def copyInstallerAndUpdateLatestYml(String platform, String installer, String ex
 
 // Helper functions for branch and release status
 def isReleaseBranch() {
-    return (env.BRANCH_NAME == "sg/improvePublishing")
+    return (env.GIT_BRANCH == "origin/sg/improvePublishing")
 }
 
 // Helper function for dry run status

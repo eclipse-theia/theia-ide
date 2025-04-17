@@ -289,7 +289,7 @@ def buildInstaller(int sleepBetweenRetries) {
 
 // Helper functions for branch and release status
 def isReleaseBranch() {
-    return (env.BRANCH_NAME == "sg/improvePublishing")
+    return (env.GIT_BRANCH == "origin/sg/improvePublishing")
 }
 
 // Helper function for dry run status
