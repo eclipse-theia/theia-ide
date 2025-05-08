@@ -222,14 +222,12 @@ def createMacInstaller() {
         
         // Copy app and create Applications symlink
         sh "ditto ${mountPoint}/TheiaIDE.app applications/electron/dist/${arch}/TheiaIDE-dmg-layout/TheiaIDE.app"
-        sh "ln -s /Applications applications/electron/dist/${arch}/TheiaIDE-dmg-layout/Applications"
+        sh "ln -sf /Applications applications/electron/dist/${arch}/TheiaIDE-dmg-layout/Applications"
         
         // Detach mounted DMG
         sh "hdiutil detach ${mountPoint}"
-    }
-
-    // Step 4: Remove quarantine bits from all files
-    architectures.each { arch ->
+        
+        // Step 4: Remove quarantine bits from all files
         sh "xattr -d -r com.apple.quarantine applications/electron/dist/${arch}/TheiaIDE-dmg-layout || true"
     }
     
