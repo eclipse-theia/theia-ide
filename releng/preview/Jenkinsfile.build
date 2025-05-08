@@ -216,12 +216,12 @@ def createMacInstaller() {
         // Copy DS_Store if exists
         sh """
             if [ -f ${mountPoint}/.DS_Store ]; then
-                cp ${mountPoint}/.DS_Store applications/electron/dist/${arch}/TheiaIDE-dmg-layout/
+                ditto ${mountPoint}/.DS_Store applications/electron/dist/${arch}/TheiaIDE-dmg-layout/
             fi
         """
         
         // Copy app and create Applications symlink
-        sh "cp -R ${mountPoint}/TheiaIDE.app applications/electron/dist/${arch}/TheiaIDE-dmg-layout/TheiaIDE.app"
+        sh "ditto ${mountPoint}/TheiaIDE.app applications/electron/dist/${arch}/TheiaIDE-dmg-layout/TheiaIDE.app"
         sh "ln -s /Applications applications/electron/dist/${arch}/TheiaIDE-dmg-layout/Applications"
         
         // Detach mounted DMG
