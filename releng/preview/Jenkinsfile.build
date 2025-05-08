@@ -222,6 +222,8 @@ def createMacInstaller() {
         
         // Copy app and create Applications symlink
         sh "ditto ${mountPoint}/TheiaIDE.app applications/electron/dist/${arch}/TheiaIDE-dmg-layout/TheiaIDE.app"
+        // Make sure the destination doesn't exist before creating the symlink
+        sh "rm -f applications/electron/dist/${arch}/TheiaIDE-dmg-layout/Applications"
         sh "ln -sf /Applications applications/electron/dist/${arch}/TheiaIDE-dmg-layout/Applications"
         
         // Detach mounted DMG
