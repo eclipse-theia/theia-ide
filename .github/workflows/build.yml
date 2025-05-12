@@ -41,7 +41,7 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Build and dev package (Windows, Linux)
+      - name: Build dev package (Windows, Linux)
         if: (runner.os == 'Windows' || runner.os == 'Linux') && github.event_name == 'pull_request'
         shell: bash
         run: |
@@ -53,7 +53,7 @@ jobs:
           NODE_OPTIONS: --max_old_space_size=4096
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # https://github.com/microsoft/vscode-ripgrep/issues/9
 
-      - name: Build and prod package (Windows, Linux)
+      - name: Build prod package (Windows, Linux)
         if: (runner.os == 'Windows' || runner.os == 'Linux') && github.event_name != 'pull_request'
         shell: bash
         run: |
@@ -70,7 +70,7 @@ jobs:
         run: |
           sed -i '' 's|https://download.eclipse.org/theia/ide/latest/macos|https://download.eclipse.org/theia/ide/latest/macos-arm|g' applications/electron/electron-builder.yml
 
-      - name: Build and package (Mac)
+      - name: Build prod package (Mac)
         if: runner.os == 'macOS'
         shell: bash
         run: |
