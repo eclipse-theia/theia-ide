@@ -9,10 +9,9 @@ on:
     branches:
       - master
   schedule:
-    - cron: '0 4 * * *' # Runs every day at 4am: https://docs.github.com/en/actions/reference/events-that-trigger-workflows#scheduled-events-schedule
+    - cron: "0 4 * * *" # Runs every day at 4am: https://docs.github.com/en/actions/reference/events-that-trigger-workflows#scheduled-events-schedule
 
 jobs:
-
   build:
     name: ${{ matrix.os }}, Node.js v${{ matrix.node }}
 
@@ -20,7 +19,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [windows-2019, ubuntu-22.04, macos-13, macos-14] # macOS-13 is for x64, macOS-14 is for arm64
-        node: ['20.x']
+        node: ["20.x"]
 
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
@@ -35,21 +34,33 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node }}
-          registry-url: 'https://registry.npmjs.org'
+          registry-url: "https://registry.npmjs.org"
 
       - name: Use Python 3.11
         uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
-      - name: Build and package (Windows, Linux)
-        if: runner.os == 'Windows' || runner.os == 'Linux'
+      - name: Build and dev package (Windows, Linux)
+        if: (runner.os == 'Windows' || runner.os == 'Linux') && github.event_name == 'pull_request'
         shell: bash
         run: |
           yarn --skip-integrity-check --network-timeout 100000
           yarn build:dev
           yarn download:plugins
           yarn package:applications:preview
+        env:
+          NODE_OPTIONS: --max_old_space_size=4096
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # https://github.com/microsoft/vscode-ripgrep/issues/9
+
+      - name: Build and prod package (Windows, Linux)
+        if: (runner.os == 'Windows' || runner.os == 'Linux') && github.event_name != 'pull_request'
+        shell: bash
+        run: |
+          yarn --skip-integrity-check --network-timeout 100000
+          yarn build
+          yarn download:plugins
+          yarn package:applications
         env:
           NODE_OPTIONS: --max_old_space_size=4096
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # https://github.com/microsoft/vscode-ripgrep/issues/9
@@ -82,6 +93,24 @@ jobs:
             !applications/electron/dist/mac-arm64/**
           retention-days: 1
 
+      - name: Upload Windows Dist Files
+        if: runner.os == 'Windows' && github.event_name != 'pull_request'
+        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 #4.6.1
+        with:
+          name: windows
+          path: |
+            applications/electron/dist/**
+          retention-days: 1
+
+      - name: Upload Linux Dist Files
+        if: runner.os == 'Linux' && github.event_name != 'pull_request'
+        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 #4.6.1
+        with:
+          name: linux
+          path: |
+            applications/electron/dist/**
+          retention-days: 1
+
       - name: Test (Linux)
         if: matrix.tests != 'skip' && runner.os == 'Linux'
         uses: GabrielBB/xvfb-action@86d97bde4a65fe9b290c0b3fb92c2c4ed0e5302d #1.6
@@ -93,7 +122,7 @@ jobs:
         shell: bash
         run: |
           yarn electron test
-          
+
       - name: Test (macOS)
         if: matrix.tests != 'skip' && runner.os == 'macOS'
         shell: bash
