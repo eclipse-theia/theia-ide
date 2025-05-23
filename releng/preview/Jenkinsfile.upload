@@ -29,13 +29,18 @@ pipeline {
                     checkout scm
                     echo "Fetching Linux artifacts from build job #${params.BUILD_NUMBER_PARAM}"
                     
-                    copyArtifacts(
-                        projectName: 'theia-ide-release',
-                        selector: specific("${params.BUILD_NUMBER_PARAM}"),
-                        filter: 'applications/electron/dist/linux/*',
-                        target: '.',
-                        fingerprintArtifacts: true
-                    )
+                    // Retry copy artifacts with timeout to handle large files (up to 800 MiB)
+                    retry(3) {
+                        timeout(time: 20, unit: 'MINUTES') {
+                            copyArtifacts(
+                                projectName: 'theia-ide-release',
+                                selector: specific("${params.BUILD_NUMBER_PARAM}"),
+                                filter: 'applications/electron/dist/linux/*',
+                                target: '.',
+                                fingerprintArtifacts: true
+                            )
+                        }
+                    }
 
                     script {
                         uploadInstaller('linux')
@@ -96,13 +101,18 @@ spec:
                     checkout scm
                     echo "Fetching Mac artifacts from sign job #${params.SIGN_NUMBER_PARAM}"
                     
-                    copyArtifacts(
-                        projectName: 'theia-ide-sign-notarize',
-                        selector: specific("${params.SIGN_NUMBER_PARAM}"),
-                        filter: 'applications/electron/dist/mac-x64/**',
-                        target: '.',
-                        fingerprintArtifacts: true
-                    )
+                    // Retry copy artifacts with timeout to handle large files (up to 800 MiB)
+                    retry(3) {
+                        timeout(time: 20, unit: 'MINUTES') {
+                            copyArtifacts(
+                                projectName: 'theia-ide-sign-notarize',
+                                selector: specific("${params.SIGN_NUMBER_PARAM}"),
+                                filter: 'applications/electron/dist/mac-x64/**',
+                                target: '.',
+                                fingerprintArtifacts: true
+                            )
+                        }
+                    }
                     
                     container('theia-dev') {
                         withCredentials([string(credentialsId: "github-bot-token", variable: 'GITHUB_TOKEN')]) {
@@ -175,13 +185,18 @@ spec:
                     checkout scm
                     echo "Fetching Mac-Arm artifacts from sign job #${params.SIGN_NUMBER_PARAM}"
                     
-                    copyArtifacts(
-                        projectName: 'theia-ide-sign-notarize',
-                        selector: specific("${params.SIGN_NUMBER_PARAM}"),
-                        filter: 'applications/electron/dist/mac-arm64/**',
-                        target: '.',
-                        fingerprintArtifacts: true
-                    )
+                    // Retry copy artifacts with timeout to handle large files (up to 800 MiB)
+                    retry(3) {
+                        timeout(time: 20, unit: 'MINUTES') {
+                            copyArtifacts(
+                                projectName: 'theia-ide-sign-notarize',
+                                selector: specific("${params.SIGN_NUMBER_PARAM}"),
+                                filter: 'applications/electron/dist/mac-arm64/**',
+                                target: '.',
+                                fingerprintArtifacts: true
+                            )
+                        }
+                    }
 
                     container('theia-dev') {
                         withCredentials([string(credentialsId: "github-bot-token", variable: 'GITHUB_TOKEN')]) {
@@ -254,13 +269,18 @@ spec:
                     checkout scm
                     echo "Fetching Windows artifacts from sign job #${params.SIGN_NUMBER_PARAM}"
                     
-                    copyArtifacts(
-                        projectName: 'theia-ide-sign-notarize',
-                        selector: specific("${params.SIGN_NUMBER_PARAM}"),
-                        filter: 'applications/electron/dist/windows/*',
-                        target: '.',
-                        fingerprintArtifacts: true
-                    )
+                    // Retry copy artifacts with timeout to handle large files (up to 800 MiB)
+                    retry(3) {
+                        timeout(time: 20, unit: 'MINUTES') {
+                            copyArtifacts(
+                                projectName: 'theia-ide-sign-notarize',
+                                selector: specific("${params.SIGN_NUMBER_PARAM}"),
+                                filter: 'applications/electron/dist/windows/*',
+                                target: '.',
+                                fingerprintArtifacts: true
+                            )
+                        }
+                    }
 
                     container('theia-dev') {
                         withCredentials([string(credentialsId: "github-bot-token", variable: 'GITHUB_TOKEN')]) {
