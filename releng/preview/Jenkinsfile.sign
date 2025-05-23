@@ -85,13 +85,18 @@ spec:
                                 checkout scm
                                 echo "Fetching artifacts from 'theia-ide-release' build #${params.BUILD_NUMBER_PARAM}"
 
-                                copyArtifacts(
-                                    projectName: "theia-ide-release",
-                                    selector: specific("${params.BUILD_NUMBER_PARAM}"),
-                                    filter: 'applications/electron/dist/**',
-                                    target: '.',
-                                    fingerprintArtifacts: true
-                                )
+                                // Retry copy artifacts with timeout to handle large files (up to 800 MiB)
+                                retry(3) {
+                                    timeout(time: 20, unit: 'MINUTES') {
+                                        copyArtifacts(
+                                            projectName: "theia-ide-release",
+                                            selector: specific("${params.BUILD_NUMBER_PARAM}"),
+                                            filter: 'applications/electron/dist/**',
+                                            target: '.',
+                                            fingerprintArtifacts: true
+                                        )
+                                    }
+                                }
                                 
                                 container('theia-dev') {
                                     withCredentials([string(credentialsId: "github-bot-token", variable: 'GITHUB_TOKEN')]) {
@@ -210,12 +215,17 @@ spec:
                         checkout scm
                         echo "Fetching artifacts from 'theia-ide-release' build #${params.BUILD_NUMBER_PARAM}"
                         
-                        copyArtifacts(
-                            projectName: "theia-ide-release",
-                            selector: specific("${params.BUILD_NUMBER_PARAM}"),
-                            filter: 'applications/electron/dist/windows/*',
-                            fingerprintArtifacts: true
-                        )
+                        // Retry copy artifacts with timeout to handle large files (up to 800 MiB)
+                        retry(3) {
+                            timeout(time: 20, unit: 'MINUTES') {
+                                copyArtifacts(
+                                    projectName: "theia-ide-release",
+                                    selector: specific("${params.BUILD_NUMBER_PARAM}"),
+                                    filter: 'applications/electron/dist/windows/*',
+                                    fingerprintArtifacts: true
+                                )
+                            }
+                        }
                         
                         container('theia-dev') {
                             withCredentials([string(credentialsId: "github-bot-token", variable: 'GITHUB_TOKEN')]) {
