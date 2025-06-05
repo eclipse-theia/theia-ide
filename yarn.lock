@@ -2122,6 +2122,20 @@
     minimatch "^5.1.0"
     tslib "^2.6.2"
 
+"@theia/ai-editor@1.63.0-next.24":
+  version "1.63.0-next.24"
+  resolved "https://registry.yarnpkg.com/@theia/ai-editor/-/ai-editor-1.63.0-next.24.tgz#1c63e0c9455a02f88b21ec7ed8497ae7d78cbb90"
+  integrity sha512-1kSp8FdGy1l98N3f2wVgCJR9xfV/rECu6YEewTKYJ2BvE1S1fyRzhGERsXphltFDKVq7Rqxn+HxNqDUpXwYx2A==
+  dependencies:
+    "@theia/ai-chat" "1.63.0-next.24+83b50cc66"
+    "@theia/ai-core" "1.63.0-next.24+83b50cc66"
+    "@theia/core" "1.63.0-next.24+83b50cc66"
+    "@theia/editor" "1.63.0-next.24+83b50cc66"
+    "@theia/filesystem" "1.63.0-next.24+83b50cc66"
+    "@theia/monaco" "1.63.0-next.24+83b50cc66"
+    "@theia/monaco-editor-core" "1.96.302"
+    "@theia/workspace" "1.63.0-next.24+83b50cc66"
+
 "@theia/ai-google@1.63.0-next.24":
   version "1.63.0-next.24"
   resolved "https://registry.yarnpkg.com/@theia/ai-google/-/ai-google-1.63.0-next.24.tgz#291c1e221853fd1b123e508ad7134cfaabbd312c"
