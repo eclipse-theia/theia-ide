@@ -18,7 +18,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-2019, ubuntu-22.04, macos-13, macos-14] # macOS-13 is for x64, macOS-14 is for arm64
+        os: [windows-2022, ubuntu-22.04, macos-13, macos-14] # macOS-13 is for x64, macOS-14 is for arm64
         node: ["20.x"]
 
     runs-on: ${{ matrix.os }}
