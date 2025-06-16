@@ -299,6 +299,7 @@ def createMacInstaller() {
             cp applications/electron/dist/mac-arm64/TheiaIDE-dmg-mounted/.DS_Store applications/electron/dist/mac-arm64/TheiaIDE-dmg-layout/
         fi
     '''
+    sh 'rm -rf applications/electron/dist/mac-arm64/TheiaIDE-dmg-layout/TheiaIDE.app'
     sh 'cp -R applications/electron/dist/mac-arm64/TheiaIDE-dmg-mounted/TheiaIDE.app applications/electron/dist/mac-arm64/TheiaIDE-dmg-layout/TheiaIDE.app'
     sh 'ln -s /Applications applications/electron/dist/mac-arm64/TheiaIDE-dmg-layout/Applications'
     sh 'hdiutil detach applications/electron/dist/mac-arm64/TheiaIDE-dmg-mounted'
