@@ -281,7 +281,7 @@ def createMacInstaller() {
     sh 'curl -L -o applications/electron/dist/mac-arm64.zip https://github.com/eclipse-theia/theia-ide/releases/download/pre-release/mac-arm64.zip'
 
     // Step 3: Extract the zip files
-    sh 'unzip applications/electron/dist/mac-arm64.zip -d applications/electron/dist/mac-arm64'
+    sh 'unzip -o applications/electron/dist/mac-arm64.zip -d applications/electron/dist/mac-arm64'
 
     // Step 4: Delete the zip files
     sh 'rm applications/electron/dist/mac-arm64.zip'
