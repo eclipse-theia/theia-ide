@@ -43,26 +43,6 @@ pipeline {
     }
     stages {
         stage('Build') {
-            when {
-                anyOf {
-                    expression {
-                        env.JOB_BASE_NAME ==~ /$releaseBranch/
-                    }
-                    expression { 
-                        env.CHANGE_BRANCH ==~ /$jenkinsRelatedRegex/
-                    }
-                    expression {
-                        env.CHANGE_TITLE ==~ /$jenkinsRelatedRegex/
-                    }
-                    expression {
-                        // PR branch? 
-                        env.BRANCH_NAME ==~ /PR-(\d)+/
-                    }
-                    expression {
-                        env.THEIA_IDE_JENKINS_RELEASE_DRYRUN == 'true'
-                    }
-                }
-            }
             parallel {
                 stage('Create Mac Installer') {
                     options {
@@ -86,25 +66,6 @@ pipeline {
             }
         }
         stage('Sign and Upload') {
-            // only proceed when merging on the release branch or if the
-            // PR seems Jenkins-related. Note: for PRs, we do not by default
-            // run this stage since it will be of little practical value.
-            when {
-                anyOf {
-                    expression {
-                        env.JOB_BASE_NAME ==~ /$releaseBranch/
-                    }
-                    expression { 
-                        env.CHANGE_BRANCH ==~ /$jenkinsRelatedRegex/
-                    }
-                    expression {
-                        env.CHANGE_TITLE ==~ /$jenkinsRelatedRegex/
-                    }
-                    expression {
-                        env.THEIA_IDE_JENKINS_RELEASE_DRYRUN == 'true'
-                    }
-                }
-            }
             parallel {
                 stage('Sign, Notarize and Upload Mac') {
                     stages {
