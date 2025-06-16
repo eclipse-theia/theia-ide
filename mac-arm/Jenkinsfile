@@ -309,14 +309,10 @@ def createMacInstaller() {
     sh 'xattr -d -r com.apple.quarantine applications/electron/dist/mac-arm64/TheiaIDE-dmg-layout || true'
     
     // Step 8: Sign binaries - only when it's a release
-    if (isRelease()) {
-        sh 'yarn --frozen-lockfile --force'
-        sshagent(['projects-storage.eclipse.org-bot-ssh']) {
-            def appPathArm64 = "/${pwd()}/applications/electron/dist/mac-arm64/TheiaIDE-dmg-layout/TheiaIDE.app"
-            sh "yarn electron sign:directory -d \"${appPathArm64}\""
-        }
-    } else {
-        echo "This is not a release, so skipping binary signing for branch ${env.BRANCH_NAME}"
+    sh 'yarn --frozen-lockfile --force'
+    sshagent(['projects-storage.eclipse.org-bot-ssh']) {
+        def appPathArm64 = "/${pwd()}/applications/electron/dist/mac-arm64/TheiaIDE-dmg-layout/TheiaIDE.app"
+        sh "yarn electron sign:directory -d \"${appPathArm64}\""
     }
     sh 'ls -al applications/electron/dist/mac-arm64/TheiaIDE-dmg-layout'
     sh 'ls -al applications/electron/dist/mac-arm64/TheiaIDE-dmg-layout/TheiaIDE.app'
@@ -336,11 +332,6 @@ def createMacInstaller() {
 }
 
 def signInstaller(String ext, String os, String arch = '') {
-    if (!isRelease()) {
-        echo "This is not a release, so skipping installer signing for branch ${env.BRANCH_NAME}"
-        return
-    }
-
     // Adjust the dist folder to include architecture if supplied
     String targetFolder = arch ? "${distFolder}/${arch}" : distFolder
     List installers = findFiles(glob: "${targetFolder}/*.${ext}")
@@ -364,11 +355,6 @@ def signInstaller(String ext, String os, String arch = '') {
 }
 
 def notarizeInstaller(String ext, String arch = '') {
-    if (!isRelease()) {
-        echo "This is not a release, so skipping installer notarizing for branch ${env.BRANCH_NAME}"
-        return
-    }
-
     String service = 'https://cbi.eclipse.org/macos/xcrun'
 
     // Adjust the dist folder to include architecture if supplied
@@ -401,11 +387,6 @@ def notarizeInstaller(String ext, String arch = '') {
 }
 
 def updateMetadata(String executable, String yaml, String platform, Boolean updatePaths, String fileExtension, int sleepBetweenRetries) {
-    if (!isRelease()) {
-        echo "This is not a release, so skipping updating metadata for branch ${env.BRANCH_NAME}"
-        return
-    }
-
     int maxRetry = 4
     try {
         // make sure the npm dependencies are available to the update scripts
