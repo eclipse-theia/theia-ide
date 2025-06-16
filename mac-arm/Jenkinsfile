@@ -407,20 +407,16 @@ def updateMetadata(String executable, String yaml, String platform, Boolean upda
 }
 
 def uploadInstaller(String platform, String arch = '') {
-    if (isReleaseBranch()) {
-        String targetFolder = arch ? "${distFolder}/${arch}" : distFolder
-        def packageJSON = readJSON file: "package.json"
-        String version = "${packageJSON.version}"
-        sshagent(['projects-storage.eclipse.org-bot-ssh']) {
-            sh "ssh genie.theia@projects-storage.eclipse.org rm -rf /home/data/httpd/download.eclipse.org/theia/ide-preview/${version}/${platform}"
-            sh "ssh genie.theia@projects-storage.eclipse.org mkdir -p /home/data/httpd/download.eclipse.org/theia/ide-preview/${version}/${platform}"
-            sh "scp ${targetFolder}/*.* genie.theia@projects-storage.eclipse.org:/home/data/httpd/download.eclipse.org/theia/ide-preview/${version}/${platform}"
-            sh "ssh genie.theia@projects-storage.eclipse.org rm -rf /home/data/httpd/download.eclipse.org/theia/ide-preview/latest/${platform}"
-            sh "ssh genie.theia@projects-storage.eclipse.org mkdir -p /home/data/httpd/download.eclipse.org/theia/ide-preview/latest/${platform}"
-            sh "scp ${targetFolder}/*.* genie.theia@projects-storage.eclipse.org:/home/data/httpd/download.eclipse.org/theia/ide-preview/latest/${platform}"
-        }
-    } else {
-        echo "Skipped upload for branch ${env.BRANCH_NAME}"
+    String targetFolder = arch ? "${distFolder}/${arch}" : distFolder
+    def packageJSON = readJSON file: "package.json"
+    String version = "${packageJSON.version}"
+    sshagent(['projects-storage.eclipse.org-bot-ssh']) {
+        sh "ssh genie.theia@projects-storage.eclipse.org rm -rf /home/data/httpd/download.eclipse.org/theia/ide-preview/${version}/${platform}"
+        sh "ssh genie.theia@projects-storage.eclipse.org mkdir -p /home/data/httpd/download.eclipse.org/theia/ide-preview/${version}/${platform}"
+        sh "scp ${targetFolder}/*.* genie.theia@projects-storage.eclipse.org:/home/data/httpd/download.eclipse.org/theia/ide-preview/${version}/${platform}"
+        sh "ssh genie.theia@projects-storage.eclipse.org rm -rf /home/data/httpd/download.eclipse.org/theia/ide-preview/latest/${platform}"
+        sh "ssh genie.theia@projects-storage.eclipse.org mkdir -p /home/data/httpd/download.eclipse.org/theia/ide-preview/latest/${platform}"
+        sh "scp ${targetFolder}/*.* genie.theia@projects-storage.eclipse.org:/home/data/httpd/download.eclipse.org/theia/ide-preview/latest/${platform}"
     }
 }
 
