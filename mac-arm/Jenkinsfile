@@ -5,7 +5,7 @@
 /* groovylint-disable NestedBlockDepth */
 import groovy.json.JsonSlurper
 
-releaseBranch = "master"
+releaseBranch = "fix/publishMacArm"
 distFolder = "applications/electron/dist"
 
 toStashDist = "${distFolder}/**"
