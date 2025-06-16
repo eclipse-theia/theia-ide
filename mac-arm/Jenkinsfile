@@ -63,22 +63,24 @@ pipeline {
                     }
                 }
             }
-            stage('Create Mac Installer') {
-                options {
-                    skipDefaultCheckout true
-                }
-                agent {
-                    label 'macos'
-                }
-                steps {
-                    script {
-                        createMacInstaller()
+            parallel {
+                stage('Create Mac Installer') {
+                    options {
+                        skipDefaultCheckout true
                     }
-                    stash includes: "${toStashDist}", name: 'mac'
-                }
-                post {
-                    failure {
-                        error("Mac installer creation failed, aborting...")
+                    agent {
+                        label 'macos'
+                    }
+                    steps {
+                        script {
+                            createMacInstaller()
+                        }
+                        stash includes: "${toStashDist}", name: 'mac'
+                    }
+                    post {
+                        failure {
+                            error("Mac installer creation failed, aborting...")
+                        }
                     }
                 }
             }
@@ -103,12 +105,13 @@ pipeline {
                     }
                 }
             }
-            stage('Sign, Notarize and Upload Mac') {
-                stages {
-                    stage('Sign and Notarize Mac') {
-                        agent {
-                            kubernetes {
-                                yaml """
+            parallel {
+                stage('Sign, Notarize and Upload Mac') {
+                    stages {
+                        stage('Sign and Notarize Mac') {
+                            agent {
+                                kubernetes {
+                                    yaml """
 apiVersion: v1
 kind: Pod
 spec:
@@ -152,137 +155,138 @@ emptyDir: {}
 configMap:
     name: known-hosts
 """
+                                }
                             }
-                        }
-                        steps {
-                            unstash 'mac'
-                            container('theia-dev') {
-                                withCredentials([string(credentialsId: "github-bot-token", variable: 'GITHUB_TOKEN')]) {
-                                    script {
-                                        signInstaller('dmg', 'mac', 'mac-arm64')
-                                        notarizeInstaller('dmg', 'mac-arm64')
+                            steps {
+                                unstash 'mac'
+                                container('theia-dev') {
+                                    withCredentials([string(credentialsId: "github-bot-token", variable: 'GITHUB_TOKEN')]) {
+                                        script {
+                                            signInstaller('dmg', 'mac', 'mac-arm64')
+                                            notarizeInstaller('dmg', 'mac-arm64')
+                                        }
                                     }
                                 }
-                            }
-                            stash includes: "${toStashDistMacArm}", name: 'mac2-arm'
-                        }
-                    }
-                    stage('Recreate Zip with Ditto for correct file permissions') {
-                        agent {
-                            label 'macos'
-                        }
-                        steps {
-                            unstash 'mac2-arm'
-                            script {
-                                def packageJSON = readJSON file: "package.json"
-                                String version = "${packageJSON.version}"
-
-                                def architectures = ['mac-arm64']
-                                architectures.each { arch -> 
-
-                                    String targetFolder = "${distFolder}/${arch}"
-                                    def notarizedDmg = "${targetFolder}/TheiaIDE.dmg"
-
-                                    // We'll mount and then copy the .app out of the DMG
-                                    def mountPoint = "${targetFolder}/TheiaIDE-mount"
-                                    def extractedFolder = "${targetFolder}/TheiaIDE-extracted"
-                                    def rezippedFile = "${targetFolder}/TheiaIDE-rezipped.zip"
-                                    def archSuffix = arch == 'mac-arm64' ? '-arm64' : ''
-                                    def finalZip = "${targetFolder}/TheiaIDE-${version}${archSuffix}-mac.zip"
-                                    sh "rm -rf \"${extractedFolder}\" \"${mountPoint}\""
-                                    sh "mkdir -p \"${extractedFolder}\" \"${mountPoint}\""
-                                    sh "hdiutil attach \"${notarizedDmg}\" -mountpoint \"${mountPoint}\""
-
-                                    sleep 5
-                                    sh "ls -al ${mountPoint}"
-                                    sh "ls -al ${mountPoint}/TheiaIDE.app"
-
-                                    // Copy the .app from the DMG to a folder we can zip
-                                    sh "ditto \"${mountPoint}/TheiaIDE.app\" \"${extractedFolder}/TheiaIDE.app\""
-
-                                    // Unmount the DMG
-                                    sh "hdiutil detach \"${mountPoint}\""
-
-                                    // Zip with ditto
-                                    sh "ditto -c -k \"${extractedFolder}\" \"${rezippedFile}\""
-
-                                    // Replace the old zip with the newly created one
-                                    sh "rm -f \"${finalZip}\""
-                                    sh "mv \"${rezippedFile}\" \"${finalZip}\""
-
-                                    // Cleanup
-                                    sh "rm -rf \"${extractedFolder}\" \"${mountPoint}\""
-                                }
-
-
-                            }
-                            stash includes: "${toStashDistMacArm}", name: 'mac3-arm'
-                        }
-                    }
-                    stage('Update Metadata and Upload Mac-Arm') {
-                        agent {
-                            kubernetes {
-                                yaml """
-apiVersion: v1
-kind: Pod
-spec:
-containers:
-- name: theia-dev
-image: eclipsetheia/theia-blueprint:builder
-imagePullPolicy: Always
-command:
-- cat
-tty: true
-resources:
-    limits:
-    memory: "8Gi"
-    cpu: "2"
-    requests:
-    memory: "8Gi"
-    cpu: "2"
-volumeMounts:
-- name: global-cache
-    mountPath: /.cache
-- name: global-yarn
-    mountPath: /.yarn      
-- name: global-npm
-    mountPath: /.npm      
-- name: electron-cache
-    mountPath: /.electron-gyp
-- name: jnlp
-volumeMounts:
-- name: volume-known-hosts
-    mountPath: /home/jenkins/.ssh
-volumes:
-- name: global-cache
-emptyDir: {}
-- name: global-yarn
-emptyDir: {}
-- name: global-npm
-emptyDir: {}
-- name: electron-cache
-emptyDir: {}
-- name: volume-known-hosts
-configMap:
-    name: known-hosts
-"""
+                                stash includes: "${toStashDistMacArm}", name: 'mac2-arm'
                             }
                         }
-                        steps {
-                            unstash 'mac3-arm'
-                            container('theia-dev') {
-                                withCredentials([string(credentialsId: "github-bot-token", variable: 'GITHUB_TOKEN')]) {
-                                    script {
-                                        def packageJSON = readJSON file: "package.json"
-                                        String version = "${packageJSON.version}"
-                                        updateMetadata('mac-arm64/TheiaIDE-' + version + '-arm64-mac.zip', 'mac-arm64/latest-mac.yml', 'macos-arm', false, '.zip', 1200)
-                                        updateMetadata('mac-arm64/TheiaIDE.dmg', 'mac-arm64/latest-mac.yml', 'macos-arm', false, '.dmg', 1200)
-                                    }
-                                }
+                        stage('Recreate Zip with Ditto for correct file permissions') {
+                            agent {
+                                label 'macos'
                             }
-                            container('jnlp') {
+                            steps {
+                                unstash 'mac2-arm'
                                 script {
-                                    uploadInstaller('macos-arm', 'mac-arm64')
+                                    def packageJSON = readJSON file: "package.json"
+                                    String version = "${packageJSON.version}"
+
+                                    def architectures = ['mac-arm64']
+                                    architectures.each { arch -> 
+
+                                        String targetFolder = "${distFolder}/${arch}"
+                                        def notarizedDmg = "${targetFolder}/TheiaIDE.dmg"
+
+                                        // We'll mount and then copy the .app out of the DMG
+                                        def mountPoint = "${targetFolder}/TheiaIDE-mount"
+                                        def extractedFolder = "${targetFolder}/TheiaIDE-extracted"
+                                        def rezippedFile = "${targetFolder}/TheiaIDE-rezipped.zip"
+                                        def archSuffix = arch == 'mac-arm64' ? '-arm64' : ''
+                                        def finalZip = "${targetFolder}/TheiaIDE-${version}${archSuffix}-mac.zip"
+                                        sh "rm -rf \"${extractedFolder}\" \"${mountPoint}\""
+                                        sh "mkdir -p \"${extractedFolder}\" \"${mountPoint}\""
+                                        sh "hdiutil attach \"${notarizedDmg}\" -mountpoint \"${mountPoint}\""
+
+                                        sleep 5
+                                        sh "ls -al ${mountPoint}"
+                                        sh "ls -al ${mountPoint}/TheiaIDE.app"
+
+                                        // Copy the .app from the DMG to a folder we can zip
+                                        sh "ditto \"${mountPoint}/TheiaIDE.app\" \"${extractedFolder}/TheiaIDE.app\""
+
+                                        // Unmount the DMG
+                                        sh "hdiutil detach \"${mountPoint}\""
+
+                                        // Zip with ditto
+                                        sh "ditto -c -k \"${extractedFolder}\" \"${rezippedFile}\""
+
+                                        // Replace the old zip with the newly created one
+                                        sh "rm -f \"${finalZip}\""
+                                        sh "mv \"${rezippedFile}\" \"${finalZip}\""
+
+                                        // Cleanup
+                                        sh "rm -rf \"${extractedFolder}\" \"${mountPoint}\""
+                                    }
+
+
+                                }
+                                stash includes: "${toStashDistMacArm}", name: 'mac3-arm'
+                            }
+                        }
+                        stage('Update Metadata and Upload Mac-Arm') {
+                            agent {
+                                kubernetes {
+                                    yaml """
+apiVersion: v1
+kind: Pod
+spec:
+containers:
+- name: theia-dev
+image: eclipsetheia/theia-blueprint:builder
+imagePullPolicy: Always
+command:
+- cat
+tty: true
+resources:
+    limits:
+    memory: "8Gi"
+    cpu: "2"
+    requests:
+    memory: "8Gi"
+    cpu: "2"
+volumeMounts:
+- name: global-cache
+    mountPath: /.cache
+- name: global-yarn
+    mountPath: /.yarn      
+- name: global-npm
+    mountPath: /.npm      
+- name: electron-cache
+    mountPath: /.electron-gyp
+- name: jnlp
+volumeMounts:
+- name: volume-known-hosts
+    mountPath: /home/jenkins/.ssh
+volumes:
+- name: global-cache
+emptyDir: {}
+- name: global-yarn
+emptyDir: {}
+- name: global-npm
+emptyDir: {}
+- name: electron-cache
+emptyDir: {}
+- name: volume-known-hosts
+configMap:
+    name: known-hosts
+"""
+                                }
+                            }
+                            steps {
+                                unstash 'mac3-arm'
+                                container('theia-dev') {
+                                    withCredentials([string(credentialsId: "github-bot-token", variable: 'GITHUB_TOKEN')]) {
+                                        script {
+                                            def packageJSON = readJSON file: "package.json"
+                                            String version = "${packageJSON.version}"
+                                            updateMetadata('mac-arm64/TheiaIDE-' + version + '-arm64-mac.zip', 'mac-arm64/latest-mac.yml', 'macos-arm', false, '.zip', 1200)
+                                            updateMetadata('mac-arm64/TheiaIDE.dmg', 'mac-arm64/latest-mac.yml', 'macos-arm', false, '.dmg', 1200)
+                                        }
+                                    }
+                                }
+                                container('jnlp') {
+                                    script {
+                                        uploadInstaller('macos-arm', 'mac-arm64')
+                                    }
                                 }
                             }
                         }
