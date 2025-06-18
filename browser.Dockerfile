@@ -60,7 +60,7 @@ ENV SHELL=/bin/bash \
 # Use installed git instead of dugite
 ENV USE_LOCAL_GIT true
 
-# Swtich to Theia user
+# Switch to Theia user
 USER theia
 WORKDIR /home/theia/applications/browser
 
