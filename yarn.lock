@@ -925,9 +925,9 @@
   optionalDependencies:
     global-agent "^3.0.0"
 
-"@electron/node-gyp@git+https://github.com/electron/node-gyp.git#06b29aafb7708acef8b3669835c8a7857ebc92d2":
+"@electron/node-gyp@https://github.com/electron/node-gyp#06b29aafb7708acef8b3669835c8a7857ebc92d2":
   version "10.2.0-electron.1"
-  resolved "git+https://github.com/electron/node-gyp.git#06b29aafb7708acef8b3669835c8a7857ebc92d2"
+  resolved "https://github.com/electron/node-gyp#06b29aafb7708acef8b3669835c8a7857ebc92d2"
   dependencies:
     env-paths "^2.2.0"
     exponential-backoff "^3.1.1"
@@ -2165,6 +2165,21 @@
     js-yaml "^4.1.0"
     minimatch "^5.1.0"
     tslib "^2.6.2"
+
+"@theia/ai-editor@1.63.0":
+  version "1.63.0"
+  resolved "https://registry.yarnpkg.com/@theia/ai-editor/-/ai-editor-1.63.0.tgz#0fbd025cefb5b1e52416ae0fad06795a7c697c29"
+  integrity sha512-K6YpBkaSgqDI9ANGvOb8qv4gQD3vMLSlHFBCVJVkyvKD/+Jg/Y5n30zrg+RUQPPDI1mQBC/lg+447bKS5awxmA==
+  dependencies:
+    "@theia/ai-chat" "1.63.0"
+    "@theia/ai-chat-ui" "1.63.0"
+    "@theia/ai-core" "1.63.0"
+    "@theia/core" "1.63.0"
+    "@theia/editor" "1.63.0"
+    "@theia/filesystem" "1.63.0"
+    "@theia/monaco" "1.63.0"
+    "@theia/monaco-editor-core" "1.96.302"
+    "@theia/workspace" "1.63.0"
 
 "@theia/ai-google@1.63.0":
   version "1.63.0"
