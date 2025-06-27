@@ -146,9 +146,9 @@ spec:
                         label 'windows'
                     }
                     steps {                 
-                        nodejs(nodeJSInstallationName: 'node_20.x') {
+                        nodejs(nodeJSInstallationName: 'node_22.x') {
                             sh "node --version"
-                            sh "npx node-gyp@9.4.1 install 20.11.1"
+                            sh "npx node-gyp@9.4.1 install 22.15.1"
 
                             // analyze memory usage
                             bat "wmic ComputerSystem get TotalPhysicalMemory"

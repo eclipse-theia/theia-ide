@@ -1,5 +1,5 @@
 # Builder stage
-FROM node:20-bullseye AS build-stage
+FROM node:22-bullseye AS build-stage
 
 # install required tools to build the application
 RUN apt-get update && apt-get install -y libxkbfile-dev libsecret-1-dev
@@ -27,7 +27,7 @@ RUN yarn config set network-timeout 600000 -g && \
     rm -rf .git applications/electron theia-extensions/launcher theia-extensions/updater node_modules
 
 # Production stage uses a small base image
-FROM node:20-bullseye-slim AS production-stage
+FROM node:22-bullseye-slim AS production-stage
 
 # Create theia user and directories
 # Application will be copied to /home/theia
