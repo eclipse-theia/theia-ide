@@ -130,8 +130,10 @@ spec:
                         label 'macos'
                     }
                     steps {
-                        script {
-                            createMacInstaller()
+                        nodejs(nodeJSInstallationName: 'node_22.x') {
+                            script {
+                                createMacInstaller()
+                            }
                         }
                         stash includes: "${toStashDist}", name: 'mac'
                     }
