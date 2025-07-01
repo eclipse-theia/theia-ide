@@ -147,17 +147,19 @@ spec:
                     agent {
                         label 'windows'
                     }
-                    steps {                 
-                        nodejs(nodeJSInstallationName: 'node_22.x') {
-                            sh "node --version"
-                            sh "npx node-gyp@9.4.1 install 22.15.1"
+                    steps {
+                        withEnv(['msvs_version=2019', 'GYP_MSVS_VERSION=2019']) {
+                            nodejs(nodeJSInstallationName: 'node_22.x') {
+                                sh "node --version"
+                                sh "npx node-gyp@9.4.1 install 22.15.1"
 
-                            // analyze memory usage
-                            bat "wmic ComputerSystem get TotalPhysicalMemory"
-                            bat "wmic OS get FreePhysicalMemory"
-                            bat "tasklist"
+                                // analyze memory usage
+                                bat "wmic ComputerSystem get TotalPhysicalMemory"
+                                bat "wmic OS get FreePhysicalMemory"
+                                bat "tasklist"
 
-                            buildInstaller(60)
+                                buildInstaller(60)
+                            }
                         }
                         stash includes: "${toStash}", name: 'win'
                     }
