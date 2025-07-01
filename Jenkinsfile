@@ -38,6 +38,7 @@ pipeline {
         // THEIA_IDE_JENKINS_RELEASE_DRYRUN = 'true'
         msvs_version = '2019'
         GYP_MSVS_VERSION = '2019'
+        npm_config_msvs_version = '2019'
 
         NODE_OPTIONS = '--max_old_space_size=4096'
     }
@@ -148,18 +149,20 @@ spec:
                         label 'windows'
                     }
                     steps {
-                        withEnv(['msvs_version=2019', 'GYP_MSVS_VERSION=2019']) {
-                            nodejs(nodeJSInstallationName: 'node_22.x') {
-                                sh "node --version"
-                                sh "npx node-gyp@9.4.1 install 22.15.1"
+                        nodejs(nodeJSInstallationName: 'node_22.x') {
+                            // Echo the env variables for verification
+                            bat "echo %msvs_version%"
+                            bat "echo %GYP_MSVS_VERSION%"
+                            bat "echo %npm_config_msvs_version%"
+                            sh "node --version"
+                            sh "npx node-gyp@9.4.1 install 22.15.1"
 
-                                // analyze memory usage
-                                bat "wmic ComputerSystem get TotalPhysicalMemory"
-                                bat "wmic OS get FreePhysicalMemory"
-                                bat "tasklist"
+                            // analyze memory usage
+                            bat "wmic ComputerSystem get TotalPhysicalMemory"
+                            bat "wmic OS get FreePhysicalMemory"
+                            bat "tasklist"
 
-                                buildInstaller(60)
-                            }
+                            buildInstaller(60)
                         }
                         stash includes: "${toStash}", name: 'win'
                     }
@@ -634,6 +637,16 @@ def createMacInstaller() {
 }
 
 def buildInstaller(int sleepBetweenRetries) {
+    // Echo relevant Windows env variables if present
+    if (env.msvs_version) {
+        echo "msvs_version: ${env.msvs_version}"
+    }
+    if (env.GYP_MSVS_VERSION) {
+        echo "GYP_MSVS_VERSION: ${env.GYP_MSVS_VERSION}"
+    }
+    if (env.npm_config_msvs_version) {
+        echo "npm_config_msvs_version: ${env.npm_config_msvs_version}"
+    }
     int maxRetry = 1
     String buildPackageCmd
 
