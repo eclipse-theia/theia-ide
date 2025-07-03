@@ -88,19 +88,20 @@ Once the PR is merged and the preview build is created, follow these steps for t
    Title:
 
    ```md
-   Theia IDE {{1.x.z}} Preview Testing
+   Theia IDE {{major.minor}}.x Preview Testing
    ```
 
    Body:
 
    ```md
-   The new version {{1.x.z}} of the Theia IDE is available on the preview channel now. Please join the preview testing!
+   The new version {{THEIA_IDE_VERSION}} of the Theia IDE is available on the preview channel now. Please join the preview testing!
 
    You can download it here:
-   - [Linux]()
-   - [Mac X86]()
-   - [Mac ARM]()
-   - [Windows]()
+
+   - [Linux](https://download.eclipse.org/theia/ide-preview/{{THEIA_IDE_VERSION}}/linux/TheiaIDE.AppImage)
+   - [Mac x86](https://download.eclipse.org/theia/ide-preview/{{THEIA_IDE_VERSION}}/macos/TheiaIDE.dmg)
+   - [Mac ARM](https://download.eclipse.org/theia/ide-preview/{{THEIA_IDE_VERSION}}/macos-arm/TheiaIDE.dmg)
+   - [Windows](https://download.eclipse.org/theia/ide-preview/{{THEIA_IDE_VERSION}}/windows/TheiaIDESetup.exe)
 
    Update your existing installation by setting the preference `updates.channel` to preview.
 
@@ -111,34 +112,43 @@ Once the PR is merged and the preview build is created, follow these steps for t
    |-------|--------|----|
    | Preview available | {{date}} | ✅ |
    | Community preview window | {{previewStart}} → {{previewEnd}} |  |
-   | Theia IDE Promoted to Stable | {{previewEnd + 1day}} |  |
-   | Docker image Publish | {{previewEnd + 1day}} |  |
-   | Snap updated | {{previewEnd + 1day}} |  |
+   | Theia IDE Promoted to Stable | {{previewEnd + 1 business day}} |  |
+   | Docker image Publish | {{previewEnd + 1 business day}} |  |
+   | Snap updated | {{previewEnd + 1 business day}} |  |
    ```
 
 - Announce the preview release via email to <theia-dev@eclipse.org> with the following template:
 
    ```md
    Hi,
-   The new version {{1.x.z}}of the Theia IDE is available on the preview channel now. Please join the preview test and help us stabilize the release. Visit this discussion for more information and coordination: {link to the Github discussion created above}
+   The new version {{THEIA_IDE_VERSION}} of the Theia IDE is available on the preview channel now. Please join the preview test and help us stabilize the release. Visit this discussion for more information and coordination: {link to the Github discussion created above}
+   ```
+
+- Announce the start of the Theia IDE Preview Test phase in the Theia Release announcement (`Eclipse Theia v{{version}}`) discussion :
+
+   ```md
+   The preview test phase for the Theia IDE has started. Details are here:
+   
+   - {{previewDiscussionLink}}
    ```
 
 ### 3.3 Patch Releases
 
 - Address reported blockers and issue patch releases (this process may take 1–2 weeks).
-   
+
    **Note:** If issues are persistent, or resources are insufficient, the release may be postponed to the next version.
 
 - For Patch Releases, use the [Base Preview discussion](#32-announce-preview-test-phase) and post a comment to announce the patch release of the Theia IDE.
 
    ```md
-   The new version {{1.x.z}} of the Theia IDE is available on the preview channel now. Please join the preview testing!
+   The new version {{THEIA_IDE_VERSION}} of the Theia IDE is available on the preview channel now. Please join the preview testing!
 
    You can download it here:
-   - [Linux]()
-   - [Mac X86]()
-   - [Mac ARM]()
-   - [Windows]()
+
+   - [Linux](https://download.eclipse.org/theia/ide-preview/{{THEIA_IDE_VERSION}}/linux/TheiaIDE.AppImage)
+   - [Mac x86](https://download.eclipse.org/theia/ide-preview/{{THEIA_IDE_VERSION}}/macos/TheiaIDE.dmg)
+   - [Mac ARM](https://download.eclipse.org/theia/ide-preview/{{THEIA_IDE_VERSION}}/macos-arm/TheiaIDE.dmg)
+   - [Windows](https://download.eclipse.org/theia/ide-preview/{{THEIA_IDE_VERSION}}/windows/TheiaIDESetup.exe)
    
    Update your existing installation by setting the preference `updates.channel` to preview.
 
@@ -155,7 +165,7 @@ Promote the IDE using the [Build Job](https://ci.eclipse.org/theia/job/Theia%20-
 - Update the [Base Preview discussion](#32-announce-preview-test-phase) status table and post a comment to announce the official release of the Theia IDE:
 
    ```md
-   1.63.100 has been prompted to stable
+   {{THEIA_IDE_VERSION}} has been prompted to stable
    ```
 
   - Mark the message as the answer.
