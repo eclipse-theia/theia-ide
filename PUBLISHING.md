@@ -110,9 +110,9 @@ Once the PR is merged and the preview build is created, follow these steps for t
 
    | Phase | Target |  |
    |-------|--------|----|
-   | Preview available | {{date}} | ✅ |
-   | Community preview window | {{previewStart}} → {{previewEnd}} |  |
-   | Theia IDE Promoted to Stable | {{previewEnd + 1 business day}} |  |
+   | {{THEIA_IDE_VERSION}} preview available | {{date}} | ✅ |
+   | {{THEIA_IDE_VERSION}} community preview window | {{previewStart}} → {{previewEnd}} |  |
+   | Theia IDE {{major.minor}}.x Promoted to Stable | {{previewEnd + 1 business day}} |  |
    | Docker image Publish | {{previewEnd + 1 business day}} |  |
    | Snap updated | {{previewEnd + 1 business day}} |  |
    ```
@@ -162,11 +162,20 @@ Promote the IDE using the [Build Job](https://ci.eclipse.org/theia/job/Theia%20-
 
 - Specify the release version in the `VERSION` parameter (e.g., 1.48.0), corresponding to the **THEIA_IDE_VERSION** copied from <https://download.eclipse.org/theia/ide-preview/>.
 
-- Update the [Base Preview discussion](#32-announce-preview-test-phase) status table and post a comment to announce the official release of the Theia IDE:
+- Update the [Base Preview discussion](#32-announce-preview-test-phase) status table with two rows for the current patch release:
 
    ```md
-   {{THEIA_IDE_VERSION}} has been prompted to stable
+   | {{THEIA_IDE_VERSION}} preview available | {{date}} | ✅ |
+   | {{THEIA_IDE_VERSION}} community preview window | {{previewStart}} → {{previewEnd}} |  |
    ```
+
+- Post a comment to announce the official release of the Theia IDE:
+
+   ```md
+   {{THEIA_IDE_VERSION}} has been promoted to stable
+   ```
+
+  - Update the [Base Preview discussion](#32-announce-preview-test-phase) status table with a checkmark and the version that has been published.
 
   - Mark the message as the answer.
 
