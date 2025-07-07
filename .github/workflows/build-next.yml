@@ -1,0 +1,61 @@
+name: Build, package and test
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 3 * * 1" # Runs every monday at 3am
+jobs:
+  build:
+    name: Build linux next
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # To fetch all history for all branches and tags. (Will be required for caching with lerna: https://github.com/markuplint/markuplint/pull/111)
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v3
+        with:
+          node-version: 22.x
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Use Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Build prod package
+        shell: bash
+        run: |
+          THEIA_VERSION=next
+          # Bump minor version in package.json
+          yarn version --minor --no-git-tag-version
+          # Get the new version
+          PACKAGE_VERSION=$(jq -r .version package.json)
+          THEIA_IDE_VERSION="${PACKAGE_VERSION}-next-$(date +"%d-%m-%y")"
+          yarn --skip-integrity-check --network-timeout 100000
+          yarn version --new-version $THEIA_IDE_VERSION --no-git-tag-version
+          yarn lerna version $THEIA_IDE_VERSION --no-push --no-git-tag-version --yes
+          yarn update:theia $THEIA_VERSION && yarn update:theia:children $THEIA_VERSION
+          yarn build
+          yarn download:plugins
+          yarn package:applications
+        env:
+          NODE_OPTIONS: --max_old_space_size=4096
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # https://github.com/microsoft/vscode-ripgrep/issues/9
+
+      - name: Rename AppImage with version
+        run: |
+          mv applications/electron/dist/TheiaIDE.AppImage applications/electron/dist/TheiaIDE-$THEIA_IDE_VERSION.AppImage
+
+      - name: Upload Linux Dist Files
+        if: runner.os == 'Linux' && github.event_name != 'pull_request'
+        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 #4.6.1
+        with:
+          name: linux
+          path: |
+            applications/electron/dist/TheiaIDE-$THEIA_IDE_VERSION.AppImage
+          retention-days: 7
