@@ -103,7 +103,7 @@ Once the PR is merged and the preview build is created, follow these steps for t
    - [Mac ARM](https://download.eclipse.org/theia/ide-preview/{{THEIA_IDE_VERSION}}/macos-arm/TheiaIDE.dmg)
    - [Windows](https://download.eclipse.org/theia/ide-preview/{{THEIA_IDE_VERSION}}/windows/TheiaIDESetup.exe)
 
-   Update your existing installation by setting the preference `updates.channel` to preview.
+   Update your existing installation by setting the preference `updates.channel` to `preview`.
 
    Please respond here when you can test the preview without finding blockers, by commenting with a ✔️.
    If you find any issues, please mention them in this thread and report them as an issue once confirmed by other testers.
@@ -150,17 +150,11 @@ Once the PR is merged and the preview build is created, follow these steps for t
    - [Mac ARM](https://download.eclipse.org/theia/ide-preview/{{THEIA_IDE_VERSION}}/macos-arm/TheiaIDE.dmg)
    - [Windows](https://download.eclipse.org/theia/ide-preview/{{THEIA_IDE_VERSION}}/windows/TheiaIDESetup.exe)
    
-   Update your existing installation by setting the preference `updates.channel` to preview.
+   Update your existing installation by setting the preference `updates.channel` to `preview`.
 
    Please respond here when you can test the preview without finding blockers, by commenting with a ✔️.
    If you find any issues, please mention them in this thread and report them as an issue once confirmed by other testers.
    ```
-
-## 4. Promote IDE from Preview to Stable Channel
-
-Promote the IDE using the [Build Job](https://ci.eclipse.org/theia/job/Theia%20-%20Promote%20IDE/).
-
-- Specify the release version in the `VERSION` parameter (e.g., 1.48.0), corresponding to the **THEIA_IDE_VERSION** copied from <https://download.eclipse.org/theia/ide-preview/>.
 
 - Update the [Base Preview discussion](#32-announce-preview-test-phase) status table with two rows for the current patch release:
 
@@ -168,6 +162,12 @@ Promote the IDE using the [Build Job](https://ci.eclipse.org/theia/job/Theia%20-
    | {{THEIA_IDE_VERSION}} preview available | {{date}} | ✅ |
    | {{THEIA_IDE_VERSION}} community preview window | {{previewStart}} → {{previewEnd}} |  |
    ```
+
+## 4. Promote IDE from Preview to Stable Channel
+
+Promote the IDE using the [Build Job](https://ci.eclipse.org/theia/job/Theia%20-%20Promote%20IDE/).
+
+- Specify the release version in the `VERSION` parameter (e.g., 1.48.0), corresponding to the **THEIA_IDE_VERSION** copied from <https://download.eclipse.org/theia/ide-preview/>.
 
 - Post a comment to announce the official release of the Theia IDE:
 
