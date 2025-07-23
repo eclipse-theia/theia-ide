@@ -314,14 +314,14 @@ def updateMetadata(String executable, String yaml, String platform, Boolean upda
     int maxRetry = 4
     try {
         // Install dependencies and update metadata
-        sh "yarn install --force"
+        sh "yarn install --network-timeout 100000 --force"
         sh "yarn electron update:blockmap -e ${executable}"
         sh "yarn electron update:checksum -e ${executable} -y ${yaml} -p ${platform} -u ${updatePaths} -f ${fileExtension}"
     } catch (error) {
         retry(maxRetry) {
             sleep(sleepBetweenRetries)
             echo "yarn failed - Retrying"
-            sh "yarn install --force"
+            sh "yarn install --network-timeout 100000 --force"
             sh "yarn electron update:blockmap -e ${executable}"
             sh "yarn electron update:checksum -e ${executable} -y ${yaml} -p ${platform} -u ${updatePaths} -f ${fileExtension}"
         }
