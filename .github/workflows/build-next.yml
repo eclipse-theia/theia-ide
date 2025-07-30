@@ -40,6 +40,7 @@ jobs:
           yarn version --new-version $THEIA_IDE_VERSION --no-git-tag-version
           yarn lerna version $THEIA_IDE_VERSION --no-push --no-git-tag-version --yes
           yarn update:theia $THEIA_VERSION && yarn update:theia:children $THEIA_VERSION
+          yarn --skip-integrity-check --network-timeout 100000
           yarn build
           yarn download:plugins
           yarn package:applications
