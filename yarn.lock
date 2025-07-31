@@ -2161,6 +2161,15 @@
     minimatch "^5.1.0"
     tslib "^2.6.2"
 
+"@theia/ai-core-ui@1.64.0":
+  version "1.64.0"
+  resolved "https://registry.yarnpkg.com/@theia/ai-core-ui/-/ai-core-ui-1.64.0.tgz#fb10559a5a52f5157d599444d55f26d3d8c9fc59"
+  integrity sha512-9uoPsuSrZDIB9Oj/7LsD1KTU6siE0k0TTU5rjE1jhDiO7D/7mQY6ypValFwnCzg5A7cUQj+JWGNGjgynlb/ASQ==
+  dependencies:
+    "@theia/ai-core" "1.64.0"
+    "@theia/core" "1.64.0"
+    tslib "^2.6.2"
+
 "@theia/ai-core@1.64.0":
   version "1.64.0"
   resolved "https://registry.yarnpkg.com/@theia/ai-core/-/ai-core-1.64.0.tgz#a8f5229db39d054961635230a0f634ffc40c7f4e"
@@ -2261,6 +2270,15 @@
     "@theia/core" "1.64.0"
     "@theia/output" "1.64.0"
     tslib "^2.6.2"
+
+"@theia/ai-mcp-ui@1.64.0":
+  version "1.64.0"
+  resolved "https://registry.yarnpkg.com/@theia/ai-mcp-ui/-/ai-mcp-ui-1.64.0.tgz#e47205cf38ed71ddd6a8ab9d45e2abde11269ca6"
+  integrity sha512-kHM0iMgzYRWint0+Vk31EoQejQb2Opkb+ZprDEF12GYrNdJWd2TRP2OJDKjNCXtAq6XCt6rq66nfxviNH7DOUw==
+  dependencies:
+    "@theia/ai-core" "1.64.0"
+    "@theia/ai-mcp" "1.64.0"
+    "@theia/core" "1.64.0"
 
 "@theia/ai-mcp@1.64.0":
   version "1.64.0"
