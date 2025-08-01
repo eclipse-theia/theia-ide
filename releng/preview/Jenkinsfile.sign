@@ -48,8 +48,8 @@ spec:
     tty: true
     resources:
       limits:
-        memory: "8000Mi"
-        cpu: "2000m"
+        memory: "4000Mi"
+        cpu: "1000m"
       requests:
         memory: "512Mi"
         cpu: "200m"
@@ -63,9 +63,13 @@ spec:
     - name: electron-cache
       mountPath: /.electron-gyp
   - name: jnlp
-    volumeMounts:
-    - name: volume-known-hosts
-      mountPath: /home/jenkins/.ssh
+    resources:
+      limits:
+        memory: "2000Mi"
+        cpu: "1000m"
+      requests:
+        memory: "1024Mi"
+        cpu: "250m"
   volumes:
   - name: global-cache
     emptyDir: {}
@@ -178,8 +182,8 @@ spec:
     tty: true
     resources:
       limits:
-        memory: "8000Mi"
-        cpu: "2000m"
+        memory: "2000Mi"
+        cpu: "1000m"
       requests:
         memory: "512Mi"
         cpu: "200m"
@@ -193,6 +197,13 @@ spec:
     - name: electron-cache
       mountPath: /.electron-gyp
   - name: jnlp
+    resources:
+      limits:
+        memory: "1000Mi"
+        cpu: "1000m"
+      requests:
+        memory: "512Mi"
+        cpu: "250m"
     volumeMounts:
     - name: volume-known-hosts
       mountPath: /home/jenkins/.ssh

@@ -43,7 +43,7 @@ pipeline {
                     }
 
                     script {
-                        uploadInstaller('linux')
+                        uploadInstaller('linux', 'linux')
                     }
                 }
             }
@@ -64,8 +64,8 @@ spec:
     tty: true
     resources:
       limits:
-        memory: "8000Mi"
-        cpu: "2000m"
+        memory: "2000Mi"
+        cpu: "1000m"
       requests:
         memory: "512Mi"
         cpu: "200m"
@@ -79,6 +79,13 @@ spec:
     - name: electron-cache
       mountPath: /.electron-gyp
   - name: jnlp
+    resources:
+      limits:
+        memory: "2500Mi"
+        cpu: "1000m"
+      requests:
+        memory: "1024Mi"
+        cpu: "250m"
     volumeMounts:
     - name: volume-known-hosts
       mountPath: /home/jenkins/.ssh
@@ -148,8 +155,8 @@ spec:
     tty: true
     resources:
       limits:
-        memory: "8000Mi"
-        cpu: "2000m"
+        memory: "2000Mi"
+        cpu: "1000m"
       requests:
         memory: "512Mi"
         cpu: "200m"
@@ -163,6 +170,13 @@ spec:
     - name: electron-cache
       mountPath: /.electron-gyp
   - name: jnlp
+    resources:
+      limits:
+        memory: "1000Mi"
+        cpu: "1000m"
+      requests:
+        memory: "512Mi"
+        cpu: "250m"
     volumeMounts:
     - name: volume-known-hosts
       mountPath: /home/jenkins/.ssh
@@ -232,8 +246,8 @@ spec:
     tty: true
     resources:
       limits:
-        memory: "8000Mi"
-        cpu: "2000m"
+        memory: "2000Mi"
+        cpu: "1000m"
       requests:
         memory: "512Mi"
         cpu: "200m"
@@ -247,6 +261,13 @@ spec:
     - name: electron-cache
       mountPath: /.electron-gyp
   - name: jnlp
+    resources:
+      limits:
+        memory: "1000Mi"
+        cpu: "1000m"
+      requests:
+        memory: "512Mi"
+        cpu: "250m"
     volumeMounts:
     - name: volume-known-hosts
       mountPath: /home/jenkins/.ssh
@@ -285,7 +306,7 @@ spec:
                     container('theia-dev') {
                         withCredentials([string(credentialsId: "github-bot-token", variable: 'GITHUB_TOKEN')]) {
                             script {
-                                updateMetadata('TheiaIDESetup.exe', 'latest.yml', 'windows', true, '.exe', 1200)
+                                updateMetadata('windows/TheiaIDESetup.exe', 'windows/latest.yml', 'windows', true, '.exe', 1200)
                             }
                         }
                     }
@@ -294,7 +315,7 @@ spec:
                             echo 'Computing updatable versions before uploading new installer'
                             def updatableVersions = getUpdatableVersions()
                             echo 'updatableVersions: ' + updatableVersions
-                            uploadInstaller('windows')
+                            uploadInstaller('windows', 'windows')
                             copyInstallerAndUpdateLatestYml('windows', 'TheiaIDESetup', 'exe', 'latest.yml', updatableVersions)
                             }
                         }
@@ -328,9 +349,9 @@ def updateMetadata(String executable, String yaml, String platform, Boolean upda
     }
 }
 
-def uploadInstaller(String platform, String arch = '') {
+def uploadInstaller(String platform, String folder = '') {
     if (!isDryRun()) {
-        String targetFolder = arch ? "applications/electron/dist/${arch}" : "applications/electron/dist"
+        String targetFolder = folder ? "applications/electron/dist/${folder}" : "applications/electron/dist"
         def packageJSON = readJSON file: "package.json"
         String version = "${packageJSON.version}"
         
