@@ -28,15 +28,15 @@ jobs:
           python-version: "3.11"
 
       - name: Export build variables
+        shell: bash
         run: |
           echo "THEIA_VERSION=next" >> $GITHUB_ENV
-          echo "PACKAGE_VERSION=$(jq -r .version package.json)" >> $GITHUB_ENV
-          echo "THEIA_IDE_VERSION=$(jq -r .version package.json)-next-$(date +%d-%m-%y)" >> $GITHUB_ENV
+          yarn version --minor --no-git-tag-version
+          echo "THEIA_IDE_VERSION=$(jq -r .version package.json)-${THEIA_VERSION}-$(date +%d-%m-%y)" >> $GITHUB_ENV
 
       - name: Build prod package
         shell: bash
         run: |
-          yarn version --minor --no-git-tag-version
           yarn --skip-integrity-check --network-timeout 100000
           yarn version --new-version $THEIA_IDE_VERSION --no-git-tag-version
           yarn lerna version $THEIA_IDE_VERSION --no-push --no-git-tag-version --yes
