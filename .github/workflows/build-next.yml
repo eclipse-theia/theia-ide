@@ -30,7 +30,8 @@ jobs:
       - name: Export build variables
         shell: bash
         run: |
-          echo "THEIA_VERSION=next" >> $GITHUB_ENV
+          THEIA_VERSION=next
+          echo "THEIA_VERSION=${THEIA_VERSION}" >> $GITHUB_ENV
           yarn version --minor --no-git-tag-version
           echo "THEIA_IDE_VERSION=$(jq -r .version package.json)-${THEIA_VERSION}-$(date +%d-%m-%y)" >> $GITHUB_ENV
 
