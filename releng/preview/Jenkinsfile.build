@@ -282,13 +282,7 @@ def buildInstaller(int sleepBetweenRetries) {
 
     // Package the built application
     sshagent(['projects-storage.eclipse.org-bot-ssh']) {
-        if (!isDryRun()) {
-            sh 'yarn download:plugins && yarn electron package:prod'
-        } else {
-            // ATM the plugins are not useful for dry runs, so
-            // let's skip fetching them
-            sh 'yarn electron package:preview'
-        }
+        sh 'yarn download:plugins && yarn electron package:prod'
     }
 }
 
