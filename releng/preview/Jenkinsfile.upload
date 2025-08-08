@@ -333,11 +333,6 @@ spec:
 }
 
 def updateMetadata(String executable, String yaml, String platform, Boolean updatePaths, String fileExtension, int sleepBetweenRetries) {
-    if (isDryRun()) {
-        echo "This is a dry run, so skipping updating metadata"
-        return
-    }
-
     int maxRetry = 4
     try {
         // Install dependencies and update metadata
@@ -374,6 +369,8 @@ def uploadInstaller(String platform, String folder = '') {
         }
     } else {
         echo "Skipped upload for dry run"
+        echo "Would have uploaded the following artifacts"
+        sh "ls -l applications/electron/dist/${folder}"
     }
 }
 

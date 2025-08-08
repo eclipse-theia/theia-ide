@@ -227,17 +227,13 @@ def createMacInstaller() {
         sh "xattr -d -r com.apple.quarantine applications/electron/dist/${arch}/TheiaIDE-dmg-layout || true"
     }
     
-    // Step 5: Sign binaries if this is not a dry run
-    if (!isDryRun()) {
-        sh 'yarn --network-timeout 100000 --frozen-lockfile --force'
-        sshagent(['projects-storage.eclipse.org-bot-ssh']) {
-            architectures.each { arch ->
-                def appPath = "/${pwd()}/applications/electron/dist/${arch}/TheiaIDE-dmg-layout/TheiaIDE.app"
-                sh "yarn electron sign:directory -d \"${appPath}\""
-            }
+    // Step 5: Sign binaries
+    sh 'yarn --network-timeout 100000 --frozen-lockfile --force'
+    sshagent(['projects-storage.eclipse.org-bot-ssh']) {
+        architectures.each { arch ->
+            def appPath = "/${pwd()}/applications/electron/dist/${arch}/TheiaIDE-dmg-layout/TheiaIDE.app"
+            sh "yarn electron sign:directory -d \"${appPath}\""
         }
-    } else {
-        echo "This is a dry run, so skipping binary signing"
     }
 
     // Step 6: Create the final DMG files

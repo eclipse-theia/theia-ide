@@ -281,11 +281,6 @@ spec:
 }
 
 def signInstaller(String ext, String os, String arch = '') {
-    if (isDryRun()) {
-        echo "This is a dry run, so skipping installer signing"
-        return
-    }
-
     // Adjust the dist folder to include architecture if supplied
     String targetFolder = arch ? "applications/electron/dist/${arch}" : "applications/electron/dist"
     List installers = findFiles(glob: "${targetFolder}/*.${ext}")
@@ -310,11 +305,6 @@ def signInstaller(String ext, String os, String arch = '') {
 }
 
 def notarizeInstaller(String ext, String arch = '') {
-    if (isDryRun()) {
-        echo "This is a dry run, so skipping installer notarizing"
-        return
-    }
-
     String service = 'https://cbi.eclipse.org/macos/xcrun'
 
     // Adjust the dist folder to include architecture if supplied
@@ -350,9 +340,4 @@ def notarizeInstaller(String ext, String arch = '') {
     } else {
         error("Error during notarization: installer not found or multiple installers exist: ${installers.size()}")
     }
-}
-
-// Helper function for dry run status
-def isDryRun() {
-    return params.DRY_RUN
 }
