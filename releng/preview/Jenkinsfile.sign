@@ -15,6 +15,7 @@ pipeline {
     options {
         timeout(time: 5, unit: 'HOURS')
         disableConcurrentBuilds()
+        durabilityHint('MAX_SURVIVABILITY')
     }
     parameters {
         string(name: 'BUILD_NUMBER_PARAM', defaultValue: '', description: 'The build number from the upstream build job')
@@ -87,6 +88,10 @@ spec:
                             }
                             steps {
                                 checkout scm
+                                // Clean and prepare target folder
+                                sh "rm -rf applications/electron/dist"
+                                sh "mkdir -p applications/electron/dist"
+
                                 echo "Fetching artifacts from 'theia-ide-release' build #${params.BUILD_NUMBER_PARAM}"
 
                                 // Retry copy artifacts with timeout to handle large files (up to 800 MiB)
@@ -122,6 +127,10 @@ spec:
                             }
                             steps {
                                 checkout scm
+                                // Clean and prepare target folder
+                                sh "rm -rf applications/electron/dist"
+                                sh "mkdir -p applications/electron/dist"
+                                
                                 unstash 'mac'
                                 unstash 'mac-arm'
                                 script {
@@ -224,6 +233,10 @@ spec:
                     }
                     steps {
                         checkout scm
+                        // Clean and prepare target folder
+                        sh "rm -rf applications/electron/dist"
+                        sh "mkdir -p applications/electron/dist"
+                        
                         echo "Fetching artifacts from 'theia-ide-release' build #${params.BUILD_NUMBER_PARAM}"
                         
                         // Retry copy artifacts with timeout to handle large files (up to 800 MiB)
@@ -268,11 +281,6 @@ spec:
 }
 
 def signInstaller(String ext, String os, String arch = '') {
-    if (isDryRun()) {
-        echo "This is a dry run, so skipping installer signing"
-        return
-    }
-
     // Adjust the dist folder to include architecture if supplied
     String targetFolder = arch ? "applications/electron/dist/${arch}" : "applications/electron/dist"
     List installers = findFiles(glob: "${targetFolder}/*.${ext}")
@@ -297,49 +305,51 @@ def signInstaller(String ext, String os, String arch = '') {
 }
 
 def notarizeInstaller(String ext, String arch = '') {
-    if (isDryRun()) {
-        echo "This is a dry run, so skipping installer notarizing"
-        return
-    }
-
     String service = 'https://cbi.eclipse.org/macos/xcrun'
 
     // Adjust the dist folder to include architecture if supplied
     String targetFolder = arch ? "applications/electron/dist/${arch}" : "applications/electron/dist"
     List installers = findFiles(glob: "${targetFolder}/*.${ext}")
 
-    if (installers.size() == 1) {
-        // Submit for notarization
-        String response = sh(
-            script: "curl -X POST -F file=@${installers[0].path} -F \'options={\"primaryBundleId\": \"eclipse.theia\", \"staple\": true};type=application/json\' ${service}/notarize", 
-            returnStdout: true
-        )
-
-        def jsonSlurper = new JsonSlurper()
-        def json = jsonSlurper.parseText(response)
-        String uuid = json.uuid
-
-        // Poll for completion
-        while(json.notarizationStatus.status == 'IN_PROGRESS') {
-            sh "sleep 60"
-            response = sh(script: "curl ${service}/${uuid}/status", returnStdout: true)
-            json = jsonSlurper.parseText(response)
-        }
-
-        if (json.notarizationStatus.status != 'COMPLETE') {
-            error("Failed to notarize ${installers[0].name}: ${response}")
-        }
-
-        // Download notarized file
-        sh "curl -o ${targetFolder}/stapled-${installers[0].name} ${service}/${uuid}/download"
-        sh "rm ${installers[0].path}"
-        sh "mv ${targetFolder}/stapled-${installers[0].name} ${installers[0].path}"
-    } else {
+    if (installers.size() != 1) {
         error("Error during notarization: installer not found or multiple installers exist: ${installers.size()}")
     }
-}
 
-// Helper function for dry run status
-def isDryRun() {
-    return params.DRY_RUN
+    // Submit for notarization
+    String response = sh(
+        script: "curl -sS -X POST -F file=@${installers[0].path} -F 'options={\"primaryBundleId\":\"eclipse.theia\",\"staple\":true};type=application/json' ${service}/notarize",
+        returnStdout: true
+    ).trim()
+
+    Map json = readJSON(text: response)
+    String uuid = json.uuid as String
+    String status = json.notarizationStatus?.status as String
+
+    // Poll with timeout
+    timeout(time: 20, unit: 'MINUTES') {
+        waitUntil {
+            echo "notarization status: ${status}"
+            if (status == 'IN_PROGRESS') {
+                sleep 60
+                response = sh(script: "curl -sS ${service}/${uuid}/status", returnStdout: true).trim()
+                try {
+                  def poll = readJSON(text: response)
+                  status = poll.notarizationStatus?.status as String
+                } catch (e) {
+                  error "Status returned non-JSON:\n${response}"
+                }
+                return false
+            }
+            return true
+        }
+    }
+
+    if (status != 'COMPLETE') {
+        error("Failed to notarize ${installers[0].name}: ${response}")
+    }
+
+    // Download notarized file
+    sh "curl -sS -o '${targetFolder}/stapled-${installers[0].name}' ${service}/${uuid}/download"
+    sh "rm '${installers[0].path}'"
+    sh "mv '${targetFolder}/stapled-${installers[0].name}' '${installers[0].path}'"
 }

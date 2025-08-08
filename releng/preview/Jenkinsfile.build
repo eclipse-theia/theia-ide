@@ -26,6 +26,7 @@ pipeline {
     options {
         timeout(time: 5, unit: 'HOURS')
         disableConcurrentBuilds()
+        durabilityHint('MAX_SURVIVABILITY')
     }
     parameters {
         booleanParam(name: 'DRY_RUN', defaultValue: true, description: 'If true, treat this as a dry run (no deployment of artifacts)')
@@ -179,18 +180,11 @@ def detachVolume(String mountpoint) {
 }
 
 def createMacInstaller() {
-    // Step 0: Clean up previously mounted DMG files and checkout scm
-    def mountPoints = [
-        "/${pwd()}/applications/electron/dist/mac-arm64/TheiaIDE-dmg-mounted",
-        "/${pwd()}/applications/electron/dist/mac-x64/TheiaIDE-dmg-mounted",
-        "/${pwd()}/applications/electron/dist/mac-arm64/TheiaIDE-mount",
-        "/${pwd()}/applications/electron/dist/mac-x64/TheiaIDE-mount"
-    ]
-    
-    mountPoints.each { point -> detachVolume(point) }
+    // Step 0: Checkout scm
     checkout scm
 
-    // Step 1: Ensure directory exists and download the zip files
+    // Step 1: Ensure directory is cleaned and recreated
+    sh "rm -rf applications/electron/dist"
     sh "mkdir -p applications/electron/dist"
     
     // Step 2: Download and extract zip files for both architectures
@@ -233,17 +227,13 @@ def createMacInstaller() {
         sh "xattr -d -r com.apple.quarantine applications/electron/dist/${arch}/TheiaIDE-dmg-layout || true"
     }
     
-    // Step 5: Sign binaries if this is not a dry run
-    if (!isDryRun()) {
-        sh 'yarn --network-timeout 100000 --frozen-lockfile --force'
-        sshagent(['projects-storage.eclipse.org-bot-ssh']) {
-            architectures.each { arch ->
-                def appPath = "/${pwd()}/applications/electron/dist/${arch}/TheiaIDE-dmg-layout/TheiaIDE.app"
-                sh "yarn electron sign:directory -d \"${appPath}\""
-            }
+    // Step 5: Sign binaries
+    sh 'yarn --network-timeout 100000 --frozen-lockfile --force'
+    sshagent(['projects-storage.eclipse.org-bot-ssh']) {
+        architectures.each { arch ->
+            def appPath = "/${pwd()}/applications/electron/dist/${arch}/TheiaIDE-dmg-layout/TheiaIDE.app"
+            sh "yarn electron sign:directory -d \"${appPath}\""
         }
-    } else {
-        echo "This is a dry run, so skipping binary signing"
     }
 
     // Step 6: Create the final DMG files
@@ -264,6 +254,10 @@ def buildInstaller(int sleepBetweenRetries) {
     String buildPackageCmd
 
     checkout scm
+
+    // Ensure directory is cleaned and recreated
+    sh "rm -rf applications/electron/dist"
+    sh "mkdir -p applications/electron/dist"
 
     // Prepare build command based on dry run status
     buildPackageCmd = 'yarn --network-timeout 100000 --frozen-lockfile --force && yarn build:extensions && yarn electron build'
@@ -288,13 +282,7 @@ def buildInstaller(int sleepBetweenRetries) {
 
     // Package the built application
     sshagent(['projects-storage.eclipse.org-bot-ssh']) {
-        if (!isDryRun()) {
-            sh 'yarn download:plugins && yarn electron package:prod'
-        } else {
-            // ATM the plugins are not useful for dry runs, so
-            // let's skip fetching them
-            sh 'yarn electron package:preview'
-        }
+        sh 'yarn download:plugins && yarn electron package:prod'
     }
 }
 

@@ -10,6 +10,7 @@ pipeline {
     options {
         timeout(time: 5, unit: 'HOURS')
         disableConcurrentBuilds()
+        durabilityHint('MAX_SURVIVABILITY')
     }
     parameters {
         string(name: 'BUILD_NUMBER_PARAM', defaultValue: '', description: 'The build number from the upstream build job')
@@ -64,7 +65,7 @@ spec:
     tty: true
     resources:
       limits:
-        memory: "2000Mi"
+        memory: "1700Mi"
         cpu: "1000m"
       requests:
         memory: "512Mi"
@@ -81,10 +82,10 @@ spec:
   - name: jnlp
     resources:
       limits:
-        memory: "2500Mi"
+        memory: "2300Mi"
         cpu: "1000m"
       requests:
-        memory: "1024Mi"
+        memory: "512Mi"
         cpu: "250m"
     volumeMounts:
     - name: volume-known-hosts
@@ -155,7 +156,7 @@ spec:
     tty: true
     resources:
       limits:
-        memory: "2000Mi"
+        memory: "1700Mi"
         cpu: "1000m"
       requests:
         memory: "512Mi"
@@ -172,7 +173,7 @@ spec:
   - name: jnlp
     resources:
       limits:
-        memory: "1000Mi"
+        memory: "2300Mi"
         cpu: "1000m"
       requests:
         memory: "512Mi"
@@ -246,7 +247,7 @@ spec:
     tty: true
     resources:
       limits:
-        memory: "2000Mi"
+        memory: "1700Mi"
         cpu: "1000m"
       requests:
         memory: "512Mi"
@@ -327,11 +328,6 @@ spec:
 }
 
 def updateMetadata(String executable, String yaml, String platform, Boolean updatePaths, String fileExtension, int sleepBetweenRetries) {
-    if (isDryRun()) {
-        echo "This is a dry run, so skipping updating metadata"
-        return
-    }
-
     int maxRetry = 4
     try {
         // Install dependencies and update metadata
@@ -368,6 +364,8 @@ def uploadInstaller(String platform, String folder = '') {
         }
     } else {
         echo "Skipped upload for dry run"
+        echo "Would have uploaded the following artifacts"
+        sh "ls -l applications/electron/dist/${folder}"
     }
 }
 
