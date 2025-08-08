@@ -22,6 +22,11 @@ pipeline {
         NODE_OPTIONS = '--max_old_space_size=4096'
     }
     stages {
+      stage('Clean dist folder') {
+          steps {
+              sh '[ -d applications/electron/dist ] && rm -rf applications/electron/dist || echo "Nothing to clean."'
+          }
+      }
       stage('Update and Upload') {
         parallel {
             stage('Linux: Upload') {

@@ -88,6 +88,10 @@ spec:
                             }
                             steps {
                                 checkout scm
+                                // Clean and prepare target folder
+                                sh "rm -rf applications/electron/dist"
+                                sh "mkdir -p applications/electron/dist"
+
                                 echo "Fetching artifacts from 'theia-ide-release' build #${params.BUILD_NUMBER_PARAM}"
 
                                 // Retry copy artifacts with timeout to handle large files (up to 800 MiB)
@@ -123,6 +127,10 @@ spec:
                             }
                             steps {
                                 checkout scm
+                                // Clean and prepare target folder
+                                sh "rm -rf applications/electron/dist"
+                                sh "mkdir -p applications/electron/dist"
+                                
                                 unstash 'mac'
                                 unstash 'mac-arm'
                                 script {
@@ -225,6 +233,10 @@ spec:
                     }
                     steps {
                         checkout scm
+                        // Clean and prepare target folder
+                        sh "rm -rf applications/electron/dist"
+                        sh "mkdir -p applications/electron/dist"
+                        
                         echo "Fetching artifacts from 'theia-ide-release' build #${params.BUILD_NUMBER_PARAM}"
                         
                         // Retry copy artifacts with timeout to handle large files (up to 800 MiB)
