@@ -26,6 +26,7 @@ pipeline {
     options {
         timeout(time: 5, unit: 'HOURS')
         disableConcurrentBuilds()
+        durabilityHint('MAX_SURVIVABILITY')
     }
     parameters {
         booleanParam(name: 'DRY_RUN', defaultValue: true, description: 'If true, treat this as a dry run (no deployment of artifacts)')

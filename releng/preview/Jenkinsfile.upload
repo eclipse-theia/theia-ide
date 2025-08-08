@@ -10,6 +10,7 @@ pipeline {
     options {
         timeout(time: 5, unit: 'HOURS')
         disableConcurrentBuilds()
+        durabilityHint('MAX_SURVIVABILITY')
     }
     parameters {
         string(name: 'BUILD_NUMBER_PARAM', defaultValue: '', description: 'The build number from the upstream build job')
@@ -172,10 +173,10 @@ spec:
   - name: jnlp
     resources:
       limits:
-        memory: "1000Mi"
+        memory: "2500Mi"
         cpu: "1000m"
       requests:
-        memory: "512Mi"
+        memory: "1024Mi"
         cpu: "250m"
     volumeMounts:
     - name: volume-known-hosts
