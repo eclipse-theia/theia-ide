@@ -18,7 +18,7 @@ import {
     MessageService,
     Progress
 } from '@theia/core/lib/common';
-import { PreferenceScope, PreferenceService } from '@theia/core/lib/browser/preferences';
+import { PreferenceScope, PreferenceService } from '@theia/core/lib/common';
 import { TheiaUpdater, TheiaUpdaterClient, UpdaterError } from '../../common/updater/theia-updater';
 import { inject, injectable, postConstruct } from '@theia/core/shared/inversify';
 import { CommonMenus, OpenerService } from '@theia/core/lib/browser';

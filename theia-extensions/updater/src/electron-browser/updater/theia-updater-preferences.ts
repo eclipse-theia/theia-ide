@@ -10,7 +10,6 @@
 import { PreferenceSchema } from '@theia/core/lib/common/preferences/preference-schema';
 
 export const theiaUpdaterPreferenceSchema: PreferenceSchema = {
-    'type': 'object',
     'properties': {
         'updates.reportOnStart': {
             type: 'boolean',
