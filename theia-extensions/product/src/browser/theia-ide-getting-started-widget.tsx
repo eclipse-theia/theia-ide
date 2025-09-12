@@ -9,7 +9,8 @@
 
 import * as React from 'react';
 
-import { Message, PreferenceService } from '@theia/core/lib/browser';
+import { Message } from '@theia/core/lib/browser';
+import { PreferenceService } from '@theia/core/lib/common';
 import { inject, injectable } from '@theia/core/shared/inversify';
 import {
     renderDocumentation, renderDownloads, renderExtendingCustomizing, renderSourceCode, renderSupport, renderTickets, renderWhatIs, renderCollaboration
