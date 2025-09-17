@@ -94,7 +94,7 @@ jobs:
           retention-days: 1
 
       - name: Upload Windows Dist Files
-        if: runner.os == 'Windows' && github.event_name != 'pull_request'
+        if: runner.os == 'Windows'
         uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 #4.6.1
         with:
           name: windows
@@ -103,7 +103,7 @@ jobs:
           retention-days: 1
 
       - name: Upload Linux Dist Files
-        if: runner.os == 'Linux' && github.event_name != 'pull_request'
+        if: runner.os == 'Linux'
         uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 #4.6.1
         with:
           name: linux
