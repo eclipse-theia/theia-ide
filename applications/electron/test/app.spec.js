@@ -148,40 +148,49 @@ describe('Theia App', function () {
     disableSplashScreen();
   });
   beforeEach(async function () {
+    this.timeout(120000); // Set timeout to 2 minutes
 
     const binary = getBinaryPath();
     if (!binary) {
       throw new Error('Tests are not supported for this platform.');
     }
 
-    // Start app and store connection in context (this)
-    this.browser = await remote({
-      // Change to info to get detailed events of webdriverio
-      logLevel: 'info',
-      capabilities: {
-        browserName: 'chrome',
-        'goog:chromeOptions': {
-          // Path to built and packaged theia
-          binary: binary,
-          // Hand in workspace to load as runtime parameter
-          args: [path.join(__dirname, 'workspace')],
+    try {
+      // Start app and store connection in context (this)
+      this.browser = await remote({
+        // Change to info to get detailed events of webdriverio
+        logLevel: 'info',
+        capabilities: {
+          browserName: 'chrome',
+          'goog:chromeOptions': {
+            // Path to built and packaged theia
+            binary: binary,
+            // Hand in workspace to load as runtime parameter
+            args: [path.join(__dirname, 'workspace')],
+          },
         },
-      },
-    });
+      });
 
-    const appShell = await this.browser.$('#theia-app-shell');
+      console.log('Browser connection established');
+      const appShell = await this.browser.$('#theia-app-shell');
 
-    // mocha waits for returned promise to resolve
-    // Theia is loaded once the app shell is present
-    return appShell.waitForExist({
-      timeout: THEIA_LOAD_TIMEOUT,
-      timeoutMsg: 'Theia took too long to load.',
-    });
+      // mocha waits for returned promise to resolve
+      // Theia is loaded once the app shell is present
+      return appShell.waitForExist({
+        timeout: THEIA_LOAD_TIMEOUT,
+        timeoutMsg: 'Theia took too long to load.',
+      });
+    } catch (error) {
+      console.error('Error during test setup:', error);
+      throw error;
+    }
   });
 
   afterEach(async function () {
     try {
-      await this.browser.closeWindow();
+      if (this.browser) {
+        await this.browser.closeWindow();
+      }
     } catch (err) {
       // Workaround: Puppeteer cannot properly connect to electron and throws an error.
       // However, the window is closed and that's all we want here.

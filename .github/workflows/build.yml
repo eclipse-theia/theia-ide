@@ -113,9 +113,8 @@ jobs:
 
       - name: Test (Linux)
         if: matrix.tests != 'skip' && runner.os == 'Linux'
-        uses: GabrielBB/xvfb-action@86d97bde4a65fe9b290c0b3fb92c2c4ed0e5302d #1.6
-        with:
-          run: yarn electron test
+        run: |
+          xvfb-run -a yarn electron test
 
       - name: Test (Windows)
         if: matrix.tests != 'skip' && runner.os == 'Windows'
