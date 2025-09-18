@@ -40,7 +40,21 @@ for (const config of configs) {
             })
         ]
     };
+
+    // Enable maximum verbosity for webpack build output
+    config.stats = { preset: 'verbose', logging: 'verbose' };
+    config.infrastructureLogging = Object.assign({}, config.infrastructureLogging, {
+        level: 'verbose',
+        debug: true
+    });
 }
+
+// Ensure node (main process) config is also verbose
+nodeConfig.config.stats = { preset: 'verbose', logging: 'verbose' };
+nodeConfig.config.infrastructureLogging = Object.assign({}, nodeConfig.config.infrastructureLogging || {}, {
+    level: 'verbose',
+    debug: true
+});
 
 module.exports = [
     ...configs,
