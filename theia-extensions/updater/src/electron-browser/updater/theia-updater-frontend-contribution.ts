@@ -62,6 +62,9 @@ export class TheiaUpdaterClientImpl implements TheiaUpdaterClient {
     protected readonly onErrorEmitter = new Emitter<UpdaterError>();
     readonly onError = this.onErrorEmitter.event;
 
+    protected readonly onCancelEmitter = new Emitter<void>();
+    readonly onCancel = this.onCancelEmitter.event;
+
     notifyReadyToInstall(): void {
         this.onReadyToInstallEmitter.fire();
     }
@@ -87,6 +90,10 @@ export class TheiaUpdaterClientImpl implements TheiaUpdaterClient {
 
     reportError(error: UpdaterError): void {
         this.onErrorEmitter.fire(error);
+    }
+
+    reportCancelled(): void {
+        this.onCancelEmitter.fire();
     }
 
 }
@@ -158,6 +165,7 @@ export class TheiaUpdaterFrontendContribution implements CommandContribution, Me
         });
 
         this.updaterClient.onError(error => this.handleError(error));
+        this.updaterClient.onCancel(() => this.stopProgress());
     }
 
     registerCommands(registry: CommandRegistry): void {
@@ -193,8 +201,9 @@ export class TheiaUpdaterFrontendContribution implements CommandContribution, Me
         if (answer === 'Yes') {
             this.stopProgress();
             this.progress = await this.messageService.showProgress({
-                text: 'Theia IDE Update'
-            });
+                text: 'Theia IDE Update',
+                options: { cancelable: true}
+            }, () => this.updater.cancel());
             let dots = 0;
             this.intervalId = setInterval(() => {
                 if (this.progress !== undefined) {

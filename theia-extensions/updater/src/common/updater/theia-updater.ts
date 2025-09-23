@@ -17,6 +17,7 @@ export interface TheiaUpdater extends JsonRpcServer<TheiaUpdaterClient> {
     onRestartToUpdateRequested(): void;
     disconnectClient(client: TheiaUpdaterClient): void;
     setUpdateChannel(channel: string): void;
+    cancel(): void;
 }
 
 export const TheiaUpdaterClient = Symbol('TheiaUpdaterClient');
@@ -30,4 +31,5 @@ export interface TheiaUpdaterClient {
     updateAvailable(available: boolean, startupCheck: boolean): void;
     notifyReadyToInstall(): void;
     reportError(error: UpdaterError): void;
+    reportCancelled(): void;
 }

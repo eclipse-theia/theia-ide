@@ -15,6 +15,7 @@ import { ElectronMainApplication, ElectronMainApplicationContribution } from '@t
 import { TheiaUpdater, TheiaUpdaterClient } from '../../common/updater/theia-updater';
 import { injectable } from '@theia/core/shared/inversify';
 import { isOSX, isWindows } from '@theia/core';
+import { CancellationToken } from 'builder-util-runtime';
 
 const STABLE_CHANNEL_WINDOWS = 'https://download.eclipse.org/theia/ide/version/windows';
 const STABLE_CHANNEL_MACOS = 'https://download.eclipse.org/theia/ide/latest/macos';
@@ -39,6 +40,7 @@ export class TheiaUpdaterImpl implements TheiaUpdater, ElectronMainApplicationCo
     private initialCheck: boolean = true;
     private updateChannelReported: boolean = false;
     private reportOnFirstRegistration: boolean = false;
+    private cancellationToken: CancellationToken = new CancellationToken();
 
     constructor() {
         autoUpdater.autoDownload = false;
@@ -70,6 +72,9 @@ export class TheiaUpdaterImpl implements TheiaUpdater, ElectronMainApplicationCo
         });
 
         autoUpdater.on('error', (err: unknown) => {
+            if (err instanceof Error && err.message.includes('cancelled')) {
+                return;
+            }
             const errorLogPath = autoUpdater.logger.transports.file.getFile().path;
             this.clients.forEach(c => c.reportError({ message: 'An error has occurred while attempting to update.', errorLogPath }));
         });
@@ -83,8 +88,16 @@ export class TheiaUpdaterImpl implements TheiaUpdater, ElectronMainApplicationCo
         autoUpdater.quitAndInstall();
     }
 
+    cancel(): void {
+        autoUpdater.logger.info('Update cancelled by user');
+        this.cancellationToken.cancel();
+        this.clients.forEach(c => c.reportCancelled());
+    }
+
     downloadUpdate(): void {
-        autoUpdater.downloadUpdate();
+        autoUpdater.logger.info('Downloading update');
+        this.cancellationToken = new CancellationToken();
+        autoUpdater.downloadUpdate(this.cancellationToken);
 
         // record download stat, ignore errors
         fs.mkdtemp(path.join(os.tmpdir(), 'updater-'))
