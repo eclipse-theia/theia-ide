@@ -15,7 +15,7 @@ pipeline {
     options {
         timeout(time: 5, unit: 'HOURS')
         disableConcurrentBuilds()
-        durabilityHint('MAX_SURVIVABILITY')
+        durabilityHint('PERFORMANCE_OPTIMIZED')
     }
     parameters {
         string(name: 'BUILD_NUMBER_PARAM', defaultValue: '', description: 'The build number from the upstream build job')
@@ -96,7 +96,7 @@ spec:
 
                                 // Retry copy artifacts with timeout to handle large files (up to 800 MiB)
                                 retry(3) {
-                                    timeout(time: 20, unit: 'MINUTES') {
+                                    timeout(time: 30, unit: 'MINUTES') {
                                         copyArtifacts(
                                             projectName: "theia-ide-release",
                                             selector: specific("${params.BUILD_NUMBER_PARAM}"),
@@ -107,13 +107,15 @@ spec:
                                     }
                                 }
                                 
-                                container('theia-dev') {
-                                    withCredentials([string(credentialsId: "github-bot-token", variable: 'GITHUB_TOKEN')]) {
-                                        script {
-                                            signInstaller('dmg', 'mac', 'mac-x64')
-                                            notarizeInstaller('dmg', 'mac-x64')
-                                            signInstaller('dmg', 'mac', 'mac-arm64')
-                                            notarizeInstaller('dmg', 'mac-arm64')
+                                retry(2) {
+                                    container('theia-dev') {
+                                        withCredentials([string(credentialsId: "github-bot-token", variable: 'GITHUB_TOKEN')]) {
+                                            script {
+                                                signInstaller('dmg', 'mac', 'mac-x64')
+                                                notarizeInstaller('dmg', 'mac-x64')
+                                                signInstaller('dmg', 'mac', 'mac-arm64')
+                                                notarizeInstaller('dmg', 'mac-arm64')
+                                            }
                                         }
                                     }
                                 }
@@ -124,6 +126,9 @@ spec:
                         stage('Mac: Recreate Zip with Ditto for correct file permissions') {
                             agent {
                                 label 'macos'
+                            }
+                            options {
+                                retry(2)
                             }
                             steps {
                                 checkout scm
@@ -151,13 +156,15 @@ spec:
                                         sh "rm -rf \"${extractedFolder}\" \"${mountPoint}\""
                                         sh "mkdir -p \"${extractedFolder}\" \"${mountPoint}\""
                                         
-                                        // Mount DMG
-                                        sh "hdiutil attach \"${notarizedDmg}\" -mountpoint \"${mountPoint}\""
-                                        sleep 5
-                                        
-                                        // Copy .app and check contents
-                                        sh "ditto \"${mountPoint}/TheiaIDE.app\" \"${extractedFolder}/TheiaIDE.app\""
-                                        sh "hdiutil detach \"${mountPoint}\""
+                                        try {
+                                          // Mount DMG
+                                          sh "hdiutil attach \"${notarizedDmg}\" -mountpoint \"${mountPoint}\""
+                                          sleep 5
+                                          // Copy .app and check contents
+                                          sh "ditto \"${mountPoint}/TheiaIDE.app\" \"${extractedFolder}/TheiaIDE.app\""
+                                        } finally {
+                                          sh "hdiutil detach \"${mountPoint}\""
+                                        }
                                         
                                         // Create zip with ditto for proper permissions
                                         sh "ditto -c -k \"${extractedFolder}\" \"${rezippedFile}\""
