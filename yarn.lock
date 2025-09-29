@@ -2229,6 +2229,22 @@
     js-yaml "^4.1.0"
     tslib "^2.6.2"
 
+"@theia/ai-claude-code@1.65.0":
+  version "1.65.0"
+  resolved "https://registry.yarnpkg.com/@theia/ai-claude-code/-/ai-claude-code-1.65.0.tgz#0df915d5c4ab873b8562f792b67bbbd0e7083165"
+  integrity sha512-XzkUd6LGVCZnqLUd43NWs+TZ8UJ5tahXKcrL6eu4ZoPRN2MvNZ71d1VEE+zjWQyqQ/4UZ1dj4gdtTzo6O4LdmA==
+  dependencies:
+    "@theia/ai-chat" "1.65.0"
+    "@theia/ai-chat-ui" "1.65.0"
+    "@theia/ai-core" "1.65.0"
+    "@theia/core" "1.65.0"
+    "@theia/editor" "1.65.0"
+    "@theia/filesystem" "1.65.0"
+    "@theia/monaco-editor-core" "^1.96.302"
+    "@theia/output" "1.65.0"
+    "@theia/workspace" "1.65.0"
+    tslib "^2.6.2"
+
 "@theia/ai-code-completion@1.65.0":
   version "1.65.0"
   resolved "https://registry.yarnpkg.com/@theia/ai-code-completion/-/ai-code-completion-1.65.0.tgz#472fa6f6f769ee0e057ce546bf69f052ca87b352"
@@ -2349,6 +2365,16 @@
     "@theia/core" "1.65.0"
     "@theia/output" "1.65.0"
     tslib "^2.6.2"
+
+"@theia/ai-mcp-server@1.65.0":
+  version "1.65.0"
+  resolved "https://registry.yarnpkg.com/@theia/ai-mcp-server/-/ai-mcp-server-1.65.0.tgz#f4792c04b2b8dfbb6c26dadba1c3eb796d6b1b22"
+  integrity sha512-3yEbL1LaG5WD7eY2GHRp/lVwddNH7dfLYaxrW7YmODDgtUA9adDqEPjpCavVtB+M5fWQG04TIHoin5CbJkt71g==
+  dependencies:
+    "@modelcontextprotocol/sdk" "^1.15.1"
+    "@theia/core" "1.65.0"
+    "@theia/workspace" "1.65.0"
+    zod "^3.23.8"
 
 "@theia/ai-mcp-ui@1.65.0":
   version "1.65.0"
@@ -2864,7 +2890,7 @@
     tslib "^2.6.2"
     vhost "^3.0.2"
 
-"@theia/monaco-editor-core@1.96.302":
+"@theia/monaco-editor-core@1.96.302", "@theia/monaco-editor-core@^1.96.302":
   version "1.96.302"
   resolved "https://registry.yarnpkg.com/@theia/monaco-editor-core/-/monaco-editor-core-1.96.302.tgz#f0d8ef59824ebd56b8130eabdfd71e10df32482a"
   integrity sha512-1np9/dI/cVmAE2KFi/13fK29jQOM9syyK6KaElaQ5nR8DVHsG49WK50Yd4yjwaqH2y4NHDeiZR8GoOJi8L9z4A==
