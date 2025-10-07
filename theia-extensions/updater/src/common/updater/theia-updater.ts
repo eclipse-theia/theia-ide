@@ -27,8 +27,17 @@ export interface UpdaterError {
     errorLogPath?: string;
 }
 
+export interface UpdateInfo {
+    version: string;
+}
+
+export interface UpdateAvailabilityInfo {
+    available: boolean;
+    updateInfo?: UpdateInfo;
+}
+
 export interface TheiaUpdaterClient {
-    updateAvailable(available: boolean, startupCheck: boolean): void;
+    updateAvailable(available: boolean, startupCheck: boolean, updateInfo?: UpdateInfo): void;
     notifyReadyToInstall(): void;
     reportError(error: UpdaterError): void;
     reportCancelled(): void;

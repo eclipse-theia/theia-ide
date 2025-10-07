@@ -44,7 +44,7 @@ export class TheiaUpdaterImpl implements TheiaUpdater, ElectronMainApplicationCo
 
     constructor() {
         autoUpdater.autoDownload = false;
-        autoUpdater.on('update-available', () => {
+        autoUpdater.on('update-available', (info: { version: string }) => {
             if (this.updateChannelReported) {
                 const startupCheck = this.initialCheck;
                 if (this.initialCheck) {
@@ -53,7 +53,8 @@ export class TheiaUpdaterImpl implements TheiaUpdater, ElectronMainApplicationCo
                         this.reportOnFirstRegistration = true;
                     }
                 }
-                this.clients.forEach(c => c.updateAvailable(true, startupCheck));
+                const updateInfo = { version: info.version };
+                this.clients.forEach(c => c.updateAvailable(true, startupCheck, updateInfo));
             }
         });
         autoUpdater.on('update-not-available', () => {
