@@ -4,15 +4,18 @@ on:
   push:
     branches:
       - master
+    paths:
+      - 'yarn.lock'
   workflow_dispatch:
   pull_request:
     branches:
       - master
+    paths:
+      - 'yarn.lock'
   schedule:
     - cron: '0 4 * * *' # Runs every day at 4am: https://docs.github.com/en/actions/reference/events-that-trigger-workflows#scheduled-events-schedule
 
 jobs:
-
   License-check:
     name: 3PP License Check using dash-licenses
 
@@ -28,25 +31,33 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
         with:
           fetch-depth: 2
 
       - name: Use Node.js ${{ matrix.node }}
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@1a4442cacd436585916779262731d5b162bc6ec7 # v3.8.2
         with:
           node-version: ${{ matrix.node }}
 
       - name: Use Java ${{ matrix.java }}
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@1df8dbefe2a8cbc99770194893dd902763bee34b # v3.9.0
         with:
           distribution: 'adopt'
           java-version: ${{ matrix.java }}
-
-      - name: Run dash-licenses
+      
+      - name: Run daily dash-licenses check (non-review mode)
+        if: ${{ github.event_name == 'schedule' }}
         shell: bash
         run: |
           yarn --frozen-lockfile --ignore-scripts
           yarn license:check
+
+      - name: Run dash-licenses check in review mode
+        if: ${{ github.event_name != 'schedule' }}
+        shell: bash
+        run: |
+          yarn --frozen-lockfile --ignore-scripts
+          yarn license:check:review
         env:
           DASH_TOKEN: ${{ secrets.DASH_LICENSES_PAT }}
