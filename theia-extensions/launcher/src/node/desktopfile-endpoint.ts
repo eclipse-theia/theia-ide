@@ -134,7 +134,7 @@ Type=Application
 Icon=${imagePath}
 StartupWMClass=Theia IDE
 Comment=Eclipse Theia IDE product
-Categories=Development;`;
+Categories=Development;IDE;`;
     }
 
     protected getDesktopURLFileContents(appImagePath: string, imagePath: string): string {
@@ -148,6 +148,6 @@ NoDisplay=true
 Icon=${imagePath}
 MimeType=x-scheme-handler/theia;
 Comment=Eclipse Theia IDE product
-Categories=Development;`;
+Categories=Development;IDE;`;
     }
 }
