@@ -133,7 +133,7 @@ Terminal=false
 Type=Application
 Icon=${imagePath}
 StartupWMClass=Theia IDE
-Comment=Eclipse Theia IDE product
+Comment=IDE for cloud and desktop
 Categories=Development;IDE;`;
     }
 
@@ -147,7 +147,7 @@ Type=Application
 NoDisplay=true
 Icon=${imagePath}
 MimeType=x-scheme-handler/theia;
-Comment=Eclipse Theia IDE product
+Comment=IDE for cloud and desktop
 Categories=Development;IDE;`;
     }
 }
