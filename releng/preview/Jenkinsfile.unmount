@@ -1,0 +1,566 @@
+/**
+ * Jenkinsfile for cleaning up stuck DMG mounts from failed builds
+ * 
+ * This is a utility Jenkinsfile for cleaning up stuck DMG mounts
+ * from failed builds on macOS agents.
+ * 
+ * This version uses SYSTEM-WIDE detection to find mounts in ANY workspace,
+ * not just the current workspace. This is critical because Jenkins creates
+ * separate workspaces for each job.
+ * 
+ * Usage:
+ * 1. Create a new Pipeline job in Jenkins
+ * 2. Point it to this Jenkinsfile (releng/preview/Jenkinsfile.unmount)
+ * 3. Run it manually when builds fail with "Resource busy" errors
+ * 4. Can be run multiple times safely - will not fail if nothing to clean
+ * 
+ * This job is safe to run and will never fail your pipeline.
+ */
+
+pipeline {
+    agent {
+        label 'macos'
+    }
+    
+    options {
+        timeout(time: 10, unit: 'MINUTES')
+        // Allow concurrent builds since multiple workspaces may need cleanup
+        // disableConcurrentBuilds() - commented out to allow parallel cleanup
+    }
+    
+    parameters {
+        string(
+            name: 'TARGET_WORKSPACE', 
+            defaultValue: '', 
+            description: 'Optional: Specific workspace path to clean (leave empty to search all workspaces)'
+        )
+    }
+    
+    stages {
+        stage('Discover Mounted DMGs System-Wide') {
+            steps {
+                script {
+                    echo "=========================================="
+                    echo "Stage 1: System-Wide DMG Discovery"
+                    echo "=========================================="
+                    
+                    sh '''
+                        set +e  # Don't fail on errors
+                        
+                        echo "Current directory: $(pwd)"
+                        echo "Hostname: $(hostname)"
+                        echo "User: $(whoami)"
+                        echo ""
+                        
+                        # Method 1: Use hdiutil info to get all mounted images
+                        echo "----------------------------------------"
+                        echo "Method 1: Checking hdiutil info"
+                        echo "----------------------------------------"
+                        if hdiutil info 2>/dev/null | grep -i "TheiaIDE"; then
+                            echo "✓ Found TheiaIDE-related disk images"
+                            echo ""
+                            echo "Full hdiutil output:"
+                            hdiutil info 2>/dev/null | grep -A 10 -i "TheiaIDE" || true
+                        else
+                            echo "ℹ No TheiaIDE images found in hdiutil info"
+                        fi
+                        echo ""
+                        
+                        # Method 2: Check mount table
+                        echo "----------------------------------------"
+                        echo "Method 2: Checking mount table"
+                        echo "----------------------------------------"
+                        if mount | grep -i "TheiaIDE"; then
+                            echo "✓ Found TheiaIDE-related mounts"
+                        else
+                            echo "ℹ No TheiaIDE mounts found in mount table"
+                        fi
+                        echo ""
+                        
+                        # Method 3: Search for mount directories
+                        echo "----------------------------------------"
+                        echo "Method 3: Searching for mount directories"
+                        echo "----------------------------------------"
+                        
+                        # Try common Jenkins workspace locations
+                        SEARCH_PATHS=(
+                            "/Users/Shared/Jenkins/Home/workspace"
+                            "/var/lib/jenkins/workspace"
+                            "$HOME/workspace"
+                            "/Users/jenkins/workspace"
+                        )
+                        
+                        # Add JENKINS_HOME if set
+                        if [ -n "$JENKINS_HOME" ]; then
+                            SEARCH_PATHS+=("$JENKINS_HOME/workspace")
+                        fi
+                        
+                        echo "Searching in the following locations:"
+                        for search_path in "${SEARCH_PATHS[@]}"; do
+                            echo "  - $search_path"
+                        done
+                        echo ""
+                        
+                        FOUND_DIRS=0
+                        for search_path in "${SEARCH_PATHS[@]}"; do
+                            if [ -d "$search_path" ]; then
+                                echo "Searching in: $search_path"
+                                FOUND=$(find "$search_path" -name "TheiaIDE-dmg-mounted" -type d 2>/dev/null || true)
+                                if [ -n "$FOUND" ]; then
+                                    echo "✓ Found mount directories:"
+                                    echo "$FOUND" | while read -r dir; do
+                                        echo "  - $dir"
+                                        FOUND_DIRS=$((FOUND_DIRS + 1))
+                                        
+                                        # Check if it's actually mounted
+                                        if mount | grep -qF "$dir"; then
+                                            echo "    Status: MOUNTED"
+                                        else
+                                            echo "    Status: Directory exists but not mounted"
+                                        fi
+                                    done
+                                fi
+                            fi
+                        done
+                        
+                        if [ "$FOUND_DIRS" -eq 0 ]; then
+                            echo "ℹ No TheiaIDE-dmg-mounted directories found"
+                        fi
+                        echo ""
+                        
+                        exit 0  # Always succeed
+                    '''
+                }
+            }
+        }
+        
+        stage('Unmount Strategy 1: By Volume Name') {
+            steps {
+                script {
+                    echo "=========================================="
+                    echo "Stage 2: Unmount by Volume Name"
+                    echo "=========================================="
+                    
+                    sh '''
+                        set +e  # Don't fail on errors
+                        
+                        echo "Searching mount table for TheiaIDE volumes..."
+                        echo ""
+                        
+                        # Find all mount entries containing "TheiaIDE"
+                        mount | grep -i "TheiaIDE" | while IFS= read -r mount_line; do
+                            echo "Found mount entry:"
+                            echo "  $mount_line"
+                            echo ""
+                            
+                            # Extract device (first field)
+                            DEVICE=$(echo "$mount_line" | awk '{print $1}')
+                            
+                            if [ -n "$DEVICE" ]; then
+                                echo "Attempting to unmount device: $DEVICE"
+                                
+                                # Try hdiutil detach
+                                if hdiutil detach "$DEVICE" -force 2>/dev/null; then
+                                    echo "✓ Successfully unmounted device: $DEVICE"
+                                else
+                                    echo "⚠ hdiutil detach failed, trying diskutil..."
+                                    if diskutil unmount force "$DEVICE" 2>/dev/null; then
+                                        echo "✓ Successfully unmounted with diskutil: $DEVICE"
+                                    else
+                                        echo "⚠ Both methods failed for device: $DEVICE"
+                                    fi
+                                fi
+                            fi
+                            echo ""
+                        done
+                        
+                        # Check if any TheiaIDE mounts remain
+                        if mount | grep -qi "TheiaIDE"; then
+                            echo "⚠ Some TheiaIDE mounts still exist after unmount attempts"
+                        else
+                            echo "✓ No TheiaIDE mounts found in mount table"
+                        fi
+                        
+                        exit 0  # Always succeed
+                    '''
+                }
+            }
+        }
+        
+        stage('Unmount Strategy 2: By Mount Point') {
+            steps {
+                script {
+                    echo "=========================================="
+                    echo "Stage 3: Unmount by Mount Point"
+                    echo "=========================================="
+                    
+                    sh '''
+                        set +e  # Don't fail on errors
+                        
+                        echo "Extracting mount points from mount table..."
+                        echo ""
+                        
+                        # Parse mount output to extract mount points
+                        # Mount format: "device on /mount/point (options)"
+                        mount | grep -i "TheiaIDE" | while IFS= read -r mount_line; do
+                            echo "Processing: $mount_line"
+                            
+                            # Extract mount point - everything between "on " and " ("
+                            MOUNT_POINT=$(echo "$mount_line" | sed -n 's/.* on \\(.*\\) (.*/\\1/p')
+                            
+                            if [ -n "$MOUNT_POINT" ]; then
+                                echo "Extracted mount point: $MOUNT_POINT"
+                                echo "Attempting to unmount..."
+                                
+                                # Try multiple methods
+                                if hdiutil detach "$MOUNT_POINT" -force 2>/dev/null; then
+                                    echo "✓ Successfully unmounted: $MOUNT_POINT"
+                                elif hdiutil detach "$MOUNT_POINT" -force -quiet 2>/dev/null; then
+                                    echo "✓ Successfully unmounted with quiet flag: $MOUNT_POINT"
+                                elif diskutil unmount force "$MOUNT_POINT" 2>/dev/null; then
+                                    echo "✓ Successfully unmounted with diskutil: $MOUNT_POINT"
+                                else
+                                    echo "⚠ All unmount attempts failed for: $MOUNT_POINT"
+                                    echo "  This may require manual intervention"
+                                fi
+                            else
+                                echo "⚠ Could not extract mount point from line"
+                            fi
+                            echo ""
+                        done
+                        
+                        exit 0  # Always succeed
+                    '''
+                }
+            }
+        }
+        
+        stage('Unmount Strategy 3: By Directory Search') {
+            steps {
+                script {
+                    echo "=========================================="
+                    echo "Stage 4: Unmount by Directory Search"
+                    echo "=========================================="
+                    
+                    sh '''
+                        set +e  # Don't fail on errors
+                        
+                        echo "Searching Jenkins workspaces for mount directories..."
+                        echo ""
+                        
+                        # Define search paths
+                        SEARCH_PATHS=(
+                            "/Users/Shared/Jenkins/Home/workspace"
+                            "/var/lib/jenkins/workspace"
+                            "$HOME/workspace"
+                            "/Users/jenkins/workspace"
+                        )
+                        
+                        # Add JENKINS_HOME if set
+                        if [ -n "$JENKINS_HOME" ]; then
+                            SEARCH_PATHS+=("$JENKINS_HOME/workspace")
+                        fi
+                        
+                        # Add TARGET_WORKSPACE parameter if provided
+                        if [ -n "${TARGET_WORKSPACE}" ]; then
+                            echo "Using target workspace from parameter: ${TARGET_WORKSPACE}"
+                            SEARCH_PATHS=("${TARGET_WORKSPACE}")
+                        fi
+                        
+                        PROCESSED=0
+                        for search_path in "${SEARCH_PATHS[@]}"; do
+                            if [ ! -d "$search_path" ]; then
+                                continue
+                            fi
+                            
+                            echo "Searching in: $search_path"
+                            
+                            find "$search_path" -name "TheiaIDE-dmg-mounted" -type d 2>/dev/null | while read -r mount_dir; do
+                                PROCESSED=$((PROCESSED + 1))
+                                echo ""
+                                echo "Found directory: $mount_dir"
+                                
+                                # Check if it's actually mounted
+                                if mount | grep -qF "$mount_dir"; then
+                                    echo "  Status: MOUNTED - attempting to unmount"
+                                    
+                                    # Try to unmount
+                                    if hdiutil detach "$mount_dir" -force 2>/dev/null; then
+                                        echo "  ✓ Successfully unmounted"
+                                    elif hdiutil detach "$mount_dir" -force -quiet 2>/dev/null; then
+                                        echo "  ✓ Successfully unmounted (with quiet flag)"
+                                    elif diskutil unmount force "$mount_dir" 2>/dev/null; then
+                                        echo "  ✓ Successfully unmounted (with diskutil)"
+                                    else
+                                        echo "  ✗ Failed to unmount - may need manual intervention"
+                                    fi
+                                else
+                                    echo "  Status: NOT MOUNTED (directory exists but not in use)"
+                                fi
+                            done
+                        done
+                        
+                        if [ "$PROCESSED" -eq 0 ]; then
+                            echo ""
+                            echo "ℹ No TheiaIDE-dmg-mounted directories found in searched paths"
+                        fi
+                        
+                        exit 0  # Always succeed
+                    '''
+                }
+            }
+        }
+        
+        stage('Clean Leftover Mount Directories') {
+            steps {
+                script {
+                    echo "=========================================="
+                    echo "Stage 5: Clean Leftover Directories"
+                    echo "=========================================="
+                    
+                    sh '''
+                        set +e  # Don't fail on errors
+                        
+                        echo "Cleaning up leftover mount directories..."
+                        echo ""
+                        
+                        # Define search paths
+                        SEARCH_PATHS=(
+                            "/Users/Shared/Jenkins/Home/workspace"
+                            "/var/lib/jenkins/workspace"
+                            "$HOME/workspace"
+                            "/Users/jenkins/workspace"
+                        )
+                        
+                        if [ -n "$JENKINS_HOME" ]; then
+                            SEARCH_PATHS+=("$JENKINS_HOME/workspace")
+                        fi
+                        
+                        if [ -n "${TARGET_WORKSPACE}" ]; then
+                            SEARCH_PATHS=("${TARGET_WORKSPACE}")
+                        fi
+                        
+                        CLEANED=0
+                        for search_path in "${SEARCH_PATHS[@]}"; do
+                            if [ ! -d "$search_path" ]; then
+                                continue
+                            fi
+                            
+                            echo "Cleaning in: $search_path"
+                            
+                            find "$search_path" -name "TheiaIDE-dmg-mounted" -type d 2>/dev/null | while read -r mount_dir; do
+                                echo ""
+                                echo "Checking: $mount_dir"
+                                
+                                # Verify it's not mounted anymore
+                                if mount | grep -qF "$mount_dir"; then
+                                    echo "  ⚠ Still mounted - skipping cleanup"
+                                else
+                                    echo "  Attempting to remove directory..."
+                                    
+                                    # Try to remove as empty directory first
+                                    if rmdir "$mount_dir" 2>/dev/null; then
+                                        echo "  ✓ Removed empty directory"
+                                        CLEANED=$((CLEANED + 1))
+                                    else
+                                        # Try force removal
+                                        if rm -rf "$mount_dir" 2>/dev/null; then
+                                            echo "  ✓ Force removed directory and contents"
+                                            CLEANED=$((CLEANED + 1))
+                                        else
+                                            echo "  ✗ Could not remove directory"
+                                            echo "    This may require manual cleanup or elevated permissions"
+                                        fi
+                                    fi
+                                fi
+                            done
+                        done
+                        
+                        echo ""
+                        if [ "$CLEANED" -gt 0 ]; then
+                            echo "✓ Cleaned up $CLEANED directory(ies)"
+                        else
+                            echo "ℹ No directories needed cleanup"
+                        fi
+                        
+                        exit 0  # Always succeed
+                    '''
+                }
+            }
+        }
+        
+        stage('Verify and Report') {
+            steps {
+                script {
+                    echo "=========================================="
+                    echo "Stage 6: Verification"
+                    echo "=========================================="
+                    
+                    sh '''
+                        set +e  # Don't fail on errors
+                        
+                        echo "Running final verification checks..."
+                        echo ""
+                        
+                        # Check 1: Mount table
+                        echo "1. Checking mount table for TheiaIDE mounts..."
+                        if mount | grep -i "TheiaIDE"; then
+                            echo "  ⚠ WARNING: TheiaIDE mounts still exist!"
+                            echo ""
+                            echo "  Details:"
+                            mount | grep -i "TheiaIDE" | while read -r line; do
+                                echo "    $line"
+                            done
+                        else
+                            echo "  ✓ No TheiaIDE mounts in mount table"
+                        fi
+                        echo ""
+                        
+                        # Check 2: hdiutil info
+                        echo "2. Checking hdiutil info for TheiaIDE images..."
+                        if hdiutil info 2>/dev/null | grep -qi "TheiaIDE"; then
+                            echo "  ⚠ WARNING: TheiaIDE images still attached!"
+                            echo ""
+                            echo "  Details:"
+                            hdiutil info 2>/dev/null | grep -A 5 -i "TheiaIDE" || true
+                        else
+                            echo "  ✓ No TheiaIDE images in hdiutil info"
+                        fi
+                        echo ""
+                        
+                        # Check 3: Leftover directories
+                        echo "3. Checking for leftover mount directories..."
+                        SEARCH_PATHS=(
+                            "/Users/Shared/Jenkins/Home/workspace"
+                            "/var/lib/jenkins/workspace"
+                            "$HOME/workspace"
+                            "/Users/jenkins/workspace"
+                        )
+                        
+                        if [ -n "$JENKINS_HOME" ]; then
+                            SEARCH_PATHS+=("$JENKINS_HOME/workspace")
+                        fi
+                        
+                        if [ -n "${TARGET_WORKSPACE}" ]; then
+                            SEARCH_PATHS=("${TARGET_WORKSPACE}")
+                        fi
+                        
+                        REMAINING=0
+                        REMAINING_DIRS=""
+                        for search_path in "${SEARCH_PATHS[@]}"; do
+                            if [ -d "$search_path" ]; then
+                                FOUND=$(find "$search_path" -name "TheiaIDE-dmg-mounted" -type d 2>/dev/null || true)
+                                if [ -n "$FOUND" ]; then
+                                    COUNT=$(echo "$FOUND" | wc -l)
+                                    REMAINING=$((REMAINING + COUNT))
+                                    REMAINING_DIRS="${REMAINING_DIRS}${FOUND}
+"
+                                fi
+                            fi
+                        done
+                        
+                        if [ "$REMAINING" -gt 0 ]; then
+                            echo "  ⚠ Found $REMAINING leftover mount directory(ies):"
+                            echo "$REMAINING_DIRS" | while read -r dir; do
+                                if [ -n "$dir" ]; then
+                                    echo "    - $dir"
+                                fi
+                            done
+                        else
+                            echo "  ✓ No leftover mount directories found"
+                        fi
+                        echo ""
+                        
+                        # Summary
+                        echo "=========================================="
+                        echo "VERIFICATION COMPLETE"
+                        echo "=========================================="
+                        
+                        exit 0  # Always succeed
+                    '''
+                }
+            }
+        }
+        
+        stage('Generate Report') {
+            steps {
+                script {
+                    echo "=========================================="
+                    echo "Stage 7: Final Report"
+                    echo "=========================================="
+                    
+                    sh '''
+                        set +e  # Don't fail on errors
+                        
+                        echo ""
+                        echo "=========================================="
+                        echo "CLEANUP REPORT"
+                        echo "=========================================="
+                        echo ""
+                        echo "Timestamp: $(date)"
+                        echo "Hostname: $(hostname)"
+                        echo "User: $(whoami)"
+                        echo "Current Directory: $(pwd)"
+                        echo ""
+                        
+                        if [ -n "${TARGET_WORKSPACE}" ]; then
+                            echo "Target Workspace: ${TARGET_WORKSPACE}"
+                        else
+                            echo "Target Workspace: ALL (system-wide search)"
+                        fi
+                        echo ""
+                        
+                        echo "Current mounted disk images:"
+                        mount | grep "/dev/disk" | head -10 || echo "  None found"
+                        echo ""
+                        
+                        echo "Available disk space:"
+                        df -h / | tail -1
+                        echo ""
+                        
+                        echo "=========================================="
+                        echo "END OF REPORT"
+                        echo "=========================================="
+                        
+                        exit 0  # Always succeed
+                    '''
+                }
+            }
+        }
+    }
+    
+    post {
+        always {
+            script {
+                echo ""
+                echo "=========================================="
+                echo "CLEANUP JOB COMPLETE"
+                echo "=========================================="
+                echo ""
+                echo "Summary:"
+                echo "- This job always succeeds, even if cleanup fails"
+                echo "- System-wide search was performed across all workspaces"
+                echo "- Check the logs above for details"
+                echo ""
+                echo "If mounts still exist, you may need to:"
+                echo "  1. Run this job again"
+                echo "  2. Manually SSH to the agent and run:"
+                echo "     mount | grep TheiaIDE"
+                echo "     hdiutil detach <mount-point> -force"
+                echo "  3. Restart the Jenkins agent"
+                echo "  4. Restart the macOS machine (last resort)"
+                echo ""
+                echo "After running this job, your main build should work again."
+                echo ""
+            }
+        }
+        success {
+            echo "✓ Cleanup job completed successfully"
+        }
+        failure {
+            // This should never happen due to our error handling
+            echo "⚠ Cleanup job reported a failure (this is unexpected)"
+            echo "Check the logs above for details"
+        }
+    }
+}
