@@ -27,7 +27,7 @@
       "cwd": "${workspaceFolder}/applications/electron",
       "protocol": "inspector",
       "args": [
-        ".",
+        "scripts/theia-electron-main.js",
         "--log-level=debug",
         "--hostname=localhost",
         "--no-cluster",
@@ -41,11 +41,10 @@
       },
       "sourceMaps": true,
       "outFiles": [
-        "${workspaceFolder}/applications/electron/src-gen/frontend/electron-main.js",
-        "${workspaceFolder}/applications/electron/src-gen/backend/main.js",
+        "${workspaceFolder}/applications/electron/src-gen/**/*.js",
         "${workspaceFolder}/applications/electron/lib/**/*.js",
         "${workspaceFolder}/theia-extensions/*/lib/**/*.js",
-        "${workspaceFolder}/dev-packages/*/lib/**/*.js"
+        "${workspaceFolder}/node_modules/@theia/*/lib/**/*.js"
       ],
       "smartStep": true,
       "internalConsoleOptions": "openOnSessionStart",
@@ -56,23 +55,24 @@
       "request": "launch",
       "name": "Launch Browser Backend",
       "program": "${workspaceFolder}/applications/browser/lib/backend/main.js",
+      "cwd": "${workspaceFolder}/applications/browser",
       "args": [
         "--hostname=0.0.0.0",
         "--port=3000",
         "--no-cluster",
         "--app-project-path=${workspaceFolder}/applications/browser",
-        "--plugins=local-dir:plugins",
-        "--hosted-plugin-inspect=9339"
+        "--plugins=local-dir:../../plugins",
+        "--log-level=debug"
       ],
       "env": {
         "NODE_ENV": "development"
       },
       "sourceMaps": true,
       "outFiles": [
-        "${workspaceFolder}/applications/browser/src-gen/backend/*.js",
+        "${workspaceFolder}/applications/browser/src-gen/**/*.js",
         "${workspaceFolder}/applications/browser/lib/**/*.js",
-        "${workspaceFolder}/packages/*/lib/**/*.js",
-        "${workspaceFolder}/dev-packages/*/lib/**/*.js"
+        "${workspaceFolder}/theia-extensions/**/lib/**/*.js",
+        "${workspaceFolder}/node_modules/@theia/*/lib/**/*.js"
       ],
       "smartStep": true,
       "internalConsoleOptions": "openOnSessionStart",
@@ -88,18 +88,24 @@
       "smartStep": true,
       "sourceMaps": true,
       "internalConsoleOptions": "openOnSessionStart",
-      "outFiles": ["${workspaceFolder}/packages/plugin-ext/lib/**/*.js", "${workspaceFolder}/plugins/**/*.js"]
+      "outFiles": [
+        "${workspaceFolder}/plugins/**/*.js"
+      ]
     },
     {
       "type": "node",
       "request": "launch",
       "name": "Launch Browser Backend (eclipse.jdt.ls)",
       "program": "${workspaceFolder}/applications/browser/lib/backend/main.js",
+      "cwd": "${workspaceFolder}/applications/browser",
       "args": [
-        "--log-level=debug",
-        "--root-dir=${workspaceFolder}/../eclipse.jdt.ls/org.eclipse.jdt.ls.core",
+        "--hostname=0.0.0.0",
         "--port=3000",
         "--no-cluster",
+        "--root-dir=${workspaceFolder}/../eclipse.jdt.ls/org.eclipse.jdt.ls.core",
+        "--app-project-path=${workspaceFolder}/applications/browser",
+        "--plugins=local-dir:../../plugins",
+        "--log-level=debug",
         "--no-app-auto-install"
       ],
       "env": {
@@ -107,10 +113,10 @@
       },
       "sourceMaps": true,
       "outFiles": [
-        "${workspaceFolder}/applications/browser/src-gen/backend/*.js",
+        "${workspaceFolder}/applications/browser/src-gen/**/*.js",
         "${workspaceFolder}/applications/browser/lib/**/*.js",
-        "${workspaceFolder}/packages/*/lib/**/*.js",
-        "${workspaceFolder}/dev-packages/*/lib/**/*.js"
+        "${workspaceFolder}/theia-extensions/**/lib/**/*.js",
+        "${workspaceFolder}/node_modules/@theia/*/lib/**/*.js"
       ],
       "smartStep": true,
       "internalConsoleOptions": "openOnSessionStart",
@@ -122,7 +128,13 @@
       "protocol": "inspector",
       "name": "Run Mocha Tests",
       "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
-      "args": ["--no-timeouts", "--colors", "--opts", "${workspaceFolder}/configs/mocha.opts", "**/${fileBasenameNoExtension}.js"],
+      "args": [
+        "--no-timeouts",
+        "--colors",
+        "--opts",
+        "${workspaceFolder}/configs/mocha.opts",
+        "**/${fileBasenameNoExtension}.js"
+      ],
       "env": {
         "TS_NODE_PROJECT": "${workspaceFolder}/tsconfig.json"
       },
@@ -164,18 +176,28 @@
       },
       "stopOnEntry": false,
       "sourceMaps": true,
-      "outFiles": ["${workspaceFolder}/../.js"]
+      "outFiles": [
+        "${workspaceFolder}/../.js"
+      ]
     }
   ],
   "compounds": [
     {
       "name": "Launch Electron Backend & Frontend",
-      "configurations": ["Launch Electron Backend", "Attach to Plugin Host", "Attach to Electron Frontend"],
+      "configurations": [
+        "Launch Electron Backend",
+        "Attach to Plugin Host",
+        "Attach to Electron Frontend"
+      ],
       "stopAll": true
     },
     {
       "name": "Launch Browser Backend & Frontend",
-      "configurations": ["Launch Browser Backend", "Attach to Plugin Host", "Launch Browser Frontend"],
+      "configurations": [
+        "Launch Browser Backend",
+        "Attach to Plugin Host",
+        "Launch Browser Frontend"
+      ],
       "stopAll": true
     }
   ]
