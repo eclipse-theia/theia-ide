@@ -255,16 +255,12 @@ def buildInstaller(int sleepBetweenRetries) {
 
     checkout scm
 
-    // Ensure directory is cleaned and recreated
-    sh "rm -rf applications/electron/dist"
-    sh "mkdir -p applications/electron/dist"
+    // Ensure build on a clean state
+    sh "git clean -xdf"
+    sh "yarn cache clean"
 
-    // Prepare build command based on dry run status
-    buildPackageCmd = 'yarn --network-timeout 100000 --frozen-lockfile --force && yarn build:extensions && yarn electron build'
-    
-    if (!isDryRun()) {
-        buildPackageCmd += ":prod"
-    }
+    // Prepare build command
+    buildPackageCmd = 'yarn --network-timeout 100000 --frozen-lockfile --force && yarn build:extensions && yarn electron build:prod'
 
     sh 'node --version'
     sh 'printenv && yarn cache dir'
