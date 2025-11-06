@@ -18,9 +18,9 @@ pipeline {
     environment {
         STORED_GIT_BRANCH = "${env.GIT_BRANCH ?: env.BRANCH_NAME ?: 'unknown'}"
         THEIA_IDE_JENKINS_CI = 'true'
-        msvs_version = '2019'
-        GYP_MSVS_VERSION = '2019'
-        npm_config_msvs_version = '2019'
+        msvs_version = '2022'
+        GYP_MSVS_VERSION = '2022'
+        npm_config_msvs_version = '2022'
         NODE_OPTIONS = '--max_old_space_size=4096'
     }
     options {
