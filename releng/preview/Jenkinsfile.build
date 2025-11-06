@@ -107,6 +107,7 @@ spec:
                     steps {
                         nodejs(nodeJSInstallationName: 'node_22.x') {
                             script {
+                                sh "node --version"
                                 createMacInstaller()
                             }
                         }
