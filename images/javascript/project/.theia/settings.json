@@ -1,0 +1,39 @@
+{
+    "extensions.ignoreRecommendations": true,
+    "files.exclude": {
+        "**/.theia": true,
+        "persisted": true,
+        "lost+found": true
+    },
+    /**
+     * JavaScript Essentials Config
+     */
+     "[javascript]": {
+        "editor.defaultFormatter": "vscode.typescript-language-features"
+    },
+    "javascript.format.enable": true,
+    "javascript.format.semicolons": "insert",
+    "javascript.preferences.quoteStyle": "single",
+    "eslint.enable": true,
+    "eslint.codeAction.showDocumentation": {
+        "enable": true
+    },
+    "eslint.codeAction.disableRuleComment": {
+        "enable": true,
+        "location": "sameLine"
+    },
+    "npm-intellisense.importES6": true,
+    "npm-intellisense.importQuotes": "'",
+    "npm-intellisense.importLinebreak": ";\r\n",
+    "npm-intellisense.importDeclarationType": "const",
+    /**
+     * The following line is for the specific configuration of the 
+     * Path-Intellisense extension over Javascript
+     */
+    "javascript.suggest.paths": false,
+    "path-intellisense.showHiddenFiles": true,
+    "formattingToggle.affects": [
+		"editor.formatOnPaste",
+		"editor.formatOnType"
+	]
+}

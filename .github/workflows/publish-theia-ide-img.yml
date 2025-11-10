@@ -7,6 +7,9 @@ on:
         description: The image's tag
         required: true
         default: next
+  push:
+    branches:
+      - master
 
 jobs:
   build:
@@ -46,7 +49,18 @@ jobs:
         shell: bash
         run: |
           docker buildx inspect --bootstrap
-      
+
+      - name: Build and push Browser Base IDE Docker image
+        uses: docker/build-push-action@48aba3b46d1b1fec4febb7c5d0c644b249a11355 # v6.10.0
+        with:
+          context: .
+          file: images/base-ide/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}/base-ide:${{ github.event.inputs.tag }}
+            ghcr.io/${{ github.repository }}/base-ide:latest
+          platforms: linux/amd64,linux/arm64
+
       - name: Build and push Docker image
         uses: docker/build-push-action@48aba3b46d1b1fec4febb7c5d0c644b249a11355 # v6.10.0
         with:
