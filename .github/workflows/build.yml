@@ -18,7 +18,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-2022, ubuntu-22.04, macos-13, macos-14] # macOS-13 is for x64, macOS-14 is for arm64
+        os: [windows-2022, ubuntu-22.04, macos-15, macos-15-intel] # macos-15-intel is for x64, macOS-15 is for arm64
         node: ["22.x"]
 
     runs-on: ${{ matrix.os }}
@@ -65,8 +65,8 @@ jobs:
           NODE_OPTIONS: --max_old_space_size=4096
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # https://github.com/microsoft/vscode-ripgrep/issues/9
 
-      - name: Update electron-builder.yml for macOS-14
-        if: matrix.os == 'macos-14'
+      - name: Update electron-builder.yml for macos-15
+        if: matrix.os == 'macos-15'
         run: |
           sed -i '' 's|https://download.eclipse.org/theia/ide/latest/macos|https://download.eclipse.org/theia/ide/latest/macos-arm|g' applications/electron/electron-builder.yml
 
@@ -86,7 +86,7 @@ jobs:
         if: runner.os == 'macOS'
         uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 #4.6.1
         with:
-          name: ${{ matrix.os == 'macos-13' && 'mac-x64' || matrix.os == 'macos-14' && 'mac-arm64'}}
+          name: ${{ matrix.os == 'macos-15-intel' && 'mac-x64' || matrix.os == 'macos-15' && 'mac-arm64'}}
           path: |
             applications/electron/dist/**
             !applications/electron/dist/mac/**
