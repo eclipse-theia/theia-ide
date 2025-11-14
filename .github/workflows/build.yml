@@ -118,24 +118,23 @@ jobs:
           retention-days: 1
 
       - name: Test (Linux)
-        if: matrix.tests != 'skip' && runner.os == 'Linux'
+        if: runner.os == 'Linux'
         run: |
           xvfb-run -a yarn electron test
 
       - name: Test (Windows)
-        if: matrix.tests != 'skip' && runner.os == 'Windows'
+        if: runner.os == 'Windows'
         shell: bash
         run: |
           yarn electron test
 
       - name: Test (macOS)
-        if: matrix.tests != 'skip' && runner.os == 'macOS'
+        if: runner.os == 'macOS'
         shell: bash
         run: |
           yarn electron test
 
       - name: Lint
-        if: matrix.tests != 'skip'
         shell: bash
         run: |
           yarn lint
