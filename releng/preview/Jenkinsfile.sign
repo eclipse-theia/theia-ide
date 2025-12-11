@@ -15,7 +15,7 @@ pipeline {
     options {
         timeout(time: 5, unit: 'HOURS')
         disableConcurrentBuilds()
-        durabilityHint('PERFORMANCE_OPTIMIZED')
+        durabilityHint('MAX_SURVIVABILITY')
     }
     parameters {
         string(name: 'BUILD_NUMBER_PARAM', defaultValue: '', description: 'The build number from the upstream build job')
