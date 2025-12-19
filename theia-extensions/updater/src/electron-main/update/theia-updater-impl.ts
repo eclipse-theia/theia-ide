@@ -12,7 +12,7 @@ import * as http from 'http';
 import * as os from 'os';
 import * as path from 'path';
 import { ElectronMainApplication, ElectronMainApplicationContribution } from '@theia/core/lib/electron-main/electron-main-application';
-import { TheiaUpdater, TheiaUpdaterClient } from '../../common/updater/theia-updater';
+import { TheiaUpdater, TheiaUpdaterClient, UpdaterSettings } from '../../common/updater/theia-updater';
 import { injectable } from '@theia/core/shared/inversify';
 import { isOSX, isWindows } from '@theia/core';
 import { CancellationToken } from 'builder-util-runtime';
@@ -36,36 +36,35 @@ autoUpdater.logger.transports.file.level = 'info';
 export class TheiaUpdaterImpl implements TheiaUpdater, ElectronMainApplicationContribution {
 
     protected clients: Array<TheiaUpdaterClient> = [];
+    protected settings: UpdaterSettings = {
+        checkForUpdates: true,
+        checkInterval: 60,
+        channel: 'stable'
+    };
 
     private initialCheck: boolean = true;
-    private updateChannelReported: boolean = false;
     private reportOnFirstRegistration: boolean = false;
     private cancellationToken: CancellationToken = new CancellationToken();
+    private updateCheckTimer: NodeJS.Timeout | undefined;
 
     constructor() {
         autoUpdater.autoDownload = false;
         autoUpdater.on('update-available', (info: { version: string }) => {
-            if (this.updateChannelReported) {
-                const startupCheck = this.initialCheck;
-                if (this.initialCheck) {
-                    this.initialCheck = false;
-                    if (this.clients.length === 0) {
-                        this.reportOnFirstRegistration = true;
-                    }
+            if (this.initialCheck) {
+                this.initialCheck = false;
+                if (this.clients.length === 0) {
+                    this.reportOnFirstRegistration = true;
                 }
-                const updateInfo = { version: info.version };
-                this.clients.forEach(c => c.updateAvailable(true, startupCheck, updateInfo));
             }
+            const updateInfo = { version: info.version };
+            this.clients.forEach(c => c.updateAvailable(true, updateInfo));
         });
         autoUpdater.on('update-not-available', () => {
-            if (this.updateChannelReported) {
-                if (this.initialCheck) {
-                    this.initialCheck = false;
-                    /* do not report that no update is available on start up */
-                    return;
-                }
-                this.clients.forEach(c => c.updateAvailable(false, false));
+            if (this.initialCheck) {
+                this.initialCheck = false;
+                return;
             }
+            this.clients.forEach(c => c.updateAvailable(false));
         });
 
         autoUpdater.on('update-downloaded', () => {
@@ -82,7 +81,19 @@ export class TheiaUpdaterImpl implements TheiaUpdater, ElectronMainApplicationCo
     }
 
     checkForUpdates(): void {
+        const feedURL = this.getFeedURL(this.settings.channel);
+        autoUpdater.setFeedURL(feedURL);
         autoUpdater.checkForUpdates();
+    }
+
+    setUpdaterSettings(settings: UpdaterSettings): void {
+        const settingsChanged = this.settings.checkForUpdates !== settings.checkForUpdates ||
+            this.settings.checkInterval !== settings.checkInterval ||
+            this.settings.channel !== settings.channel;
+        this.settings = settings;
+        if (settingsChanged) {
+            this.scheduleUpdateChecks();
+        }
     }
 
     onRestartToUpdateRequested(): void {
@@ -114,12 +125,35 @@ export class TheiaUpdaterImpl implements TheiaUpdater, ElectronMainApplicationCo
     }
 
     onStart(application: ElectronMainApplication): void {
-        // Called when the contribution is starting. You can use both async and sync code from here.
-        this.checkForUpdates();
     }
 
     onStop(application: ElectronMainApplication): void {
-        // Invoked when the contribution is stopping. You can clean up things here. You are not allowed call async code from here.
+        this.stopUpdateCheckTimer();
+    }
+
+    private scheduleUpdateChecks(): void {
+        this.stopUpdateCheckTimer();
+
+        if (!this.settings.checkForUpdates) {
+            return;
+        }
+
+        this.checkForUpdates();
+
+        const intervalMs = Math.max(this.settings.checkInterval, 1) * 60 * 1000;
+
+        this.updateCheckTimer = setInterval(() => {
+            if (this.settings.checkForUpdates) {
+                this.checkForUpdates();
+            }
+        }, intervalMs);
+    }
+
+    private stopUpdateCheckTimer(): void {
+        if (this.updateCheckTimer) {
+            clearInterval(this.updateCheckTimer);
+            this.updateCheckTimer = undefined;
+        }
     }
 
     setClient(client: TheiaUpdaterClient | undefined): void {
@@ -127,17 +161,8 @@ export class TheiaUpdaterImpl implements TheiaUpdater, ElectronMainApplicationCo
             this.clients.push(client);
             if (this.reportOnFirstRegistration) {
                 this.reportOnFirstRegistration = false;
-                this.clients.forEach(c => c.updateAvailable(true, true));
+                this.clients.forEach(c => c.updateAvailable(true));
             }
-        }
-    }
-
-    setUpdateChannel(channel: string): void {
-        const feedURL = this.getFeedURL(channel);
-        autoUpdater.setFeedURL(feedURL);
-        if (!this.updateChannelReported) {
-            this.updateChannelReported = true;
-            this.checkForUpdates();
         }
     }
 
@@ -164,6 +189,7 @@ export class TheiaUpdaterImpl implements TheiaUpdater, ElectronMainApplicationCo
     }
 
     dispose(): void {
+        this.stopUpdateCheckTimer();
         this.clients.forEach(this.disconnectClient.bind(this));
     }
 
