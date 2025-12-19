@@ -19,7 +19,7 @@ import {
     Progress
 } from '@theia/core/lib/common';
 import { PreferenceScope, PreferenceService } from '@theia/core/lib/common';
-import { TheiaUpdater, TheiaUpdaterClient, UpdaterError, UpdateInfo, UpdateAvailabilityInfo } from '../../common/updater/theia-updater';
+import { TheiaUpdater, TheiaUpdaterClient, UpdaterError, UpdateInfo, UpdateAvailabilityInfo, UpdaterSettings } from '../../common/updater/theia-updater';
 import { inject, injectable, postConstruct } from '@theia/core/shared/inversify';
 import { CommonMenus, OpenerService } from '@theia/core/lib/browser';
 import { ElectronMainMenuFactory } from '@theia/core/lib/electron-browser/menu/electron-main-menu-factory';
@@ -51,8 +51,6 @@ export namespace TheiaUpdaterMenu {
 @injectable()
 export class TheiaUpdaterClientImpl implements TheiaUpdaterClient {
 
-    @inject(PreferenceService) private readonly preferenceService: PreferenceService;
-
     protected readonly onReadyToInstallEmitter = new Emitter<void>();
     readonly onReadyToInstall = this.onReadyToInstallEmitter.event;
 
@@ -69,23 +67,8 @@ export class TheiaUpdaterClientImpl implements TheiaUpdaterClient {
         this.onReadyToInstallEmitter.fire();
     }
 
-    updateAvailable(available: boolean, startupCheck: boolean, updateInfo?: UpdateInfo): void {
-        if (startupCheck) {
-            // When we are checking for updates after program launch we need to check whether to prompt the user
-            // we need to wait for the preference service. Also add a few seconds delay before showing the dialog
-            this.preferenceService.ready
-                .then(() => {
-                    setTimeout(() => {
-                        const reportOnStart: boolean = this.preferenceService.get('updates.reportOnStart', true);
-                        if (reportOnStart) {
-                            this.onUpdateAvailableEmitter.fire({ available, updateInfo });
-                        }
-                    }, 10000);
-                });
-        } else {
-            this.onUpdateAvailableEmitter.fire({ available, updateInfo });
-        }
-
+    updateAvailable(available: boolean, updateInfo?: UpdateInfo): void {
+        this.onUpdateAvailableEmitter.fire({ available, updateInfo });
     }
 
     reportError(error: UpdaterError): void {
@@ -144,13 +127,6 @@ export class TheiaUpdaterFrontendContribution implements CommandContribution, Me
 
     @postConstruct()
     protected init(): void {
-        this.preferenceService.ready.then(() => this.updater.setUpdateChannel(this.preferenceService.get('updates.channel', 'stable')));
-        this.preferenceService.onPreferenceChanged(e => {
-            if (e.preferenceName === 'updates.channel') {
-                this.updater.setUpdateChannel(this.preferenceService.get('updates.channel', 'stable'));
-            }
-        });
-
         this.updaterClient.onUpdateAvailable(({ available, updateInfo }) => {
             if (available) {
                 this.currentUpdateInfo = updateInfo;
@@ -168,6 +144,26 @@ export class TheiaUpdaterFrontendContribution implements CommandContribution, Me
 
         this.updaterClient.onError(error => this.handleError(error));
         this.updaterClient.onCancel(() => this.stopProgress());
+
+        this.preferenceService.ready.then(() => {
+            this.syncUpdaterSettings();
+        });
+        this.preferenceService.onPreferenceChanged(e => {
+            if (e.preferenceName === 'updates.checkForUpdates' ||
+                e.preferenceName === 'updates.checkInterval' ||
+                e.preferenceName === 'updates.channel') {
+                this.syncUpdaterSettings();
+            }
+        });
+    }
+
+    protected syncUpdaterSettings(): void {
+        const settings: UpdaterSettings = {
+            checkForUpdates: this.preferenceService.get<boolean>('updates.checkForUpdates', true),
+            checkInterval: this.preferenceService.get<number>('updates.checkInterval', 60),
+            channel: this.preferenceService.get<'stable' | 'preview'>('updates.channel', 'stable')
+        };
+        this.updater.setUpdaterSettings(settings);
     }
 
     registerCommands(registry: CommandRegistry): void {
@@ -198,9 +194,14 @@ export class TheiaUpdaterFrontendContribution implements CommandContribution, Me
         const message = updateInfo
             ? `Update to version ${updateInfo.version} found, do you want to update?`
             : 'Updates found, do you want to update?';
-        const answer = await this.messageService.info(message, 'No', 'Yes', 'Never');
+        const actions = ['Not now', 'Yes'];
+        const checkForUpdates = this.preferenceService.get<boolean>('updates.checkForUpdates', true);
+        if (checkForUpdates) {
+            actions.push('Never');
+        }
+        const answer = await this.messageService.info(message, ...actions);
         if (answer === 'Never') {
-            this.preferenceService.set('updates.reportOnStart', false, PreferenceScope.User);
+            this.preferenceService.set('updates.checkForUpdates', false, PreferenceScope.User);
             return;
         }
         if (answer === 'Yes') {
