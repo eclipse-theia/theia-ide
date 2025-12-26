@@ -18,7 +18,8 @@ finish-args:
   - --share=network
   - --socket=pulseaudio
   - --socket=ssh-auth
-  - --socket=x11 # Until it is solved: https://github.com/eclipse-theia/theia/issues/16582
+  - --socket=wayland
+  - --socket=fallback-x11
   - --talk-name=org.freedesktop.Flatpak # Required to run commands in the host system.
   - --talk-name=org.freedesktop.secrets # Access to authentication services, e.g. for git.
 separate-locales: false
@@ -33,7 +34,7 @@ modules:
       - type: script
         dest-filename: wrapper.sh
         commands:
-          - exec zypak-wrapper /app/share/theia/theia-ide-electron-app.bin --ozone-platform=x11 --no-sandbox "$@"
+          - exec zypak-wrapper /app/share/theia/theia-ide-electron-app.bin --ozone-platform-hint=auto --no-sandbox "$@"
       - type: inline
         contents: |
           --install.frozen-lockfile true
