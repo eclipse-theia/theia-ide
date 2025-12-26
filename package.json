@@ -52,6 +52,7 @@
     "electron": "yarn --cwd applications/electron",
     "electron:flatpak:sources": "flatpak-node-generator yarn yarn.lock --electron-ffmpeg archive -o flatpak/generated-sources.json",
     "electron:flatpak": "yarn electron:flatpak:sources && flatpak-builder flatpak/build flatpak/org.eclipse.theia.yaml --install-deps-from=flathub --force-clean --user",
+    "electron:flatpak:install": "yarn electron:flatpak:sources && flatpak-builder flatpak/build flatpak/org.eclipse.theia.yaml --install-deps-from=flathub --force-clean --user --install",
     "browser": "yarn --cwd applications/browser",
     "update:theia": "ts-node scripts/update-theia-version.ts",
     "update:theia:children": "lerna run update:theia -- ",
