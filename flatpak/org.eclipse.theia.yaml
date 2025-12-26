@@ -31,6 +31,8 @@ modules:
         path: ..
       - type: patch
         path: electron-builder.patch
+      # Bundled VS Code extensions - update with: ./update-extensions.sh
+      - extension-sources.json
       - type: script
         dest-filename: wrapper.sh
         commands:
@@ -71,6 +73,14 @@ modules:
       - yarn run build
       - yarn run package:applications:prod
       - mv applications/electron/dist/linux-unpacked ${FLATPAK_DEST}/share/theia
+      # Install bundled plugins - extract VSIXs since Theia expects directories for system plugins
+      - mkdir -p ${FLATPAK_DEST}/share/theia/resources/app/plugins
+      - |
+        for vsix in plugins/*.vsix; do
+          name=$(basename "$vsix" .vsix)
+          mkdir -p "${FLATPAK_DEST}/share/theia/resources/app/plugins/${name}"
+          unzip -q "$vsix" -d "${FLATPAK_DEST}/share/theia/resources/app/plugins/${name}"
+        done
       - install -Dm0755 wrapper.sh ${FLATPAK_DEST}/bin/theia
       - install -Dm0644 ${FLATPAK_ID}.desktop -t ${FLATPAK_DEST}/share/applications
       - install -Dm0644 ${FLATPAK_ID}.metainfo.xml -t ${FLATPAK_DEST}/share/metainfo
