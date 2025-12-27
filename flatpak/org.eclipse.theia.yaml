@@ -34,7 +34,16 @@ modules:
       - type: script
         dest-filename: wrapper.sh
         commands:
-          - exec zypak-wrapper /app/share/theia/theia-ide-electron-app.bin --ozone-platform-hint=auto --no-sandbox "$@"
+          # Escape the Flatpak sandbox to run on the host for access to SDKs and tools
+          - |
+            APP_LOCATION=$(flatpak-spawn --host flatpak info --show-location org.eclipse.theia)
+            exec flatpak-spawn --host \
+              --env=XDG_DATA_HOME="${XDG_DATA_HOME:-}" \
+              --env=XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-}" \
+              --env=XDG_CACHE_HOME="${XDG_CACHE_HOME:-}" \
+              --env=XDG_STATE_HOME="${XDG_STATE_HOME:-}" \
+              "$APP_LOCATION/files/share/theia/theia-ide-electron-app.bin" \
+              --ozone-platform-hint=auto --no-sandbox "$@"
       - type: inline
         contents: |
           --install.frozen-lockfile true
