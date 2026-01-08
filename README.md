@@ -62,7 +62,7 @@ Documentation on how to package Theia as a Desktop Product may be found [here](h
   - `updater` contains a Theia extension contributing the update mechanism and corresponding UI elements (based on the electron updater).
   - `launcher` contains a Theia extension contributing, for AppImage applications, the option to create a script that allows to start the Eclipse Theia IDE from the command line by calling the 'theia' command.
 
-### Build
+### Native build
 
 For development and casual testing of the Eclipse Theia IDE, one can build it in "dev" mode. This permits building the IDE on systems with less resources, like a Raspberry Pi 4B with 4GB of RAM.
 
@@ -80,6 +80,22 @@ Production applications:
 # Build production version of the Eclipse Theia IDE app
 yarn && yarn build && yarn download:plugins
 ```
+
+### Flatpak build
+
+To build the Flatpak, you'll need `flatpak`, `flatpak-builder` and `flatpak-node-generator`.
+The first two dependencies should be available from your distro's package manager, while the last can be installed by running:
+
+```shell
+pipx install 'git+https://github.com/flatpak/flatpak-builder-tools.git#subdirectory=node'
+```
+
+Before building, make sure `yarn.lock` is up to date, since it will be used to download all Theia dependencies before building the Flatpak.
+In fact, `flatpak-builder` works in a sandbox without networking, so dependencies must be downloaded up front.
+Also, make sure git submodules are in place: `git submodule update --init`.
+
+To build the Flatpak, run the convenient command `yarn electron:flatpak`. If you don't want to install `yarn` on your system, simply run the commands
+you find in [package.json](package.json). The output files will be located in `flatpak/build`.
 
 ### Package the Applications
 
