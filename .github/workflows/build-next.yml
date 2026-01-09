@@ -1,4 +1,4 @@
-name: Build linux next version
+name: Build Theia IDE next version
 
 on:
   workflow_dispatch:
@@ -6,8 +6,13 @@ on:
     - cron: "0 3 * * 1" # Runs every monday at 3am
 jobs:
   build:
-    name: Build linux next
-    runs-on: ubuntu-22.04
+    name: Build ${{ matrix.os }} next
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, macos-15, macos-15-intel, windows-2022] # macos-15-intel is for x64, macOS-15 is for arm64
+
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 60
 
     steps:
@@ -35,6 +40,11 @@ jobs:
           yarn version --minor --no-git-tag-version
           echo "THEIA_IDE_VERSION=$(jq -r .version package.json)-${THEIA_VERSION}-$(date +%d-%m-%y)" >> $GITHUB_ENV
 
+      - name: Update electron-builder.yml for macos-15
+        if: matrix.os == 'macos-15'
+        run: |
+          sed -i '' 's|https://download.eclipse.org/theia/ide/latest/macos|https://download.eclipse.org/theia/ide/latest/macos-arm|g' applications/electron/electron-builder.yml
+
       - name: Build prod package
         shell: bash
         run: |
@@ -51,14 +61,31 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # https://github.com/microsoft/vscode-ripgrep/issues/9
 
       - name: Rename AppImage with version
+        if: runner.os == 'Linux'
         run: |
           mv applications/electron/dist/TheiaIDE.AppImage applications/electron/dist/TheiaIDE-$THEIA_IDE_VERSION.AppImage
 
       - name: Upload Linux Dist Files
-        if: runner.os == 'Linux' && github.event_name != 'pull_request'
+        if: runner.os == 'Linux'
         uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 #4.6.1
         with:
-          name: linux
+          name: theia-ide-next-linux
           path: |
             applications/electron/dist/TheiaIDE-${{ env.THEIA_IDE_VERSION }}.AppImage
+          retention-days: 7
+
+      - name: Upload Mac Dist Files
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 #4.6.1
+        with:
+          name: ${{ matrix.os == 'macos-15-intel' && 'theia-ide-next-mac-x64' || matrix.os == 'macos-15' && 'theia-ide-next-mac-arm64'}}
+          path: applications/electron/dist/*.dmg
+          retention-days: 7
+
+      - name: Upload Windows Dist Files
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 #4.6.1
+        with:
+          name: theia-ide-next-windows
+          path: applications/electron/dist/*.exe
           retention-days: 7
