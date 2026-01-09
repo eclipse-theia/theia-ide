@@ -31,7 +31,7 @@ This guide differentiates between two version numbers:
 
 - **THEIA_VERSION**: (used variable: {{version}}) The version of Theia used in this release.
 - **THEIA_IDE_VERSION**: (used variable: {{ideVersion}}) The Theia IDE release version. Depending on the context:
-  - If there was **no** Theia release, increment the patch version by 1 (e.g., 1.47.100 -> 1.47.101).
+  - If there was **no** Theia release, increment the patch version by 1 (e.g., 1.47.0 -> 1.47.1 or 1.47.100 -> 1.47.101).
   - For a new Theia *minor* release (e.g., 1.48.0), use the same version as Theia.
   - For a new Theia *patch* release (e.g., 1.48.1), use Theia's patch version multiplied by 100 (e.g., 1.48.100).
 
@@ -56,7 +56,7 @@ yarn
    yarn version --no-git-tag-version --new-version {{ideVersion}}
    ```
 
-2. If there is a Theia release, update Theia dependencies to **THEIA_VERSION** :
+2. Optional: If there is a new Theia release to consume, update Theia dependencies to **THEIA_VERSION** :
 
    ```sh
    yarn update:theia {{version}} && yarn update:theia:children {{version}}
@@ -95,14 +95,20 @@ After completing step 2.3, open a PR with your changes <https://github.com/eclip
    PR Title:
 
    ```md
-   Update to Theia v{{ideVersion}}
+   Update to Theia v{{version}}
+   ```
+
+   OR (if it is a pure Theia IDE version update):
+
+   ```md
+   Publish Theia IDE {{ideVersion}}
    ```
 
 ### 2.5. Mac Artifacts
 <!-- release: both -->
 
 - The PR will trigger a verification build that generates two zip files with mac artifacts.
-- Download these zips and replace them in this pre-release: <https://github.com/eclipse-theia/theia-ide/releases/tag/pre-release>.
+- Download these two zips and replace them in this pre-release: <https://github.com/eclipse-theia/theia-ide/releases/tag/pre-release>.
 - These unsigned dmgs will be used as input for the Jenkins build.
 
 ### 2.6. Merge Release PR & Trigger Jenkins Build
@@ -112,7 +118,7 @@ After completing step 2.3, open a PR with your changes <https://github.com/eclip
 
 2. ==> Steps 2.4 and 2.5 need to be complete to proceed!
 
-3. Once PR checks are complete, trigger the Jenkins Release Preview <https://ci.eclipse.org/theia/job/theia-ide-release/> job without parameters.
+3. Once [CI checks after merge to master are complete](https://github.com/eclipse-theia/theia-ide/actions), trigger the Jenkins Release Preview <https://ci.eclipse.org/theia/job/theia-ide-release/> job without parameters.
 
 4. Once 3. is successful the notarize job <https://ci.eclipse.org/theia/job/theia-ide-sign-notarize/> is started automatically.
 
@@ -189,7 +195,7 @@ Once the PR is merged and the preview build is created, follow these steps for t
    ```md
    Hi everyone,
 
-   The new version {{ideVersion}} of the Theia IDE is available on the preview channel now. Please join the preview test and help us stabilize the release.
+   Version {{ideVersion}} of the Theia IDE is now available on the preview channel. Please join the preview test and help us stabilize the release.
    Visit the preview discussion for more information and coordination: https://github.com/eclipse-theia/theia/discussions/{{discussionNumber}}
    ```
 
@@ -205,7 +211,7 @@ Once the PR is merged and the preview build is created, follow these steps for t
    ```
 
 ### 3.2.4 Optional: Announcement to Theia IDE Preview Testers
-<!-- release: both -->
+<!-- release: minor -->
 
 - Optional: Announce the start of the Theia IDE Preview Test phase to your testers (e.g., via Slack, Teams, E-Mail):
 
@@ -292,6 +298,7 @@ Thanks! :thx:
 ```
 
 ## 4. Promote IDE from Preview to Stable Channel
+<!-- release: both -->
 
 Promote the IDE using the [Build Job](https://ci.eclipse.org/theia/job/Theia%20-%20Promote%20IDE/).
 
@@ -305,11 +312,16 @@ Promote the IDE using the [Build Job](https://ci.eclipse.org/theia/job/Theia%20-
 
   - Update the [Base Preview discussion](#32-announce-preview-test-phase) status table with a checkmark and the version that has been published.
 
+   ```md
+   | [Theia IDE {{majorMinor}}.x Promoted to Stable](https://download.eclipse.org/theia/ide/1.67.100/) | {{today}} | :white_check_mark: |
+   ```
+
   - Mark the message as the answer.
 
   - Unpin discussion from the Release Announcement Category.
 
 ## 5. Tag the Release Commit
+<!-- release: both -->
 
 After promoting the release, tag the release commit as follows:
 
@@ -326,13 +338,21 @@ After promoting the release, tag the release commit as follows:
    ```
 
 ## 6. Publish Docker Image
+<!-- release: both -->
 
 Publish the Docker image by running the [workflow](https://github.com/eclipse-theia/theia-ide/actions/workflows/publish-theia-ide-img.yml) from the `master` branch. Use **${THEIA_IDE_VERSION}** as the version.
 (We do NOT use the v prefix here in this case currently).
 
+- Check the GH package page if the image was published correctly: <https://github.com/eclipse-theia/theia-ide/pkgs/container/theia-ide%2Ftheia-ide>
+
 - Update the [Preview discussion](#32-announce-preview-test-phase) status table
 
+   ```md
+   | [Docker image Publish](https://github.com/eclipse-theia/theia-ide/pkgs/container/theia-ide%2Ftheia-ide) | {{today}} | :white_check_mark: |
+   ```
+
 ## 7. Snap Update
+<!-- release: both -->
 
 Can be parallel to step 6.
 After the IDE is promoted to stable, perform these steps for the snap update:
@@ -348,11 +368,16 @@ After the IDE is promoted to stable, perform these steps for the snap update:
 
 5. Force push the branch.
 6. Verify that all checks pass, and then `rebase and merge`.
-7. Confirm the master branch build is successful.
-8. check if snap is available <https://snapcraft.io/theia-ide>
+7. Confirm the master branch build (Store Publishing) is successful.
+8. Check if snap is available <https://snapcraft.io/theia-ide>
 9. Update the [Preview discussion](#32-announce-preview-test-phase) status table
 
+   ```md
+   | [Snap updated](https://snapcraft.io/theia-ide) | {{today}} | :white_check_mark: |
+   ```
+
 ## 8. Upgrade Dependencies
+<!-- release: both -->
 
 After each release, run the following command to upgrade dependencies:
 
