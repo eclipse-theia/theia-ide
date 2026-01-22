@@ -26,6 +26,7 @@ modules:
   - name: theia
     sources:
       - generated-sources.json
+      - generated-extension-sources.json
       - type: dir
         path: ..
       - type: patch
@@ -59,6 +60,14 @@ modules:
       - yarn run build
       - yarn run package:applications:prod
       - mv applications/electron/dist/linux-unpacked ${FLATPAK_DEST}/share/theia
+      # Install bundled plugins - extract VSIXs since Theia expects directories for system plugins
+      - mkdir -p ${FLATPAK_DEST}/share/theia/resources/app/plugins
+      - |
+        for vsix in plugins/*.vsix; do
+          name=$(basename "$vsix" .vsix)
+          mkdir -p "${FLATPAK_DEST}/share/theia/resources/app/plugins/${name}"
+          unzip -q "$vsix" -d "${FLATPAK_DEST}/share/theia/resources/app/plugins/${name}"
+        done
       - install -Dm0755 theia.sh ${FLATPAK_DEST}/bin/theia
       - install -Dm0644 ${FLATPAK_ID}.desktop -t ${FLATPAK_DEST}/share/applications
       - install -Dm0644 ${FLATPAK_ID}.metainfo.xml -t ${FLATPAK_DEST}/share/metainfo
