@@ -3,11 +3,7 @@ productName: TheiaIDE
 copyright: Copyright © 2020-2025 Eclipse Foundation, Inc
 electronDist: ../../node_modules/electron/dist
 electronVersion: 38.4.0
-# Although it is generally not recommended to disable asar, it is required for Theia.
-# Enabling this leads to: process ERROR Error: spawn ENOTDIR
-# because binaries can not be executed from the asar archive.
-# See asar file API limitations: https://www.electronjs.org/docs/tutorial/application-packaging#limitations-of-the-node-api
-asar: false
+asar: true
 nodeGypRebuild: false
 npmRebuild: false
 
