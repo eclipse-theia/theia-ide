@@ -231,6 +231,6 @@ describe('Theia App', function () {
 
     // Exemplary check a few extensions
     expect(extensionNames).to.include('Debugger for Java');
-    expect(extensionNames).to.include('TypeScript Language Basics (built-in)');
+    expect(extensionNames).to.include('TypeScript and JavaScript Language Features (built-in)');
   });
 });
