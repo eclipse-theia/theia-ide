@@ -9,7 +9,12 @@ const { copyBundledPlugins } = require('./appimage-helpers');
 // Detect if running as AppImage
 const isAppImage = !!process.env.APPIMAGE;
 
-const bundledPluginsDir = path.resolve(__dirname, '../', 'plugins');
+// When packaged with asar, __dirname is inside app.asar (e.g., .../app.asar/scripts)
+// but plugins are in extraResources at .../app/plugins (outside the asar)
+const isInsideAsar = __dirname.includes('.asar');
+const bundledPluginsDir = isInsideAsar
+    ? path.join(process.resourcesPath, 'app', 'plugins')
+    : path.resolve(__dirname, '../', 'plugins');
 
 if (isAppImage) {
     // When running as AppImage, use a user-writable directory for the built-in plugins
