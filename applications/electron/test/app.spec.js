@@ -1,11 +1,13 @@
 const os = require('os');
 const path = require('path');
-const fs = require('fs');
 const { execSync } = require('child_process');
 const { remote } = require('webdriverio');
 const { expect } = require('chai');
 
 const THEIA_LOAD_TIMEOUT = 15000; // 15 seconds
+
+// Set environment variable to disable splash screen (works with asar packaging)
+process.env.THEIA_NO_SPLASH = '1';
 
 function isMacArm() {
     if (os.platform() !== 'darwin'){
@@ -18,79 +20,6 @@ function isMacArm() {
     } catch (error) {
         // Fall back to node's arch property if uname fails
         return os.arch() === 'arm64';
-    }
-}
-
-function getElectronMainJS() {
-    const distFolder = path.join(__dirname, '..', 'dist');
-    switch (os.platform()) {
-    case 'linux':
-        return path.join(
-        distFolder,
-        'linux-unpacked',
-        'resources',
-        'app',
-        'lib',
-        'backend',
-        'electron-main.js'
-        );
-    case 'win32':
-        return path.join(
-        distFolder,
-        'win-unpacked',
-        'resources',
-        'app',
-        'lib',
-        'backend',
-        'electron-main.js'
-        );
-    case 'darwin':
-        const macFolder = isMacArm() ? 'mac-arm64' : 'mac';
-        return path.join(
-        distFolder,
-        macFolder,
-        'TheiaIDE.app',
-        'Contents',
-        'Resources',
-        'app',
-        'lib',
-        'backend',
-        'electron-main.js'
-        );
-    default:
-        return undefined;
-    }
-}
-
-function disableSplashScreen() {
-    const filePath = getElectronMainJS();
-    if (fs.existsSync(filePath)) {
-        fs.readFile(filePath, 'utf8', (err, data) => {
-            if (err) {
-                console.error(err);
-                return;
-            }
-            let regex = /,splashScreenOptions:\{[^}]*\}/;
-            if (regex.test(data)) {
-                const updatedData = data.replace(regex, '');
-                fs.writeFile(filePath, updatedData, 'utf8', e => {
-                    if (e) {
-                        console.error(e);
-                    }
-                });
-            } else {
-                // check non minified as well
-                regex = /,(\s+)"splashScreenOptions":\s*\{[^}]*\}/s;
-                if (regex.test(data)) {
-                    const updatedData = data.replace(regex, '');
-                    fs.writeFile(filePath, updatedData, 'utf8', e => {
-                        if (e) {
-                            console.error(e);
-                        }
-                    });
-                }
-            }
-        });
     }
 }
 
@@ -141,12 +70,6 @@ function macSafeKeyCombo(keys) {
 describe('Theia App', function () {
   // In mocha, 'this' is a common context between sibling beforeEach, afterEach, it, etc methods within the same describe.
   // Each describe has its own context.
-  before(async function () {
-    // XXX
-    // our current webdriverio version does not seem to be able to handle the window switches
-    // since we should probably switch to playwright tests, we disable the splashscreen for now in the AUT
-    disableSplashScreen();
-  });
   beforeEach(async function () {
 
     const binary = getBinaryPath();
@@ -217,11 +140,11 @@ describe('Theia App', function () {
     await builtinHeader.waitForClickable();
     await builtinHeader.click();
 
-    // Wait for expansion to finish
+    // Wait for expansion to finish (plugins may take time to scan, especially with asar packaging)
     const builtin = await this.browser.$(
       '#vsx-extensions\\:builtin .theia-TreeContainer'
     );
-    await builtin.waitForExist();
+    await builtin.waitForExist({ timeout: 10000 });
 
     // Get names of all builtin extensions
     const extensions = await builtin.$$('.theia-vsx-extension .name');
