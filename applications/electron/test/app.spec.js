@@ -156,4 +156,72 @@ describe('Theia App', function () {
     expect(extensionNames).to.include('Debugger for Java');
     expect(extensionNames).to.include('TypeScript and JavaScript Language Features (built-in)');
   });
+
+  it('Search in workspace', async function () {
+    // Wait a bit to make sure key handlers are registered
+    await new Promise(r => setTimeout(r, 5000));
+
+    // Open search view (Ctrl+Shift+F)
+    await this.browser.keys(macSafeKeyCombo(['Control', 'Shift', 'f']));
+
+    // Wait for search input to appear
+    const searchInput = await this.browser.$('#search-input-field');
+    await searchInput.waitForExist({ timeout: 5000 });
+    await searchInput.waitForDisplayed();
+
+    // Search for text that exists in the test workspace README.md
+    await searchInput.setValue('Test Workspace');
+
+    // Wait for search results to appear
+    const searchResults = await this.browser.$('.t-siw-search-container .resultLine');
+    await searchResults.waitForExist({ timeout: 10000, timeoutMsg: 'Search results did not appear. Ripgrep may not be working correctly with asar packaging.' });
+
+    // Verify we got results
+    const resultsText = await searchResults.getText();
+    expect(resultsText).to.include('Test Workspace');
+  });
+
+  it('Quick file open', async function () {
+    // Wait a bit to make sure key handlers are registered
+    await new Promise(r => setTimeout(r, 5000));
+
+    // Open quick file picker (Ctrl+P)
+    await this.browser.keys(macSafeKeyCombo(['Control', 'p']));
+
+    // Wait for quick input to appear
+    const quickInput = await this.browser.$('.quick-input-widget');
+    await quickInput.waitForExist({ timeout: 5000 });
+    await quickInput.waitForDisplayed();
+
+    // Type filename to search for
+    const inputBox = await this.browser.$('.quick-input-box input');
+    await inputBox.waitForExist({ timeout: 5000 });
+    await inputBox.setValue('README');
+
+    // Wait for file to appear in results
+    const fileResult = await this.browser.$('.quick-input-list-row');
+    await fileResult.waitForExist({ timeout: 10000, timeoutMsg: 'Quick file open results did not appear. Ripgrep may not be working correctly with asar packaging.' });
+
+    // Verify README.md appears in results
+    const resultLabel = await this.browser.$('.quick-input-list-label');
+    const labelText = await resultLabel.getText();
+    expect(labelText.toLowerCase()).to.include('readme');
+  });
+
+  it('Integrated terminal', async function () {
+    // Wait a bit to make sure key handlers are registered
+    await new Promise(r => setTimeout(r, 5000));
+
+    // Open terminal (Ctrl+` on all platforms, including Mac)
+    await this.browser.keys(['Control', '`']);
+
+    // Wait for terminal widget to appear
+    const terminal = await this.browser.$('.xterm');
+    await terminal.waitForExist({ timeout: 10000, timeoutMsg: 'Terminal did not open. PTY may not be working correctly with asar packaging.' });
+    await terminal.waitForDisplayed();
+
+    // Verify terminal is visible
+    const isDisplayed = await terminal.isDisplayed();
+    expect(isDisplayed).to.equal(true);
+  });
 });
