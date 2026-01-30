@@ -23,21 +23,25 @@ class PatchRipgrepPlugin {
             const mainJsPath = path.join(compiler.outputPath, 'main.js');
             if (fs.existsSync(mainJsPath)) {
                 let content = fs.readFileSync(mainJsPath, 'utf8');
+                const isProduction = compiler.options.mode === 'production';
 
-                // Find the ripgrep module pattern: t.rgPath=i.join(__dirname,"./native/rg"...)
-                // The variable name (i) varies, so we capture it
-                const pattern = /t\.rgPath=(\w+)\.join\(__dirname,"\.\/native\/rg"\+\("win32"===process\.platform\?"\.exe":""\)\)/g;
+                // Production (minified): t.rgPath=i.join(__dirname,"./native/rg"+("win32"===process.platform?".exe":""))
+                // Development: exports.rgPath = path.join(__dirname, `./native/rg${process.platform === 'win32' ? '.exe' : ''}`);
+                const pattern = isProduction
+                    ? /(\w+)\.rgPath\s*=\s*(\w+)\.join\(\s*__dirname\s*,\s*["']\.\/native\/rg["']\s*\+\s*\(["']win32["']\s*===\s*process\.platform\s*\?\s*["']\.exe["']\s*:\s*["']["']\s*\)\s*\)/g
+                    : /(\w+)\.rgPath\s*=\s*(\w+)\.join\(\s*__dirname\s*,\s*`\.\/native\/rg\$\{process\.platform\s*===\s*['"]win32['"]\s*\?\s*['"]\.exe['"]\s*:\s*['"]['"]}\s*`\s*\)/g;
 
-                const newContent = content.replace(pattern, (match, varName) => {
-                    // Replace with code that handles asar paths
-                    return `(()=>{const p=${varName}.join(__dirname,"./native/rg"+("win32"===process.platform?".exe":""));return t.rgPath=p.includes(".asar"+${varName}.sep)?p.replace(".asar"+${varName}.sep,".asar.unpacked"+${varName}.sep):p})()`;
+                let patched = false;
+                const newContent = content.replace(pattern, (match, exportsVar, pathVar) => {
+                    patched = true;
+                    return `(()=>{const p=${pathVar}.join(__dirname,"./native/rg"+("win32"===process.platform?".exe":""));return ${exportsVar}.rgPath=p.includes(".asar"+${pathVar}.sep)?p.replace(".asar"+${pathVar}.sep,".asar.unpacked"+${pathVar}.sep):p})()`;
                 });
 
-                if (newContent !== content) {
+                if (patched) {
                     fs.writeFileSync(mainJsPath, newContent);
                     console.log('Patched main.js ripgrep path for asar compatibility');
                 } else {
-                    console.warn('Warning: Could not find ripgrep pattern to patch in main.js');
+                    throw new Error('Could not find ripgrep pattern to patch in main.js. The pattern may have changed in @theia/native-webpack-plugin.');
                 }
             }
             callback();
