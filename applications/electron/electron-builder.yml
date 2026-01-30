@@ -4,6 +4,8 @@ copyright: Copyright © 2020-2025 Eclipse Foundation, Inc
 electronDist: ../../node_modules/electron/dist
 electronVersion: 38.4.0
 asar: true
+asarUnpack:
+  - "**/lib/backend/native/**"
 nodeGypRebuild: false
 npmRebuild: false
 
