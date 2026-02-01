@@ -29,6 +29,8 @@ win:
   icon: resources/icons/WindowsLauncherIcons/TheiaIDE.ico
   target:
     - nsis
+  signtoolOptions:
+    sign: ./scripts/windows-sign.js
   publish:
     provider: generic
     url: "https://download.eclipse.org/theia/ide/${version}/windows"
