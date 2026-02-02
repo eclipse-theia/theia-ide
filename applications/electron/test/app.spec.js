@@ -10,17 +10,17 @@ const THEIA_LOAD_TIMEOUT = 15000; // 15 seconds
 process.env.THEIA_NO_SPLASH = '1';
 
 function isMacArm() {
-    if (os.platform() !== 'darwin'){
-      return false;
-    }
-    try {
-        // Check the architecture using uname -m
-        const arch = execSync('uname -m').toString().trim();
-        return arch === 'arm64';
-    } catch (error) {
-        // Fall back to node's arch property if uname fails
-        return os.arch() === 'arm64';
-    }
+  if (os.platform() !== 'darwin') {
+    return false;
+  }
+  try {
+    // Check the architecture using uname -m
+    const arch = execSync('uname -m').toString().trim();
+    return arch === 'arm64';
+  } catch (error) {
+    // Fall back to node's arch property if uname fails
+    return os.arch() === 'arm64';
+  }
 }
 
 function getBinaryPath() {
@@ -96,10 +96,25 @@ describe('Theia App', function () {
 
     // mocha waits for returned promise to resolve
     // Theia is loaded once the app shell is present
-    return appShell.waitForExist({
+    await appShell.waitForExist({
       timeout: THEIA_LOAD_TIMEOUT,
       timeoutMsg: 'Theia took too long to load.',
     });
+
+    // If workspace trust dialog appears, trust the workspace
+    const dialog = await this.browser.$('.dialogOverlay.workspace-trust-dialog');
+    const dialogAppeared = await dialog.waitForExist({ timeout: 5000 }).catch(() => false);
+
+    if (dialogAppeared) {
+      // Click the main action button to trust the workspace
+      const trustButton = await this.browser.$('.dialogOverlay.workspace-trust-dialog .dialogControl button.theia-button.main');
+      const buttonClickable = await trustButton.waitForClickable({ timeout: 2000 }).catch(() => false);
+      if (buttonClickable) {
+        await trustButton.click();
+        // Wait for dialog to close
+        await dialog.waitForExist({ timeout: 2000, reverse: true }).catch(() => { });
+      }
+    }
   });
 
   afterEach(async function () {
