@@ -6,6 +6,7 @@ electronVersion: 38.4.0
 asar: true
 asarUnpack:
   - "**/lib/backend/native/**"
+  - "**/lib/build/Release/**"
 nodeGypRebuild: false
 npmRebuild: false
 
