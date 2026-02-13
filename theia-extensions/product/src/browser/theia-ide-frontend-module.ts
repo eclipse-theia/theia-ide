@@ -11,6 +11,7 @@ import '../../src/browser/style/index.css';
 
 import { WidgetFactory } from '@theia/core/lib/browser';
 import { AboutDialog } from '@theia/core/lib/browser/about-dialog';
+import { applyBranding } from './theia-ide-config';
 import { CommandContribution } from '@theia/core/lib/common/command';
 import { ContainerModule } from '@theia/core/shared/inversify';
 import { GettingStartedWidget } from '@theia/getting-started/lib/browser/getting-started-widget';
@@ -20,6 +21,8 @@ import { TheiaIDEContribution } from './theia-ide-contribution';
 import { TheiaIDEGettingStartedWidget } from './theia-ide-getting-started-widget';
 
 export default new ContainerModule((bind, _unbind, isBound, rebind) => {
+    applyBranding();
+
     bind(TheiaIDEGettingStartedWidget).toSelf();
     bind(WidgetFactory).toDynamicValue(context => ({
         id: GettingStartedWidget.ID,

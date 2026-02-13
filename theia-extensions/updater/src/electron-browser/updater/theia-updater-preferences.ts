@@ -8,6 +8,18 @@
  ********************************************************************************/
 
 import { PreferenceSchema, PreferenceScope } from '@theia/core';
+import { FrontendApplicationConfigProvider } from '@theia/core/lib/browser/frontend-application-config-provider';
+
+const DEFAULT_UPDATE_CHANNELS = ['stable', 'preview'];
+
+function getAvailableUpdateChannels(): string[] {
+    try {
+        const config = FrontendApplicationConfigProvider.get() as Record<string, unknown>;
+        return (config['availableUpdateChannels'] as string[]) ?? DEFAULT_UPDATE_CHANNELS;
+    } catch {
+        return DEFAULT_UPDATE_CHANNELS;
+    }
+}
 
 export const theiaUpdaterPreferenceSchema: PreferenceSchema = {
     'properties': {
@@ -25,9 +37,9 @@ export const theiaUpdaterPreferenceSchema: PreferenceSchema = {
         },
         'updates.channel': {
             type: 'string',
-            enum: ['stable', 'preview'],
+            enum: getAvailableUpdateChannels(),
             description: 'Channel to use for updates.',
-            default: 'stable',
+            default: getAvailableUpdateChannels()[0] ?? '',
             scope: PreferenceScope.User
         },
     }

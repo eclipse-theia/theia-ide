@@ -9,11 +9,18 @@
 
 import { WindowService } from '@theia/core/lib/browser/window/window-service';
 import * as React from 'react';
+import { getBrandingVariant } from './theia-ide-config';
 
 export interface ExternalBrowserLinkProps {
     text: string;
     url: string;
     windowService: WindowService;
+}
+
+export function renderProductName(): React.ReactNode {
+    const variant = getBrandingVariant();
+    const suffix = variant !== 'stable' ? ` ${variant.charAt(0).toUpperCase() + variant.slice(1)}` : '';
+    return <h1>Eclipse Theia <span className="gs-blue-header">IDE</span>{suffix}</h1>;
 }
 
 function BrowserLink(props: ExternalBrowserLinkProps): JSX.Element {
@@ -22,7 +29,7 @@ function BrowserLink(props: ExternalBrowserLinkProps): JSX.Element {
         tabIndex={0}
         href={props.url}
         target='_blank'
-        >
+    >
         {props.text}
     </a>;
 }
@@ -34,12 +41,12 @@ export function renderWhatIs(windowService: WindowService): React.ReactNode {
         </h3>
         <div>
             The Eclipse Theia IDE is a modern and open IDE for cloud and desktop. The Theia IDE is based on the <BrowserLink text="Theia platform"
-            url="https://theia-ide.org" windowService={windowService} ></BrowserLink>.
+                url="https://theia-ide.org" windowService={windowService} ></BrowserLink>.
         </div>
         <div>
             The IDE is available as a <BrowserLink text="downloadable desktop application" url="https://theia-ide.org//#theiaidedownload"
-            windowService={windowService} ></BrowserLink>. You can also <BrowserLink text="try the latest version of the Theia IDE online"
-            url="https://try.theia-cloud.io/" windowService={windowService} ></BrowserLink>. The online test version is limited to 30 minutes per session and hosted
+                windowService={windowService} ></BrowserLink>. You can also <BrowserLink text="try the latest version of the Theia IDE online"
+                    url="https://try.theia-cloud.io/" windowService={windowService} ></BrowserLink>. The online test version is limited to 30 minutes per session and hosted
             via <BrowserLink text="Theia Cloud" url="https://theia-cloud.io/" windowService={windowService} ></BrowserLink>.
         </div>
     </div>;
@@ -52,13 +59,13 @@ export function renderExtendingCustomizing(windowService: WindowService): React.
         </h3>
         <div >
             You can extend the Theia IDE at runtime by installing VS Code extensions, e.g. from the <BrowserLink text="OpenVSX registry" url="https://open-vsx.org/"
-            windowService={windowService} ></BrowserLink>, an open marketplace for VS Code extensions. Just open the extension view or browse <BrowserLink
-            text="OpenVSX online" url="https://open-vsx.org/" windowService={windowService} ></BrowserLink>.
+                windowService={windowService} ></BrowserLink>, an open marketplace for VS Code extensions. Just open the extension view or browse <BrowserLink
+                    text="OpenVSX online" url="https://open-vsx.org/" windowService={windowService} ></BrowserLink>.
         </div>
         <div>
             Furthermore, the Theia IDE is based on the flexible Theia platform. Therefore, the Theia IDE can serve as a <span className='gs-text-bold'>template</span> for building
             custom tools and IDEs. Browse <BrowserLink text="the documentation" url="https://theia-ide.org/docs/composing_applications/"
-            windowService={windowService} ></BrowserLink> to help you customize and build your own Eclipse Theia-based product.
+                windowService={windowService} ></BrowserLink> to help you customize and build your own Eclipse Theia-based product.
         </div>
     </div>;
 }
@@ -71,7 +78,7 @@ export function renderSupport(windowService: WindowService): React.ReactNode {
         <div>
             Professional support, implementation services, consulting and training for building tools like Theia IDE and for building other tools based on Eclipse Theia is
             available by selected companies as listed on the <BrowserLink text=" Theia support page" url="https://theia-ide.org/support/"
-            windowService={windowService} ></BrowserLink>.
+                windowService={windowService} ></BrowserLink>.
         </div>
     </div>;
 }
@@ -117,7 +124,7 @@ export function renderDocumentation(windowService: WindowService): React.ReactNo
         </h3>
         <div >
             Please see the <BrowserLink text="documentation" url="https://theia-ide.org/docs/user_getting_started/"
-            windowService={windowService} ></BrowserLink> on how to use the Theia IDE.
+                windowService={windowService} ></BrowserLink> on how to use the Theia IDE.
         </div>
     </div>;
 }
