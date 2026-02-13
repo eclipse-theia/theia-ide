@@ -6,6 +6,7 @@ electronVersion: 38.4.0
 asar: true
 asarUnpack:
   - "**/lib/backend/native/**"
+  - "**/lib/build/Release/**"
 nodeGypRebuild: false
 npmRebuild: false
 
@@ -29,6 +30,8 @@ win:
   icon: resources/icons/WindowsLauncherIcons/TheiaIDE.ico
   target:
     - nsis
+  signtoolOptions:
+    sign: ./scripts/windows-sign.js
   publish:
     provider: generic
     url: "https://download.eclipse.org/theia/ide/${version}/windows"
