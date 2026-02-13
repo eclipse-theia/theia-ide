@@ -27,6 +27,10 @@ const PREVIEW_CHANNEL_MACOS = 'https://download.eclipse.org/theia/ide-preview/la
 const PREVIEW_CHANNEL_MACOS_ARM = 'https://download.eclipse.org/theia/ide-preview/latest/macos-arm';
 const PREVIEW_CHANNEL_LINUX = 'https://download.eclipse.org/theia/ide-preview/latest/linux';
 
+// Next updates are currently only available for Linux.
+// The feed is served from GitHub Release assets (rolling "next" tag).
+const NEXT_CHANNEL_LINUX = 'https://github.com/eclipse-theia/theia-ide/releases/download/next';
+
 const { autoUpdater } = require('electron-updater');
 
 autoUpdater.logger = require('electron-log');
@@ -169,14 +173,19 @@ export class TheiaUpdaterImpl implements TheiaUpdater, ElectronMainApplicationCo
     protected getFeedURL(channel: string): string {
         if (isWindows) {
             const curVersion = autoUpdater.currentVersion.toString();
+            // Next not yet available on Windows, fall back to stable
             return (channel === 'preview') ? PREVIEW_CHANNEL_WINDOWS.replace('version', curVersion) : STABLE_CHANNEL_WINDOWS.replace('version', curVersion);
         } else if (isOSX) {
+            // Next not yet available on macOS, fall back to stable
             if (process.arch === 'arm64') {
                 return (channel === 'preview') ? PREVIEW_CHANNEL_MACOS_ARM : STABLE_CHANNEL_MACOS_ARM;
             } else {
                 return (channel === 'preview') ? PREVIEW_CHANNEL_MACOS : STABLE_CHANNEL_MACOS;
             }
         } else {
+            if (channel === 'next') {
+                return NEXT_CHANNEL_LINUX;
+            }
             return (channel === 'preview') ? PREVIEW_CHANNEL_LINUX : STABLE_CHANNEL_LINUX;
         }
     }

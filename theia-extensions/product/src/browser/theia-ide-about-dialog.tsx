@@ -10,10 +10,9 @@
 import * as React from 'react';
 import { AboutDialog, AboutDialogProps, ABOUT_CONTENT_CLASS } from '@theia/core/lib/browser/about-dialog';
 import { injectable, inject } from '@theia/core/shared/inversify';
-import { renderDocumentation, renderDownloads, renderSourceCode, renderSupport, renderTickets, renderWhatIs } from './branding-util';
+import { renderDocumentation, renderDownloads, renderProductName, renderSourceCode, renderSupport, renderTickets, renderWhatIs } from './branding-util';
 import { VSXEnvironment } from '@theia/vsx-registry/lib/common/vsx-environment';
 import { WindowService } from '@theia/core/lib/browser/window/window-service';
-
 @injectable()
 export class TheiaIDEAboutDialog extends AboutDialog {
 
@@ -87,7 +86,7 @@ export class TheiaIDEAboutDialog extends AboutDialog {
 
     protected renderTitle(): React.ReactNode {
         return <div className='gs-header'>
-            <h1>Eclipse Theia <span className='gs-blue-header'>IDE</span></h1>
+            {renderProductName()}
             {this.renderVersion()}
         </div>;
     }

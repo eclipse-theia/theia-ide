@@ -1,0 +1,171 @@
+{
+  "private": true,
+  "name": "theia-ide-next-electron-app",
+  "description": "Eclipse Theia IDE Next product",
+  "productName": "Theia IDE Next",
+  "version": "1.68.200",
+  "main": "scripts/theia-electron-main.js",
+  "license": "MIT",
+  "author": "Eclipse Theia <theia-dev@eclipse.org>",
+  "homepage": "https://github.com/eclipse-theia/theia-ide#readme",
+  "bugs": {
+    "url": "https://github.com/eclipse-theia/theia/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eclipse-theia/theia-ide.git"
+  },
+  "engines": {
+    "yarn": ">=1.7.0 <2",
+    "node": ">=20"
+  },
+  "theia": {
+    "target": "electron",
+    "frontend": {
+      "config": {
+        "applicationName": "Theia IDE Next",
+        "brandingVariant": "next",
+        "availableUpdateChannels": [
+          "next"
+        ],
+        "reloadOnReconnect": true,
+        "preferences": {
+          "toolbar.showToolbar": true,
+          "updates.channel": "next"
+        },
+        "electron": {
+          "showWindowEarly": false,
+          "splashScreenOptions": {
+            "content": "resources/TheiaIDENextSplash.svg",
+            "height": 276,
+            "width": 446
+          }
+        }
+      }
+    },
+    "backend": {
+      "config": {
+        "frontendConnectionTimeout": -1,
+        "startupTimeout": -1,
+        "resolveSystemPlugins": false,
+        "configurationFolder": ".theia-ide-next"
+      }
+    },
+    "generator": {
+      "config": {
+        "preloadTemplate": "./resources/preload.html"
+      }
+    }
+  },
+  "dependencies": {
+    "@theia/ai-anthropic": "next",
+    "@theia/ai-chat": "next",
+    "@theia/ai-chat-ui": "next",
+    "@theia/ai-claude-code": "next",
+    "@theia/ai-code-completion": "next",
+    "@theia/ai-codex": "next",
+    "@theia/ai-copilot": "next",
+    "@theia/ai-core": "next",
+    "@theia/ai-core-ui": "next",
+    "@theia/ai-editor": "next",
+    "@theia/ai-google": "next",
+    "@theia/ai-history": "next",
+    "@theia/ai-huggingface": "next",
+    "@theia/ai-ide": "next",
+    "@theia/ai-llamafile": "next",
+    "@theia/ai-mcp": "next",
+    "@theia/ai-mcp-server": "next",
+    "@theia/ai-mcp-ui": "next",
+    "@theia/ai-ollama": "next",
+    "@theia/ai-openai": "next",
+    "@theia/ai-scanoss": "next",
+    "@theia/ai-terminal": "next",
+    "@theia/ai-vercel-ai": "next",
+    "@theia/bulk-edit": "next",
+    "@theia/callhierarchy": "next",
+    "@theia/collaboration": "next",
+    "@theia/console": "next",
+    "@theia/core": "next",
+    "@theia/debug": "next",
+    "@theia/dev-container": "next",
+    "@theia/editor": "next",
+    "@theia/editor-preview": "next",
+    "@theia/electron": "next",
+    "@theia/external-terminal": "next",
+    "@theia/file-search": "next",
+    "@theia/filesystem": "next",
+    "@theia/getting-started": "next",
+    "@theia/keymaps": "next",
+    "@theia/markers": "next",
+    "@theia/memory-inspector": "next",
+    "@theia/messages": "next",
+    "@theia/metrics": "next",
+    "@theia/mini-browser": "next",
+    "@theia/monaco": "next",
+    "@theia/navigator": "next",
+    "@theia/notebook": "next",
+    "@theia/outline-view": "next",
+    "@theia/output": "next",
+    "@theia/plugin-dev": "next",
+    "@theia/plugin-ext": "next",
+    "@theia/plugin-ext-vscode": "next",
+    "@theia/preferences": "next",
+    "@theia/preview": "next",
+    "@theia/process": "next",
+    "@theia/property-view": "next",
+    "@theia/remote": "next",
+    "@theia/remote-wsl": "next",
+    "@theia/scanoss": "next",
+    "@theia/scm": "next",
+    "@theia/search-in-workspace": "next",
+    "@theia/secondary-window": "next",
+    "@theia/task": "next",
+    "@theia/terminal": "next",
+    "@theia/terminal-manager": "next",
+    "@theia/test": "next",
+    "@theia/timeline": "next",
+    "@theia/toolbar": "next",
+    "@theia/typehierarchy": "next",
+    "@theia/userstorage": "next",
+    "@theia/variable-resolver": "next",
+    "@theia/vsx-registry": "next",
+    "@theia/workspace": "next",
+    "fs-extra": "^9.0.1",
+    "theia-ide-launcher-ext": "1.68.200",
+    "theia-ide-product-ext": "1.68.200",
+    "theia-ide-updater-ext": "1.68.200"
+  },
+  "devDependencies": {
+    "@theia/cli": "next",
+    "@theia/native-webpack-plugin": "next",
+    "@types/js-yaml": "^3.12.0",
+    "@types/yargs": "17.0.7",
+    "app-builder-lib": "26.0.12",
+    "concurrently": "^3.5.0",
+    "electron": "38.4.0",
+    "electron-builder": "26.0.12",
+    "electron-osx-sign": "^0.6.0",
+    "js-yaml": "^3.12.0",
+    "rimraf": "^2.7.1",
+    "ts-node": "^10.0.0",
+    "yargs": "17.2.1"
+  },
+  "scripts": {
+    "clean": "theia clean && rimraf node_modules",
+    "clean:dist": "rimraf dist",
+    "build": "yarn -s rebuild && theia build --app-target=\"electron\" --mode development",
+    "build:prod": "yarn -s rebuild && theia build --app-target=\"electron\"",
+    "rebuild": "theia rebuild:electron --cacheRoot ../..",
+    "watch": "concurrently -n compile,build \"theiaext watch --preserveWatchOutput\" \"theia build --watch --mode development\"",
+    "start": "electron scripts/theia-electron-main.js --plugins=local-dir:../../plugins",
+    "start:debug": "yarn start --log-level=debug",
+    "package": "yarn clean:dist && yarn rebuild && electron-builder -c.mac.identity=null --publish never",
+    "package:prod": "yarn deploy",
+    "deploy": "yarn clean:dist && yarn rebuild && electron-builder -c.mac.identity=null --publish always",
+    "package:preview": "yarn clean:dist && yarn rebuild && electron-builder -c.mac.identity=null --dir",
+    "update:theia": "ts-node ../../scripts/update-theia-version.ts",
+    "update:next": "ts-node ../../scripts/update-theia-version.ts next",
+    "lint": "eslint --ext js,jsx,ts,tsx scripts",
+    "lint:fix": "eslint --ext js,jsx,ts,tsx scripts --fix"
+  }
+}

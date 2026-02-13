@@ -1,0 +1,43 @@
+appId: eclipse.theia.next
+productName: TheiaIDENext
+copyright: Copyright © 2020-2025 Eclipse Foundation, Inc
+electronDist: ../../node_modules/electron/dist
+electronVersion: 38.4.0
+asar: true
+asarUnpack:
+  - "**/lib/backend/native/**"
+nodeGypRebuild: false
+npmRebuild: false
+
+directories:
+  buildResources: resources
+
+# node_modules and package.json are copied automatically
+# Exclude node_modules manually because electron is copied by electron-builder and we are using a bundled backend
+files:
+  - src-gen
+  - lib
+  - resources/icons/WindowIcon/512-512.png
+  - resources/TheiaIDENextSplash.svg
+  - scripts
+  - "!**node_modules/**"
+extraResources:
+  - from: ../../plugins
+    to: app/plugins
+
+linux:
+  icon: resources/icons/LinuxLauncherIcons
+  category: Development
+  mimeTypes:
+    - inode/directory
+  vendor: Eclipse Foundation, Inc
+  target:
+    - deb
+    - AppImage
+
+deb:
+  artifactName: ${productName}.${ext}
+appImage:
+  artifactName: ${productName}.${ext}
+
+afterPack: ./scripts/after-pack.js

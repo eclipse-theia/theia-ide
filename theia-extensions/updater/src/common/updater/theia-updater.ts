@@ -14,7 +14,7 @@ export const TheiaUpdater = Symbol('TheiaUpdater');
 export interface UpdaterSettings {
     checkForUpdates: boolean;
     checkInterval: number;
-    channel: 'stable' | 'preview';
+    channel: 'stable' | 'preview' | 'next';
 }
 
 export interface TheiaUpdater extends RpcServer<TheiaUpdaterClient> {

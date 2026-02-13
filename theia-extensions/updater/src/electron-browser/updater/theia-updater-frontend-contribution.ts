@@ -161,7 +161,7 @@ export class TheiaUpdaterFrontendContribution implements CommandContribution, Me
         const settings: UpdaterSettings = {
             checkForUpdates: this.preferenceService.get<boolean>('updates.checkForUpdates', true),
             checkInterval: this.preferenceService.get<number>('updates.checkInterval', 60),
-            channel: this.preferenceService.get<'stable' | 'preview'>('updates.channel', 'stable')
+            channel: this.preferenceService.get<'stable' | 'preview' | 'next'>('updates.channel', 'stable')
         };
         this.updater.setUpdaterSettings(settings);
     }
