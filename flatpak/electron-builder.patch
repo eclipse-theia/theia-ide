@@ -1,0 +1,14 @@
+diff --git a/applications/electron/electron-builder.yml b/applications/electron/electron-builder.yml
+index e7351de..81da41a 100644
+--- a/applications/electron/electron-builder.yml
++++ b/applications/electron/electron-builder.yml
+@@ -56,8 +56,7 @@ linux:
+     - inode/directory
+   vendor: Eclipse Foundation, Inc
+   target:
+-    - deb
+-    - AppImage
++    - dir
+   publish:
+     provider: generic
+     url: "https://download.eclipse.org/theia/ide/latest/linux"
