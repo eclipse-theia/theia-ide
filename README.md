@@ -124,6 +124,10 @@ yarn browser start
 
 and connect to <http://localhost:3000/>
 
+### Developing with Local Theia Framework
+
+To build and test the Theia IDE against a local development version of the Theia framework, see [docs/developing-with-local-theia.md](docs/developing-with-local-theia.md).
+
 ### Troubleshooting
 
 - [_"Don't expect that you can build app for all platforms on one platform."_](https://www.electron.build/multi-platform-build)
