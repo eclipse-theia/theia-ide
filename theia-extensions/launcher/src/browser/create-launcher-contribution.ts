@@ -31,34 +31,30 @@ export class CreateLauncherCommandContribution implements FrontendApplicationCon
     onStart(_app: FrontendApplication): MaybePromise<void> {
         const appConfig = FrontendApplicationConfigProvider.get();
         const applicationName = appConfig.applicationName;
-        const brandingVariant = (appConfig as Record<string, unknown>)['brandingVariant'] as string | undefined;
-        const isNext = brandingVariant === 'next';
+        const uriScheme = appConfig.electron.uriScheme;
 
-        // Only offer CLI launcher for standard (non-next) builds
-        if (!isNext) {
-            this.launcherService.isInitialized().then(async initialized => {
-                if (!initialized) {
-                    const messageContainer = document.createElement('div');
-                    // eslint-disable-next-line max-len
-                    messageContainer.textContent = nls.localizeByDefault("Would you like to install a shell command that launches the application?\nYou will be able to run the Theia IDE from the command line by typing 'theia'.");
-                    messageContainer.setAttribute('style', 'white-space: pre-line');
-                    const details = document.createElement('p');
-                    details.textContent = 'Administrator privileges are required, you will need to enter your password next.';
-                    messageContainer.appendChild(details);
-                    const dialog = new ConfirmDialog({
-                        title: nls.localizeByDefault('Create launcher'),
-                        msg: messageContainer,
-                        ok: Dialog.YES,
-                        cancel: Dialog.NO
-                    });
-                    const install = await dialog.open();
-                    this.launcherService.createLauncher(!!install);
-                    this.logger.info('Initialized application launcher.');
-                } else {
-                    this.logger.info('Application launcher was already initialized.');
-                }
-            });
-        }
+        this.launcherService.isInitialized(uriScheme).then(async initialized => {
+            if (!initialized) {
+                const messageContainer = document.createElement('div');
+                // eslint-disable-next-line max-len
+                messageContainer.textContent = nls.localizeByDefault(`Would you like to install a shell command that launches the application?\nYou will be able to run ${applicationName} from the command line by typing '${uriScheme}'.`);
+                messageContainer.setAttribute('style', 'white-space: pre-line');
+                const details = document.createElement('p');
+                details.textContent = 'Administrator privileges are required, you will need to enter your password next.';
+                messageContainer.appendChild(details);
+                const dialog = new ConfirmDialog({
+                    title: nls.localizeByDefault('Create launcher'),
+                    msg: messageContainer,
+                    ok: Dialog.YES,
+                    cancel: Dialog.NO
+                });
+                const install = await dialog.open();
+                this.launcherService.createLauncher(!!install, uriScheme);
+                this.logger.info('Initialized application launcher.');
+            } else {
+                this.logger.info('Application launcher was already initialized.');
+            }
+        });
 
         this.desktopFileService.isInitialized().then(async initialized => {
             if (!initialized) {
@@ -75,7 +71,8 @@ export class CreateLauncherCommandContribution implements FrontendApplicationCon
                 const install = await dialog.open();
                 this.desktopFileService.createOrUpdateDesktopfile(!!install, {
                     applicationName,
-                    createUrlHandler: !isNext
+                    createUrlHandler: true,
+                    uriScheme
                 });
                 this.logger.info('Created or updated .desktop file.');
             } else {

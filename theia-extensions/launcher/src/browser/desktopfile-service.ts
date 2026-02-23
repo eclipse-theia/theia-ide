@@ -13,6 +13,7 @@ import { injectable } from '@theia/core/shared/inversify';
 export interface DesktopFileOptions {
     applicationName?: string;
     createUrlHandler?: boolean;
+    uriScheme?: string;
 }
 
 @injectable()

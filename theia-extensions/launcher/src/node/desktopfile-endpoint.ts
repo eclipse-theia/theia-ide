@@ -94,6 +94,7 @@ export class TheiaDesktopFileServiceEndpoint implements BackendApplicationContri
         const createOrUpdate = request.body.create;
         const applicationName: string = request.body.applicationName || 'Theia IDE';
         const createUrlHandler: boolean = request.body.createUrlHandler !== false;
+        const uriScheme: string = request.body.uriScheme || 'theia';
         const appId = applicationName.toLowerCase().replace(/\s+/g, '-');
 
         if (createOrUpdate) {
@@ -128,7 +129,7 @@ export class TheiaDesktopFileServiceEndpoint implements BackendApplicationContri
 
             if (createUrlHandler) {
                 const desktopURLFilePath = path.join(applicationsDir, `${appId}-launcher-url.desktop`);
-                fs.outputFileSync(desktopURLFilePath, this.getDesktopURLFileContents(applicationName, process.env.APPIMAGE!, imagePath));
+                fs.outputFileSync(desktopURLFilePath, this.getDesktopURLFileContents(applicationName, process.env.APPIMAGE!, imagePath, uriScheme));
             }
 
             appImageInformation.appImage = process.env.APPIMAGE!;
@@ -154,7 +155,7 @@ Comment=IDE for cloud and desktop
 Categories=Development;IDE;`;
     }
 
-    protected getDesktopURLFileContents(applicationName: string, appImagePath: string, imagePath: string): string {
+    protected getDesktopURLFileContents(applicationName: string, appImagePath: string, imagePath: string, uriScheme: string = 'theia'): string {
         return `[Desktop Entry]
 Name=${applicationName} - URL Handler
 GenericName=Integrated Development Environment
@@ -163,7 +164,7 @@ Terminal=false
 Type=Application
 NoDisplay=true
 Icon=${imagePath}
-MimeType=x-scheme-handler/theia;
+MimeType=x-scheme-handler/${uriScheme};
 Comment=IDE for cloud and desktop
 Categories=Development;IDE;`;
     }

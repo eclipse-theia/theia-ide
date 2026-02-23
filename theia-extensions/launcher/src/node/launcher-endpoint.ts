@@ -27,8 +27,6 @@ interface PathEntry {
 export class TheiaLauncherServiceEndpoint implements BackendApplicationContribution {
     protected static PATH = '/launcher';
     protected static STORAGE_FILE_NAME = 'paths.json';
-    private LAUNCHER_LINK_SOURCE = '/usr/local/bin/theia';
-
     @inject(ILogger)
     protected readonly logger: ILogger;
 
@@ -43,12 +41,14 @@ export class TheiaLauncherServiceEndpoint implements BackendApplicationContribut
         app.use(TheiaLauncherServiceEndpoint.PATH, router);
     }
 
-    private async isInitialized(_request: Request, response: Response): Promise<void> {
+    private async isInitialized(request: Request, response: Response): Promise<void> {
         if (!process.env.APPIMAGE) {
             // we are not running from an AppImage, so there's nothing to initialize
             // return true
             response.json({ initialized: true });
         }
+        const uriScheme = (request.query.uriScheme as string) || 'theia';
+        const launcherLink = `/usr/local/bin/${uriScheme}`;
         const storageFile = await getStorageFilePath(this.envServer, TheiaLauncherServiceEndpoint.STORAGE_FILE_NAME);
         if (!storageFile) {
             throw new Error('Could not resolve path to storage file.');
@@ -58,7 +58,7 @@ export class TheiaLauncherServiceEndpoint implements BackendApplicationContribut
             return;
         }
         const data = await this.readLauncherPathsFromStorage(storageFile);
-        const initialized = !!data.find(entry => entry.source === this.LAUNCHER_LINK_SOURCE);
+        const initialized = !!data.find(entry => entry.source === launcherLink);
         response.json({ initialized });
     }
 
@@ -82,7 +82,9 @@ export class TheiaLauncherServiceEndpoint implements BackendApplicationContribut
 
     private async createLauncher(request: Request, response: Response): Promise<void> {
         const shouldCreateLauncher = request.body.create;
-        const launcher = this.LAUNCHER_LINK_SOURCE;
+        const uriScheme: string = request.body.uriScheme || 'theia';
+        const launcher = `/usr/local/bin/${uriScheme}`;
+        const sudoPromptName = uriScheme === 'theia-next' ? 'Theia IDE Next' : 'Theia IDE';
         const target = process.env.APPIMAGE;
         const logFile = await this.getLogFilePath();
         const command = `printf '%s\n' '#!/bin/bash' 'exec "${target}" \\$1 &> ${logFile} &' >${launcher} && chmod +x ${launcher}`;
@@ -91,7 +93,7 @@ export class TheiaLauncherServiceEndpoint implements BackendApplicationContribut
             if (!targetExists) {
                 throw new Error('Could not find application to launch');
             }
-            sudo.exec(command, { name: 'Theia IDE' });
+            sudo.exec(command, { name: sudoPromptName });
         }
 
         const storageFile = await getStorageFilePath(this.envServer, TheiaLauncherServiceEndpoint.STORAGE_FILE_NAME);

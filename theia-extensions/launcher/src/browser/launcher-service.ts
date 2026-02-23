@@ -13,17 +13,18 @@ import { injectable } from '@theia/core/shared/inversify';
 @injectable()
 export class LauncherService {
 
-    async isInitialized(): Promise<boolean> {
-        const response = await fetch(new Request(`${this.endpoint()}/initialized`), {
+    async isInitialized(uriScheme?: string): Promise<boolean> {
+        const query = uriScheme ? `?uriScheme=${encodeURIComponent(uriScheme)}` : '';
+        const response = await fetch(new Request(`${this.endpoint()}/initialized${query}`), {
             body: undefined,
             method: 'GET'
         }).then(r => r.json());
         return !!response?.initialized;
     }
 
-    async createLauncher(create: boolean): Promise<void> {
+    async createLauncher(create: boolean, uriScheme?: string): Promise<void> {
         fetch(new Request(`${this.endpoint()}`), {
-            body: JSON.stringify({ create }),
+            body: JSON.stringify({ create, uriScheme }),
             method: 'PUT',
             headers: new Headers({ 'Content-Type': 'application/json' })
         });
