@@ -112,8 +112,12 @@ describe('Theia App', function () {
   });
 
   afterEach(async function () {
+    const CLOSE_TIMEOUT = 10000; // 10 seconds
     try {
-      await this.browser.closeWindow();
+      await Promise.race([
+        this.browser.closeWindow(),
+        new Promise(resolve => setTimeout(resolve, CLOSE_TIMEOUT))
+      ]);
     } catch (err) {
       // Workaround: Puppeteer cannot properly connect to electron and throws an error.
       // However, the window is closed and that's all we want here.
