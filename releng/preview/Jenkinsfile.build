@@ -105,7 +105,7 @@ spec:
                         label 'macos'
                     }
                     steps {
-                        nodejs(nodeJSInstallationName: 'node_22.x') {
+                        nodejs(nodeJSInstallationName: 'node_24.x') {
                             script {
                                 sh "node --version"
                                 createMacInstaller()
@@ -124,7 +124,7 @@ spec:
                         label 'windows'
                     }
                     steps {
-                        nodejs(nodeJSInstallationName: 'node_22.x') {
+                        nodejs(nodeJSInstallationName: 'node_24.x') {
                             // analyze memory usage
                             bat "wmic ComputerSystem get TotalPhysicalMemory"
                             bat "wmic OS get FreePhysicalMemory"
