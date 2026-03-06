@@ -1,5 +1,5 @@
 # Builder stage
-FROM node:24-bullseye AS build-stage
+FROM node:24-bookworm AS build-stage
 
 # install required tools to build the application
 RUN apt-get update && apt-get install -y libxkbfile-dev libsecret-1-dev
@@ -27,12 +27,12 @@ RUN yarn config set network-timeout 600000 -g && \
     rm -rf .git applications/electron theia-extensions/launcher theia-extensions/updater node_modules
 
 # Production stage uses a small base image
-FROM node:24-bullseye-slim AS production-stage
+FROM node:24-bookworm-slim AS production-stage
 
 # Create theia user and directories
 # Application will be copied to /home/theia
 # Default workspace is located at /home/project
-RUN adduser --system --group theia
+RUN adduser --system --group --home /home/theia theia
 RUN chmod g+rw /home && \
     mkdir -p /home/project && \
     chown -R theia:theia /home/theia && \
@@ -45,7 +45,7 @@ RUN apt-get update && apt-get install -y wget apt-transport-https && \
     apt-get purge -y wget && \
     apt-get clean
 
-ENV HOME /home/theia
+ENV HOME=/home/theia
 WORKDIR /home/theia
 
 # Copy application from builder-stage
@@ -58,7 +58,7 @@ ENV SHELL=/bin/bash \
     THEIA_DEFAULT_PLUGINS=local-dir:/home/theia/plugins
 
 # Use installed git instead of dugite
-ENV USE_LOCAL_GIT true
+ENV USE_LOCAL_GIT=true
 
 # Switch to Theia user
 USER theia
