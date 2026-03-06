@@ -105,7 +105,7 @@ spec:
                         label 'macos'
                     }
                     steps {
-                        nodejs(nodeJSInstallationName: 'node_24.x') {
+                        nodejs(nodeJSInstallationName: 'node_22.x') {
                             script {
                                 sh "node --version"
                                 createMacInstaller()
