@@ -10,6 +10,12 @@ const THEIA_LOAD_TIMEOUT = 15000; // 15 seconds
 // Set environment variable to disable splash screen (works with asar packaging)
 process.env.THEIA_NO_SPLASH = '1';
 
+// Resolve the application directory from cwd so this spec can be shared across products
+const appDir = process.cwd();
+const builderConfig = fs.readFileSync(path.join(appDir, 'electron-builder.yml'), 'utf8');
+const productName = builderConfig.match(/^productName:\s*(.+)$/m)[1].trim();
+const packageName = require(path.join(appDir, 'package.json')).name;
+
 function isMacArm() {
   if (os.platform() !== 'darwin') {
     return false;
@@ -51,7 +57,7 @@ function getElectronMainJS() {
       return path.join(
         distFolder,
         isMacArm() ? 'mac-arm64' : 'mac',
-        'InterlisIDE.app',
+        `${productName}.app`,
         'Contents',
         'Resources',
         'app',
@@ -82,29 +88,16 @@ function disableSplashScreen() {
 }
 
 function getBinaryPath() {
-  const distFolder = path.join(__dirname, '..', 'dist');
+  const distFolder = path.join(appDir, 'dist');
   switch (os.platform()) {
     case 'linux':
-      return path.join(
-        distFolder,
-        'linux-unpacked',
-        'theia-ide-electron-app'
-      );
+      return path.join(distFolder, 'linux-unpacked', packageName);
     case 'win32':
-      return path.join(
-        distFolder,
-        'win-unpacked',
-        'InterlisIDE.exe'
-      );
+      return path.join(distFolder, 'win-unpacked', `${productName}.exe`);
     case 'darwin':
       const macFolder = isMacArm() ? 'mac-arm64' : 'mac';
       const binaryPath = path.join(
-        distFolder,
-        macFolder,
-        'InterlisIDE.app',
-        'Contents',
-        'MacOS',
-        'InterlisIDE'
+        distFolder, macFolder, `${productName}.app`, 'Contents', 'MacOS', productName
       );
       console.log(`Using binary path for Mac ${isMacArm() ? 'ARM64' : 'Intel'}: ${binaryPath}`);
       return binaryPath;
@@ -149,7 +142,7 @@ describe('INTERLIS IDE App', function () {
           // Path to built and packaged theia
           binary: binary,
           // Hand in workspace to load as runtime parameter
-          args: [path.join(__dirname, 'workspace')],
+          args: [path.join(appDir, 'test', 'workspace')],
         },
       },
     });
