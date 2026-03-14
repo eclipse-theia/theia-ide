@@ -57,6 +57,16 @@ jobs:
         with:
           python-version: '3.13'
 
+      - name: Install dependencies
+        shell: bash
+        run: yarn --skip-integrity-check --network-timeout 100000
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Lint
+        shell: bash
+        run: yarn lint
+
       - name: Update electron-builder.yml for macos-15
         if: matrix.os == 'macos-15'
         run: |
@@ -66,7 +76,6 @@ jobs:
         if: runner.os != 'Linux' || runner.arch != 'ARM64'
         shell: bash
         run: |
-          yarn --skip-integrity-check --network-timeout 100000
           yarn build
           yarn download:plugins
           yarn electron package:prod

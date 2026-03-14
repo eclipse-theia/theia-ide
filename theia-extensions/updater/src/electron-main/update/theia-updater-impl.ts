@@ -12,7 +12,7 @@ import * as http from 'http';
 import * as os from 'os';
 import * as path from 'path';
 import { ElectronMainApplication, ElectronMainApplicationContribution } from '@theia/core/lib/electron-main/electron-main-application';
-import { TheiaUpdater, TheiaUpdaterClient } from '../../common/updater/theia-updater';
+import { TheiaUpdater, TheiaUpdaterClient, UpdaterSettings } from '../../common/updater/theia-updater';
 import { injectable } from '@theia/core/shared/inversify';
 import { isOSX, isWindows } from '@theia/core';
 import { CancellationToken } from 'builder-util-runtime';
@@ -27,6 +27,10 @@ const PREVIEW_CHANNEL_MACOS = 'https://download.eclipse.org/theia/ide-preview/la
 const PREVIEW_CHANNEL_MACOS_ARM = 'https://download.eclipse.org/theia/ide-preview/latest/macos-arm';
 const PREVIEW_CHANNEL_LINUX = 'https://download.eclipse.org/theia/ide-preview/latest/linux';
 
+// Next updates are currently only available for Linux.
+// The feed is served from GitHub Release assets (rolling "next" tag).
+const NEXT_CHANNEL_LINUX = 'https://github.com/eclipse-theia/theia-ide/releases/download/next';
+
 const { autoUpdater } = require('electron-updater');
 
 autoUpdater.logger = require('electron-log');
@@ -36,36 +40,35 @@ autoUpdater.logger.transports.file.level = 'info';
 export class TheiaUpdaterImpl implements TheiaUpdater, ElectronMainApplicationContribution {
 
     protected clients: Array<TheiaUpdaterClient> = [];
+    protected settings: UpdaterSettings = {
+        checkForUpdates: true,
+        checkInterval: 60,
+        channel: 'stable'
+    };
 
     private initialCheck: boolean = true;
-    private updateChannelReported: boolean = false;
     private reportOnFirstRegistration: boolean = false;
     private cancellationToken: CancellationToken = new CancellationToken();
+    private updateCheckTimer: NodeJS.Timeout | undefined;
 
     constructor() {
         autoUpdater.autoDownload = false;
         autoUpdater.on('update-available', (info: { version: string }) => {
-            if (this.updateChannelReported) {
-                const startupCheck = this.initialCheck;
-                if (this.initialCheck) {
-                    this.initialCheck = false;
-                    if (this.clients.length === 0) {
-                        this.reportOnFirstRegistration = true;
-                    }
+            if (this.initialCheck) {
+                this.initialCheck = false;
+                if (this.clients.length === 0) {
+                    this.reportOnFirstRegistration = true;
                 }
-                const updateInfo = { version: info.version };
-                this.clients.forEach(c => c.updateAvailable(true, startupCheck, updateInfo));
             }
+            const updateInfo = { version: info.version };
+            this.clients.forEach(c => c.updateAvailable(true, updateInfo));
         });
         autoUpdater.on('update-not-available', () => {
-            if (this.updateChannelReported) {
-                if (this.initialCheck) {
-                    this.initialCheck = false;
-                    /* do not report that no update is available on start up */
-                    return;
-                }
-                this.clients.forEach(c => c.updateAvailable(false, false));
+            if (this.initialCheck) {
+                this.initialCheck = false;
+                return;
             }
+            this.clients.forEach(c => c.updateAvailable(false));
         });
 
         autoUpdater.on('update-downloaded', () => {
@@ -82,7 +85,19 @@ export class TheiaUpdaterImpl implements TheiaUpdater, ElectronMainApplicationCo
     }
 
     checkForUpdates(): void {
+        const feedURL = this.getFeedURL(this.settings.channel);
+        autoUpdater.setFeedURL(feedURL);
         autoUpdater.checkForUpdates();
+    }
+
+    setUpdaterSettings(settings: UpdaterSettings): void {
+        const settingsChanged = this.settings.checkForUpdates !== settings.checkForUpdates ||
+            this.settings.checkInterval !== settings.checkInterval ||
+            this.settings.channel !== settings.channel;
+        this.settings = settings;
+        if (settingsChanged) {
+            this.scheduleUpdateChecks();
+        }
     }
 
     onRestartToUpdateRequested(): void {
@@ -114,12 +129,35 @@ export class TheiaUpdaterImpl implements TheiaUpdater, ElectronMainApplicationCo
     }
 
     onStart(application: ElectronMainApplication): void {
-        // Called when the contribution is starting. You can use both async and sync code from here.
-        this.checkForUpdates();
     }
 
     onStop(application: ElectronMainApplication): void {
-        // Invoked when the contribution is stopping. You can clean up things here. You are not allowed call async code from here.
+        this.stopUpdateCheckTimer();
+    }
+
+    private scheduleUpdateChecks(): void {
+        this.stopUpdateCheckTimer();
+
+        if (!this.settings.checkForUpdates) {
+            return;
+        }
+
+        this.checkForUpdates();
+
+        const intervalMs = Math.max(this.settings.checkInterval, 1) * 60 * 1000;
+
+        this.updateCheckTimer = setInterval(() => {
+            if (this.settings.checkForUpdates) {
+                this.checkForUpdates();
+            }
+        }, intervalMs);
+    }
+
+    private stopUpdateCheckTimer(): void {
+        if (this.updateCheckTimer) {
+            clearInterval(this.updateCheckTimer);
+            this.updateCheckTimer = undefined;
+        }
     }
 
     setClient(client: TheiaUpdaterClient | undefined): void {
@@ -127,31 +165,27 @@ export class TheiaUpdaterImpl implements TheiaUpdater, ElectronMainApplicationCo
             this.clients.push(client);
             if (this.reportOnFirstRegistration) {
                 this.reportOnFirstRegistration = false;
-                this.clients.forEach(c => c.updateAvailable(true, true));
+                this.clients.forEach(c => c.updateAvailable(true));
             }
-        }
-    }
-
-    setUpdateChannel(channel: string): void {
-        const feedURL = this.getFeedURL(channel);
-        autoUpdater.setFeedURL(feedURL);
-        if (!this.updateChannelReported) {
-            this.updateChannelReported = true;
-            this.checkForUpdates();
         }
     }
 
     protected getFeedURL(channel: string): string {
         if (isWindows) {
             const curVersion = autoUpdater.currentVersion.toString();
+            // Next not yet available on Windows, fall back to stable
             return (channel === 'preview') ? PREVIEW_CHANNEL_WINDOWS.replace('version', curVersion) : STABLE_CHANNEL_WINDOWS.replace('version', curVersion);
         } else if (isOSX) {
+            // Next not yet available on macOS, fall back to stable
             if (process.arch === 'arm64') {
                 return (channel === 'preview') ? PREVIEW_CHANNEL_MACOS_ARM : STABLE_CHANNEL_MACOS_ARM;
             } else {
                 return (channel === 'preview') ? PREVIEW_CHANNEL_MACOS : STABLE_CHANNEL_MACOS;
             }
         } else {
+            if (channel === 'next') {
+                return NEXT_CHANNEL_LINUX;
+            }
             return (channel === 'preview') ? PREVIEW_CHANNEL_LINUX : STABLE_CHANNEL_LINUX;
         }
     }
@@ -164,6 +198,7 @@ export class TheiaUpdaterImpl implements TheiaUpdater, ElectronMainApplicationCo
     }
 
     dispose(): void {
+        this.stopUpdateCheckTimer();
         this.clients.forEach(this.disconnectClient.bind(this));
     }
 

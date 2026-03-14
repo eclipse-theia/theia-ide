@@ -3,11 +3,10 @@ productName: InterlisIDE
 copyright: Copyright © 2020-2025 Eclipse Foundation, Inc
 electronDist: ../../node_modules/electron/dist
 electronVersion: 38.4.0
-# Although it is generally not recommended to disable asar, it is required for Theia.
-# Enabling this leads to: process ERROR Error: spawn ENOTDIR
-# because binaries can not be executed from the asar archive.
-# See asar file API limitations: https://www.electronjs.org/docs/tutorial/application-packaging#limitations-of-the-node-api
-asar: false
+asar: true
+asarUnpack:
+  - "**/lib/backend/native/**"
+  - "**/lib/build/Release/**"
 nodeGypRebuild: false
 npmRebuild: false
 
@@ -29,7 +28,7 @@ extraResources:
     to: app/plugins
 
 win:
-  icon: resources/icons/WindowsLauncherIcon/TheiaIDE.ico
+  icon: resources/icons/WindowsLauncherIcons/TheiaIDE.ico
   target:
     - nsis
   publish:
@@ -37,7 +36,7 @@ win:
     url: "https://download.eclipse.org/theia/ide/${version}/windows"
     useMultipleRangeRequest: false
 mac:
-  icon: resources/icons/MacLauncherIcon/512-512-2.icns
+  icon: resources/icons/MacLauncherIcons/icon.icns
   category: public.app-category.developer-tools
   protocols:
     - name: theia
@@ -67,9 +66,9 @@ nsis:
   menuCategory: true
   oneClick: false
   perMachine: false
-  installerHeaderIcon: resources/icons/WindowsLauncherIcon/TheiaIDE.ico
-  installerIcon: resources/icons/WindowsLauncherIcon/TheiaIDE.ico
-  uninstallerIcon: resources/icons/WindowsLauncherIcon/TheiaIDE.ico
+  installerHeaderIcon: resources/icons/WindowsLauncherIcons/TheiaIDE.ico
+  installerIcon: resources/icons/WindowsLauncherIcons/TheiaIDE.ico
+  uninstallerIcon: resources/icons/WindowsLauncherIcons/TheiaIDE.ico
   installerSidebar: resources/icons/InstallerSidebarImage/164-314Windows.bmp
   uninstallerSidebar: resources/icons/InstallerSidebarImage/164-314Windows.bmp
   allowToChangeInstallationDirectory: true

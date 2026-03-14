@@ -92,12 +92,27 @@ export class TheiaDesktopFileServiceEndpoint implements BackendApplicationContri
         }
 
         const createOrUpdate = request.body.create;
+        const applicationName: string = request.body.applicationName || 'Theia IDE';
+        const createUrlHandler: boolean = request.body.createUrlHandler !== false;
+        const appId = applicationName.toLowerCase().replace(/\s+/g, '-');
+
         if (createOrUpdate) {
-            const imagePath = path.join(process.env.HOME!, '.local', 'share', 'applications', 'theia-ide-electron-app.png');
+            const iconFileName = appId + '-electron-app.png';
+            const applicationsDir = path.join(process.env.HOME!, '.local', 'share', 'applications');
+            const imagePath = path.join(applicationsDir, iconFileName);
             if (!fs.existsSync(imagePath)) {
                 const appDir = process.env.APPDIR;
                 if (appDir !== undefined) {
-                    const unpackedImagePath = path.join(appDir, 'theia-ide-electron-app.png');
+                    let unpackedImagePath = path.join(appDir, iconFileName);
+                    if (!fs.existsSync(unpackedImagePath)) {
+                        // Fallback: find any .png icon in the AppImage root
+                        try {
+                            const pngFile = fs.readdirSync(appDir).find((f: string) => f.endsWith('.png'));
+                            if (pngFile) {
+                                unpackedImagePath = path.join(appDir, pngFile);
+                            }
+                        } catch { /* ignore */ }
+                    }
                     if (fs.existsSync(unpackedImagePath)) {
                         fs.copyFileSync(unpackedImagePath, imagePath);
                     } else {
@@ -108,11 +123,13 @@ export class TheiaDesktopFileServiceEndpoint implements BackendApplicationContri
                 }
             }
 
-            const desktopFilePath = path.join(process.env.HOME!, '.local', 'share', 'applications', 'theia-ide-launcher.desktop');
-            fs.outputFileSync(desktopFilePath, this.getDesktopFileContents(process.env.APPIMAGE!, imagePath));
+            const desktopFilePath = path.join(applicationsDir, `${appId}-launcher.desktop`);
+            fs.outputFileSync(desktopFilePath, this.getDesktopFileContents(applicationName, process.env.APPIMAGE!, imagePath));
 
-            const desktopURLFilePath = path.join(process.env.HOME!, '.local', 'share', 'applications', 'theia-ide-launcher-url.desktop');
-            fs.outputFileSync(desktopURLFilePath, this.getDesktopURLFileContents(process.env.APPIMAGE!, imagePath));
+            if (createUrlHandler) {
+                const desktopURLFilePath = path.join(applicationsDir, `${appId}-launcher-url.desktop`);
+                fs.outputFileSync(desktopURLFilePath, this.getDesktopURLFileContents(applicationName, process.env.APPIMAGE!, imagePath));
+            }
 
             appImageInformation.appImage = process.env.APPIMAGE!;
             fs.outputJSONSync(storageFile, appImageInformation);
@@ -124,22 +141,22 @@ export class TheiaDesktopFileServiceEndpoint implements BackendApplicationContri
         response.sendStatus(200);
     }
 
-    protected getDesktopFileContents(appImagePath: string, imagePath: string): string {
+    protected getDesktopFileContents(applicationName: string, appImagePath: string, imagePath: string): string {
         return `[Desktop Entry]
-Name=Theia IDE
+Name=${applicationName}
 GenericName=Integrated Development Environment
 Exec=${appImagePath} %U
 Terminal=false
 Type=Application
 Icon=${imagePath}
-StartupWMClass=Theia IDE
+StartupWMClass=${applicationName}
 Comment=IDE for cloud and desktop
 Categories=Development;IDE;`;
     }
 
-    protected getDesktopURLFileContents(appImagePath: string, imagePath: string): string {
+    protected getDesktopURLFileContents(applicationName: string, appImagePath: string, imagePath: string): string {
         return `[Desktop Entry]
-Name=Theia IDE - URL Handler
+Name=${applicationName} - URL Handler
 GenericName=Integrated Development Environment
 Exec=${appImagePath} --open-url %U
 Terminal=false

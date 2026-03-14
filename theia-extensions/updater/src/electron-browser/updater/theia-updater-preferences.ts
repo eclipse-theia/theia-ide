@@ -7,19 +7,40 @@
  * SPDX-License-Identifier: MIT
  ********************************************************************************/
 
-import { PreferenceSchema } from '@theia/core/lib/common/preferences/preference-schema';
+import { PreferenceSchema, PreferenceScope } from '@theia/core';
+import { FrontendApplicationConfigProvider } from '@theia/core/lib/browser/frontend-application-config-provider';
+
+const DEFAULT_UPDATE_CHANNELS = ['stable', 'preview'];
+
+function getAvailableUpdateChannels(): string[] {
+    try {
+        const config = FrontendApplicationConfigProvider.get() as Record<string, unknown>;
+        return (config['availableUpdateChannels'] as string[]) ?? DEFAULT_UPDATE_CHANNELS;
+    } catch {
+        return DEFAULT_UPDATE_CHANNELS;
+    }
+}
 
 export const theiaUpdaterPreferenceSchema: PreferenceSchema = {
     'properties': {
-        'updates.reportOnStart': {
+        'updates.checkForUpdates': {
             type: 'boolean',
-            description: 'Report available updates after application start.',
-            default: true
+            description: 'Automatically check for updates.',
+            default: true,
+            scope: PreferenceScope.User
+        },
+        'updates.checkInterval': {
+            type: 'number',
+            description: 'Interval in minutes between automatic update checks.',
+            default: 60,
+            scope: PreferenceScope.User
         },
         'updates.channel': {
             type: 'string',
-            enum: ['stable', 'preview'], // once we have a nightly/next build, we can add a third channel
-            default: 'stable'
+            enum: getAvailableUpdateChannels(),
+            description: 'Channel to use for updates.',
+            default: getAvailableUpdateChannels()[0] ?? '',
+            scope: PreferenceScope.User
         },
     }
 };

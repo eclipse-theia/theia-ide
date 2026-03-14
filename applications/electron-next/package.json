@@ -1,9 +1,10 @@
 {
   "private": true,
-  "name": "theia-ide-browser-app",
-  "description": "Eclipse Theia IDE browser product",
-  "productName": "Theia IDE",
-  "version": "0.0.7",
+  "name": "theia-ide-next-electron-app",
+  "description": "Eclipse Theia IDE Next product",
+  "productName": "Theia IDE Next",
+  "version": "1.68.201",
+  "main": "scripts/theia-electron-main.js",
   "license": "MIT",
   "author": "Eclipse Theia <theia-dev@eclipse.org>",
   "homepage": "https://github.com/eclipse-theia/theia-ide#readme",
@@ -19,29 +20,35 @@
     "node": ">=20"
   },
   "theia": {
+    "target": "electron",
     "frontend": {
       "config": {
-        "applicationName": "Theia IDE",
-        "warnOnPotentiallyInsecureHostPattern": false,
+        "applicationName": "Theia IDE Next",
+        "brandingVariant": "next",
+        "availableUpdateChannels": [
+          "next"
+        ],
+        "reloadOnReconnect": true,
         "preferences": {
           "toolbar.showToolbar": true,
-          "files.enableTrash": false,
-          "security.workspace.trust.enabled": false
+          "updates.channel": "next"
         },
-        "about": {
-          "productVersionLabel": "Version {version}",
-          "copyright": "Copyright (c) 2025 Amt für Geoinformation, Kanton Solothurn"
-        },
-        "reloadOnReconnect": true
+        "electron": {
+          "showWindowEarly": false,
+          "splashScreenOptions": {
+            "content": "resources/TheiaIDENextSplash.svg",
+            "height": 276,
+            "width": 446
+          }
+        }
       }
     },
     "backend": {
       "config": {
-        "warnOnPotentiallyInsecureHostPattern": false,
+        "frontendConnectionTimeout": -1,
         "startupTimeout": -1,
         "resolveSystemPlugins": false,
-        "configurationFolder": ".theia-ide",
-        "frontendConnectionTimeout": 3000
+        "configurationFolder": ".theia-ide-next"
       }
     },
     "generator": {
@@ -83,6 +90,7 @@
     "@theia/dev-container": "1.68.2",
     "@theia/editor": "1.68.2",
     "@theia/editor-preview": "1.68.2",
+    "@theia/electron": "1.68.2",
     "@theia/external-terminal": "1.68.2",
     "@theia/file-search": "1.68.2",
     "@theia/filesystem": "1.68.2",
@@ -106,6 +114,7 @@
     "@theia/process": "1.68.2",
     "@theia/property-view": "1.68.2",
     "@theia/remote": "1.68.2",
+    "@theia/remote-wsl": "1.68.2",
     "@theia/scanoss": "1.68.2",
     "@theia/scm": "1.68.2",
     "@theia/search-in-workspace": "1.68.2",
@@ -122,21 +131,41 @@
     "@theia/vsx-registry": "1.68.2",
     "@theia/workspace": "1.68.2",
     "fs-extra": "^9.0.1",
-    "theia-ide-product-ext": "0.0.7",
-    "theia-ide-webview-drag-guard-ext": "0.0.7"
+    "theia-ide-launcher-ext": "1.68.201",
+    "theia-ide-product-ext": "1.68.201",
+    "theia-ide-updater-ext": "1.68.201"
   },
   "devDependencies": {
     "@theia/cli": "1.68.2",
-    "@theia/native-webpack-plugin": "1.68.2"
+    "@theia/native-webpack-plugin": "1.68.2",
+    "@types/js-yaml": "^3.12.0",
+    "@types/yargs": "17.0.7",
+    "app-builder-lib": "26.0.12",
+    "concurrently": "^3.5.0",
+    "electron": "38.4.0",
+    "electron-builder": "26.0.12",
+    "electron-osx-sign": "^0.6.0",
+    "js-yaml": "^3.12.0",
+    "rimraf": "^2.7.1",
+    "ts-node": "^10.0.0",
+    "yargs": "17.2.1"
   },
   "scripts": {
     "clean": "theia clean && rimraf node_modules",
-    "build": "yarn -s rebuild && theia build --app-target=\"browser\" --mode development",
-    "build:prod": "yarn -s rebuild && theia  build --app-target=\"browser\"",
-    "rebuild": "theia rebuild:browser --cacheRoot ../..",
-    "start": "theia start --plugins=local-dir:../../plugins",
-    "watch": "concurrently --kill-others -n tsc,build -c red,yellow \"tsc -b -w --preserveWatchOutput\" \"yarn -s watch:bundle\"",
+    "clean:dist": "rimraf dist",
+    "build": "yarn -s rebuild && theia build --app-target=\"electron\" --mode development",
+    "build:prod": "yarn -s rebuild && theia build --app-target=\"electron\"",
+    "rebuild": "theia rebuild:electron --cacheRoot ../..",
+    "watch": "concurrently -n compile,build \"theiaext watch --preserveWatchOutput\" \"theia build --watch --mode development\"",
+    "start": "electron scripts/theia-electron-main.js --plugins=local-dir:../../plugins",
+    "start:debug": "yarn start --log-level=debug",
+    "package": "yarn clean:dist && yarn rebuild && electron-builder -c.mac.identity=null --publish never",
+    "package:prod": "yarn deploy",
+    "deploy": "yarn clean:dist && yarn rebuild && electron-builder -c.mac.identity=null --publish always",
+    "package:preview": "yarn clean:dist && yarn rebuild && electron-builder -c.mac.identity=null --dir",
     "update:theia": "ts-node ../../scripts/update-theia-version.ts",
-    "update:next": "ts-node ../../scripts/update-theia-version.ts next"
+    "update:next": "ts-node ../../scripts/update-theia-version.ts next",
+    "lint": "eslint --ext js,jsx,ts,tsx scripts",
+    "lint:fix": "eslint --ext js,jsx,ts,tsx scripts --fix"
   }
 }

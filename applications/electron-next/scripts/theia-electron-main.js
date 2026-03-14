@@ -19,7 +19,7 @@ const bundledPluginsDir = isInsideAsar
 if (isAppImage) {
     // When running as AppImage, use a user-writable directory for the built-in plugins
     // The AppImage mount point (/tmp/.mount_*) is read-only
-    const configDir = process.env.THEIA_CONFIG_DIR || path.join(os.homedir(), '.theia-ide');
+    const configDir = process.env.THEIA_CONFIG_DIR || path.join(os.homedir(), '.theia-ide-next');
     const userPluginsDir = path.join(configDir, 'builtInPlugins');
     const packageJsonPath = path.resolve(__dirname, '../', 'package.json');
     const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));

@@ -16,7 +16,15 @@
     background-position: center;
     background-repeat: no-repeat;
     background-size: contain;
-  }
+}
+
+body[data-theia-branding="next"] {
+    --theia-branding-logo: url(../icons/TheiaIDE-next.png);
+}
+
+body[data-theia-branding="next"] .theia-icon {
+    background-image: url("../icons/512-512-next.png");
+}
 
 .gs-blue-header {
     color: #5088e7;
@@ -74,4 +82,4 @@ ul.theia-aboutExtensions {
     list-style-type: none;
     padding: 0;
     margin-left: 10px;
- }
+}
