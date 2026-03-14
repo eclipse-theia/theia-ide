@@ -37,7 +37,7 @@ export class TheiaIDEContribution implements CommandContribution, MenuContributi
     protected readonly windowService: WindowService;
 
     static REPORT_ISSUE_URL = 'https://github.com/edigonzales/interlis-lsp/issues/new?assignees=&labels=&template=';
-    static DOCUMENTATION_URL = 'https://interlis-ide.ch/docs/user_getting_started/';
+    static DOCUMENTATION_URL = 'https://interlis-ide.ch/docs/intro';
 
     registerCommands(commandRegistry: CommandRegistry): void {
         commandRegistry.registerCommand(TheiaIDECommands.REPORT_ISSUE, {

@@ -10,6 +10,11 @@
 import { Endpoint } from '@theia/core/lib/browser';
 import { injectable } from '@theia/core/shared/inversify';
 
+export interface DesktopFileOptions {
+    applicationName?: string;
+    createUrlHandler?: boolean;
+}
+
 @injectable()
 export class DesktopFileService {
 
@@ -21,9 +26,9 @@ export class DesktopFileService {
         return !!response?.initialized;
     }
 
-    async createOrUpdateDesktopfile(create: boolean): Promise<void> {
+    async createOrUpdateDesktopfile(create: boolean, options?: DesktopFileOptions): Promise<void> {
         fetch(new Request(`${this.endpoint()}`), {
-            body: JSON.stringify({ create }),
+            body: JSON.stringify({ create, ...options }),
             method: 'PUT',
             headers: new Headers({ 'Content-Type': 'application/json' })
         });

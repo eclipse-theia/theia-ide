@@ -1,24 +1,24 @@
 {
   "name": "theia-ide-launcher-ext",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "keywords": [
     "theia-extension"
   ],
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/eclipse-theia/theia-ide.git"
+    "url": "https://github.com/edigonzales/interlis-ide.git"
   },
   "bugs": {
-    "url": "https://github.com/eclipse-theia/theia-ide/issues"
+    "url": "https://github.com/edigonzales/interlis-lsp/issues/new?assignees=&labels=&template="
   },
-  "homepage": "https://github.com/eclipse-theia/theia-ide",
+  "homepage": "https://interlis-ide.ch",
   "files": [
     "lib",
     "src"
   ],
   "dependencies": {
-    "@theia/core": "1.65.1",
+    "@theia/core": "1.69.0",
     "@vscode/sudo-prompt": "9.3.1",
     "body-parser": "^1.17.2",
     "fs-extra": "^4.0.2"

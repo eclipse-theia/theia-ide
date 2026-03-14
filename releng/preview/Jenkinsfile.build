@@ -18,9 +18,9 @@ pipeline {
     environment {
         STORED_GIT_BRANCH = "${env.GIT_BRANCH ?: env.BRANCH_NAME ?: 'unknown'}"
         THEIA_IDE_JENKINS_CI = 'true'
-        msvs_version = '2019'
-        GYP_MSVS_VERSION = '2019'
-        npm_config_msvs_version = '2019'
+        msvs_version = '2022'
+        GYP_MSVS_VERSION = '2022'
+        npm_config_msvs_version = '2022'
         NODE_OPTIONS = '--max_old_space_size=4096'
     }
     options {
@@ -107,6 +107,7 @@ spec:
                     steps {
                         nodejs(nodeJSInstallationName: 'node_22.x') {
                             script {
+                                sh "node --version"
                                 createMacInstaller()
                             }
                         }
@@ -122,11 +123,8 @@ spec:
                     agent {
                         label 'windows'
                     }
-                    steps {                 
+                    steps {
                         nodejs(nodeJSInstallationName: 'node_22.x') {
-                            sh "node --version"
-                            sh "npx node-gyp@9.4.1 install 22.15.1"
-
                             // analyze memory usage
                             bat "wmic ComputerSystem get TotalPhysicalMemory"
                             bat "wmic OS get FreePhysicalMemory"
@@ -255,23 +253,19 @@ def buildInstaller(int sleepBetweenRetries) {
 
     checkout scm
 
-    // Ensure directory is cleaned and recreated
-    sh "rm -rf applications/electron/dist"
-    sh "mkdir -p applications/electron/dist"
-
-    // Prepare build command based on dry run status
-    buildPackageCmd = 'yarn --network-timeout 100000 --frozen-lockfile --force && yarn build:extensions && yarn electron build'
-    
-    if (!isDryRun()) {
-        buildPackageCmd += ":prod"
-    }
+    // Ensure build on a clean state
+    sh "git clean -xdf"
+    sh "yarn cache clean"
 
     sh 'node --version'
     sh 'printenv && yarn cache dir'
     
     // Execute build with retry capability
     try {
-        sh(script: buildPackageCmd)
+        // run install, build extensions and build electron app in separate steps
+        sh 'yarn --network-timeout 100000 --frozen-lockfile --force'
+        sh 'yarn build:extensions'
+        sh 'yarn electron build:prod'
     } catch (error) {
         retry(maxRetry) {
             sleep(sleepBetweenRetries)
@@ -282,7 +276,8 @@ def buildInstaller(int sleepBetweenRetries) {
 
     // Package the built application
     sshagent(['projects-storage.eclipse.org-bot-ssh']) {
-        sh 'yarn download:plugins && yarn electron package:prod'
+        sh 'yarn download:plugins'
+        sh 'yarn electron package:prod'
     }
 }
 

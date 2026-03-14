@@ -10,7 +10,7 @@
 import * as React from 'react';
 import { AboutDialog, AboutDialogProps, ABOUT_CONTENT_CLASS } from '@theia/core/lib/browser/about-dialog';
 import { injectable, inject } from '@theia/core/shared/inversify';
-import { renderDocumentation, /*renderDownloads,*/ renderSourceCode, /*renderSupport,*/ /*renderTickets,*/ renderWhatIs } from './branding-util';
+import { renderDocumentation, renderSourceCode, renderWhatIs } from './branding-util';
 import { VSXEnvironment } from '@theia/vsx-registry/lib/common/vsx-environment';
 import { WindowService } from '@theia/core/lib/browser/window/window-service';
 import { FrontendApplicationConfigProvider } from '@theia/core/lib/browser/frontend-application-config-provider';
@@ -102,10 +102,14 @@ export class TheiaIDEAboutDialog extends AboutDialog {
         const displayVersionLabel = this.resolveVersionLabel(configuredVersionLabel, applicationVersion);
         const shouldAppendApplicationVersion = Boolean(applicationVersion && displayVersionLabel && !displayVersionLabel.includes(applicationVersion));
         const versionLine = displayVersionLabel ?? 'Version information unavailable';
+        const baseLine = 'Based on Theia IDE v1.69.0 / Theia v1.69.0';
         const copyrightLine = this.aboutConfig.copyright ?? 'Copyright (c) 2025 Amt für Geoinformation, Kanton Solothurn';
         return <div>
             <p className='gs-sub-header' >
                 {shouldAppendApplicationVersion ? `${versionLine} (${applicationVersion})` : versionLine}
+            </p>
+            <p className='gs-sub-header' >
+                {baseLine}
             </p>
             <p className='gs-sub-header' >
                 {copyrightLine}
