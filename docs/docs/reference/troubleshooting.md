@@ -37,4 +37,4 @@ message.
 
 ## Need more help?
 
-Open an issue on the [INTERLIS IDE GitHub tracker](https://github.com/eclipse-theia/theia-ide/issues) or join the community spaces linked in the footer of this site.
+Open an issue on the [INTERLIS IDE GitHub tracker](https://github.com/edigonzales/interlis-ide/issues) or join the community spaces linked in the footer of this site.

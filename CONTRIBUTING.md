@@ -1,123 +1,67 @@
-# Contributing to Eclipse Theia
+# Contributing to INTERLIS IDE
 
-Theia is a young open-source project with a modular architecture. One of the
-goals is to make sure that we can customize and enhance any Theia application
-through extensions.  So while the main Theia repository contains some common
-functionality for IDE-like applications, like a file system or a navigator
-view, most functionality doesn't necessarily need to be put into the core
-repository but can be developed separately.
+INTERLIS IDE combines product packaging, Eclipse Theia composition, and INTERLIS-specific tooling into a desktop application. Contributions are welcome, but the first step is to change the right repository and verify the right level of behaviour.
 
-## How Can I Contribute?
+## Where changes belong
 
-In the following some of the typical ways of contribution are described.
+Use `interlis-ide` for:
 
-### Asking Questions
+- Electron and browser product packaging
+- branding, icons, splash screen, menus, and about dialog content
+- updater behaviour and release workflow integration
+- bundled plugin versions and runtime defaults
+- documentation, maintainer runbooks, and GitHub Actions workflows
+- Eclipse Theia upstream merges and related conflict resolution
 
-It's totally fine to ask questions by opening an issue in the Theia GitHub
-repository. We will close it once it's answered and tag it with the 'question'
-label. Please check if the question has been asked before there or on [Stack
-Overflow](https://stackoverflow.com).
+Use `interlis-lsp` for:
 
-### Reporting Bugs
+- Java language server behaviour
+- diagnostics, compiler integration, and document processing
+- LSP commands and responses
+- editor features implemented inside the bundled VS Code extension
+- Java runtime delivery for the extension itself
 
-If you have found a bug, you should first check if it has already been filed
-and maybe even fixed. If you find an existing unresolved issue, please add your
-case. If you could not find an existing bug report, please file a new one. In
-any case, please add all information you can share and that will help to
-reproduce and solve the problem.
+If a change affects both repositories, document the dependency in both PRs and link them to each other.
 
-### Reporting Feature Requests
+## Contribution flow
 
-You may want to see a feature or have an idea. You can file a request and we
-can discuss it.  If such a feature request already exists, please add a comment
-or some other form of feedback to indicate you are interested too. Also in this
-case any concrete use case scenario is appreciated to understand the motivation
-behind it.
+1. Start from `origin/master`.
+2. Create a short-lived branch with a descriptive name.
+3. Make the smallest coherent change that solves the problem.
+4. Run the relevant checks locally.
+5. Open a PR against `master` with a concise summary of behaviour changes and verification steps.
 
-### Pull Requests
+For user-facing UI or packaging changes, include screenshots or a short note about what changed visually.
 
-Before you get started investing significant time in something you want to get
-merged and maintained as part of Theia, you should talk with the team through
-an issue. Simply choose the issue you would want to work on, and tell everyone
-that you are willing to do so and how you would approach it. The team will be
-happy to guide you and give feedback.
+## Local verification expectations
 
-We follow the contributing and reviewing pull request guidelines described
-[here](https://github.com/eclipse-theia/theia/blob/master/doc/pull-requests.md).
+Use the smallest set of checks that proves the change:
 
-## Coding Guidelines
+- Docs-only changes:
+  - verify links and examples manually
+  - run `npm --prefix docs run build` if Docusaurus pages changed
+- Product, packaging, or workflow changes:
+  - `yarn lint`
+  - `yarn build:dev`
+  - `yarn download:plugins`
+  - `yarn electron package:preview`
+  - `yarn electron test`
+- Release or installer changes:
+  - `yarn electron package:prod`
 
-We follow the coding guidelines described
-[here](https://github.com/eclipse-theia/theia/wiki/Coding-Guidelines).
+If a command is intentionally skipped, explain why in the PR.
 
-## Eclipse Contributor Agreement
+## Issues and support channels
 
-Before your contribution can be accepted by the project team contributors must
-electronically sign the Eclipse Contributor Agreement (ECA).
+- Use <https://github.com/edigonzales/interlis-ide/issues> for IDE packaging, updater, branding, distribution, and documentation problems.
+- Use <https://github.com/edigonzales/interlis-lsp/issues> for language server, validation, compiler, and editor feature issues.
 
-* https://www.eclipse.org/legal/ECA.php
+## Keep the docs in sync
 
-Commits that are provided by non-committers must have a Signed-off-by field in
-the footer indicating that the author is aware of the terms by which the
-contribution has been provided to the project. The non-committer must
-additionally have an Eclipse Foundation account and must have a signed Eclipse
-Contributor Agreement (ECA) on file.
+If you change the release process, updater behaviour, Theia upgrade flow, or contributor workflow, update the matching root runbook in the same PR:
 
-For more information, please see the Eclipse Committer Handbook:
-https://www.eclipse.org/projects/handbook/#resources-commit
+- [RELEASE.md](RELEASE.md)
+- [THEIA_UPGRADE.md](THEIA_UPGRADE.md)
+- [PUBLISHING.md](PUBLISHING.md)
 
-## Sign your work
-
-The sign-off is a simple line at the end of the explanation for the patch. Your
-signature certifies that you wrote the patch or otherwise have the right to
-pass it on as an open-source patch. The rules are pretty simple: if you can
-certify the below (from
-[developercertificate.org](https://developercertificate.org/)):
-
-```
-Developer Certificate of Origin
-Version 1.1
-
-Copyright (C) 2004, 2006 The Linux Foundation and its contributors.
-1 Letterman Drive
-Suite D4700
-San Francisco, CA, 94129
-
-Everyone is permitted to copy and distribute verbatim copies of this
-license document, but changing it is not allowed.
-
-Developer's Certificate of Origin 1.1
-
-By making a contribution to this project, I certify that:
-
-(a) The contribution was created in whole or in part by me and I
-    have the right to submit it under the open source license
-    indicated in the file; or
-
-(b) The contribution is based upon previous work that, to the best
-    of my knowledge, is covered under an appropriate open source
-    license and I have the right under that license to submit that
-    work with modifications, whether created in whole or in part
-    by me, under the same open source license (unless I am
-    permitted to submit under a different license), as indicated
-    in the file; or
-
-(c) The contribution was provided directly to me by some other
-    person who certified (a), (b) or (c) and I have not modified
-    it.
-
-(d) I understand and agree that this project and the contribution
-    are public and that a record of the contribution (including all
-    personal information I submit with it, including my sign-off) is
-    maintained indefinitely and may be redistributed consistent with
-    this project or the open source license(s) involved.
-```
-
-Then you just add a line to every git commit message:
-
-    Signed-off-by: Joe Smith <joe.smith@email.com>
-
-Use your real name (sorry, no pseudonyms or anonymous contributions.)
-
-If you set your `user.name` and `user.email` git configs, you can sign your
-commit automatically with `git commit -s`.
+This repository depends on those files being accurate enough for future maintainers to repeat the workflow without reconstructing it from old PRs or chat logs.
