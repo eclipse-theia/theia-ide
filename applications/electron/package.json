@@ -3,17 +3,17 @@
   "name": "theia-ide-electron-app",
   "description": "INTERLIS IDE product",
   "productName": "InterlisIDE",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "main": "scripts/theia-electron-main.js",
   "license": "MIT",
   "author": "Eclipse Theia <theia-dev@eclipse.org>",
-  "homepage": "https://github.com/eclipse-theia/theia-ide#readme",
+  "homepage": "https://interlis-ide.ch",
   "bugs": {
-    "url": "https://github.com/eclipse-theia/theia/issues"
+    "url": "https://github.com/edigonzales/interlis-lsp/issues/new?assignees=&labels=&template="
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/eclipse-theia/theia-ide.git"
+    "url": "git+https://github.com/edigonzales/interlis-ide.git"
   },
   "engines": {
     "yarn": ">=1.7.0 <2",
@@ -24,6 +24,9 @@
     "frontend": {
       "config": {
         "applicationName": "INTERLIS IDE",
+        "availableUpdateChannels": [
+          "stable"
+        ],
         "reloadOnReconnect": true,
         "preferences": {
           "toolbar.showToolbar": true,
@@ -132,10 +135,10 @@
     "@theia/vsx-registry": "1.69.0",
     "@theia/workspace": "1.69.0",
     "fs-extra": "^9.0.1",
-    "theia-ide-launcher-ext": "0.0.7",
-    "theia-ide-product-ext": "0.0.7",
-    "theia-ide-updater-ext": "0.0.7",
-    "theia-ide-webview-drag-guard-ext": "0.0.7"
+    "theia-ide-launcher-ext": "0.0.8",
+    "theia-ide-product-ext": "0.0.8",
+    "theia-ide-updater-ext": "0.0.8",
+    "theia-ide-webview-drag-guard-ext": "0.0.8"
   },
   "devDependencies": {
     "@theia/cli": "1.69.0",
@@ -172,7 +175,7 @@
     "start": "electron scripts/theia-electron-main.js --plugins=local-dir:../../plugins",
     "start:debug": "yarn start --log-level=debug",
     "package": "yarn clean:dist && yarn rebuild && electron-builder -c.mac.identity=null --publish never",
-    "package:prod": "yarn deploy",
+    "package:prod": "yarn package",
     "deploy": "yarn clean:dist && yarn rebuild && electron-builder -c.mac.identity=null --publish always",
     "package:preview": "yarn clean:dist && yarn rebuild && electron-builder -c.mac.identity=null --dir",
     "update:checksum": "ts-node scripts/update-checksum.ts",

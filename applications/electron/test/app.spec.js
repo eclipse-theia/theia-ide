@@ -118,6 +118,34 @@ function macSafeKeyCombo(keys) {
   return keys;
 };
 
+async function executeCommand(browser, query) {
+  const result = await browser.executeAsync((commandId, done) => {
+    const { theia } = window;
+    const bindingMap = theia.container?._bindingDictionary?._map;
+    const commandServiceKey = bindingMap && Array.from(bindingMap.keys())
+      .find(key => String(key) === 'Symbol(CommandService)');
+
+    if (!commandServiceKey) {
+      done({
+        ok: false,
+        message: 'CommandService binding not found in frontend container.'
+      });
+      return;
+    }
+
+    theia.container.get(commandServiceKey).executeCommand(commandId)
+      .then(() => done({ ok: true }))
+      .catch(error => done({
+        ok: false,
+        message: error instanceof Error ? error.message : String(error)
+      }));
+  }, query);
+
+  if (!result.ok) {
+    throw new Error(`Command "${query}" failed: ${result.message}`);
+  }
+}
+
 describe('INTERLIS IDE App', function () {
   // In mocha, 'this' is a common context between sibling beforeEach, afterEach, it, etc methods within the same describe.
   // Each describe has its own context.
@@ -282,8 +310,8 @@ describe('INTERLIS IDE App', function () {
     // Wait a bit to make sure key handlers are registered
     await new Promise(r => setTimeout(r, 5000));
 
-    // Open terminal (Ctrl+` on all platforms, including Mac)
-    await this.browser.keys(['Control', '`']);
+    // Use the command palette to avoid keyboard-layout-specific issues for Ctrl+`.
+    await executeCommand(this.browser, 'terminal:new:active:workspace');
 
     // Wait for terminal widget to appear
     const terminal = await this.browser.$('.xterm');

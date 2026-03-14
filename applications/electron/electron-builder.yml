@@ -27,14 +27,16 @@ extraResources:
   - from: ../../plugins
     to: app/plugins
 
+publish:
+  provider: github
+  owner: edigonzales
+  repo: interlis-ide
+  releaseType: release
+
 win:
   icon: resources/icons/WindowsLauncherIcons/TheiaIDE.ico
   target:
     - nsis
-  publish:
-    provider: generic
-    url: "https://download.eclipse.org/theia/ide/${version}/windows"
-    useMultipleRangeRequest: false
 mac:
   icon: resources/icons/MacLauncherIcons/icon.icns
   category: public.app-category.developer-tools
@@ -46,9 +48,6 @@ mac:
   target:
     - dmg
     - zip
-  publish:
-    provider: generic
-    url: "https://download.eclipse.org/theia/ide/latest/macos"
 linux:
   icon: resources/icons/LinuxLauncherIcons
   category: Development
@@ -58,9 +57,6 @@ linux:
   target:
     - deb
     - AppImage
-  publish:
-    provider: generic
-    url: "https://download.eclipse.org/theia/ide/latest/linux"
 
 nsis:
   menuCategory: true

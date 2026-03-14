@@ -3,16 +3,16 @@
   "name": "theia-ide-browser-app",
   "description": "Eclipse Theia IDE browser product",
   "productName": "Theia IDE",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "license": "MIT",
   "author": "Eclipse Theia <theia-dev@eclipse.org>",
-  "homepage": "https://github.com/eclipse-theia/theia-ide#readme",
+  "homepage": "https://interlis-ide.ch",
   "bugs": {
-    "url": "https://github.com/eclipse-theia/theia/issues"
+    "url": "https://github.com/edigonzales/interlis-lsp/issues/new?assignees=&labels=&template="
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/eclipse-theia/theia-ide.git"
+    "url": "git+https://github.com/edigonzales/interlis-ide.git"
   },
   "engines": {
     "yarn": ">=1.7.0 <2",
@@ -122,8 +122,8 @@
     "@theia/vsx-registry": "1.69.0",
     "@theia/workspace": "1.69.0",
     "fs-extra": "^9.0.1",
-    "theia-ide-product-ext": "0.0.7",
-    "theia-ide-webview-drag-guard-ext": "0.0.7"
+    "theia-ide-product-ext": "0.0.8",
+    "theia-ide-webview-drag-guard-ext": "0.0.8"
   },
   "devDependencies": {
     "@theia/cli": "1.69.0",

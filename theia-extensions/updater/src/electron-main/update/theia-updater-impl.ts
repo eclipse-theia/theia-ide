@@ -7,29 +7,14 @@
  * SPDX-License-Identifier: MIT
  ********************************************************************************/
 
-import * as fs from 'fs-extra';
-import * as http from 'http';
-import * as os from 'os';
-import * as path from 'path';
 import { ElectronMainApplication, ElectronMainApplicationContribution } from '@theia/core/lib/electron-main/electron-main-application';
 import { TheiaUpdater, TheiaUpdaterClient, UpdaterSettings } from '../../common/updater/theia-updater';
 import { injectable } from '@theia/core/shared/inversify';
-import { isOSX, isWindows } from '@theia/core';
-import { CancellationToken } from 'builder-util-runtime';
+import { CancellationToken, GithubOptions } from 'builder-util-runtime';
 
-const STABLE_CHANNEL_WINDOWS = 'https://download.eclipse.org/theia/ide/version/windows';
-const STABLE_CHANNEL_MACOS = 'https://download.eclipse.org/theia/ide/latest/macos';
-const STABLE_CHANNEL_MACOS_ARM = 'https://download.eclipse.org/theia/ide/latest/macos-arm';
-const STABLE_CHANNEL_LINUX = 'https://download.eclipse.org/theia/ide/latest/linux';
-
-const PREVIEW_CHANNEL_WINDOWS = 'https://download.eclipse.org/theia/ide-preview/version/windows';
-const PREVIEW_CHANNEL_MACOS = 'https://download.eclipse.org/theia/ide-preview/latest/macos';
-const PREVIEW_CHANNEL_MACOS_ARM = 'https://download.eclipse.org/theia/ide-preview/latest/macos-arm';
-const PREVIEW_CHANNEL_LINUX = 'https://download.eclipse.org/theia/ide-preview/latest/linux';
-
-// Next updates are currently only available for Linux.
-// The feed is served from GitHub Release assets (rolling "next" tag).
-const NEXT_CHANNEL_LINUX = 'https://github.com/eclipse-theia/theia-ide/releases/download/next';
+const INTERLIS_IDE_RELEASES_OWNER = 'edigonzales';
+const INTERLIS_IDE_RELEASES_REPO = 'interlis-ide';
+const STABLE_CHANNEL = 'stable';
 
 const { autoUpdater } = require('electron-updater');
 
@@ -85,8 +70,7 @@ export class TheiaUpdaterImpl implements TheiaUpdater, ElectronMainApplicationCo
     }
 
     checkForUpdates(): void {
-        const feedURL = this.getFeedURL(this.settings.channel);
-        autoUpdater.setFeedURL(feedURL);
+        autoUpdater.setFeedURL(this.getFeedOptions(this.settings.channel));
         autoUpdater.checkForUpdates();
     }
 
@@ -114,18 +98,6 @@ export class TheiaUpdaterImpl implements TheiaUpdater, ElectronMainApplicationCo
         autoUpdater.logger.info('Downloading update');
         this.cancellationToken = new CancellationToken();
         autoUpdater.downloadUpdate(this.cancellationToken);
-
-        // record download stat, ignore errors
-        fs.mkdtemp(path.join(os.tmpdir(), 'updater-'))
-            .then(tmpDir => {
-                const file = fs.createWriteStream(path.join(tmpDir, 'update'));
-                http.get('https://www.eclipse.org/downloads/download.php?file=/theia/update&r=1', response => {
-                    response.pipe(file);
-                    file.on('finish', () => {
-                        file.close();
-                    });
-                });
-            });
     }
 
     onStart(application: ElectronMainApplication): void {
@@ -170,24 +142,17 @@ export class TheiaUpdaterImpl implements TheiaUpdater, ElectronMainApplicationCo
         }
     }
 
-    protected getFeedURL(channel: string): string {
-        if (isWindows) {
-            const curVersion = autoUpdater.currentVersion.toString();
-            // Next not yet available on Windows, fall back to stable
-            return (channel === 'preview') ? PREVIEW_CHANNEL_WINDOWS.replace('version', curVersion) : STABLE_CHANNEL_WINDOWS.replace('version', curVersion);
-        } else if (isOSX) {
-            // Next not yet available on macOS, fall back to stable
-            if (process.arch === 'arm64') {
-                return (channel === 'preview') ? PREVIEW_CHANNEL_MACOS_ARM : STABLE_CHANNEL_MACOS_ARM;
-            } else {
-                return (channel === 'preview') ? PREVIEW_CHANNEL_MACOS : STABLE_CHANNEL_MACOS;
-            }
-        } else {
-            if (channel === 'next') {
-                return NEXT_CHANNEL_LINUX;
-            }
-            return (channel === 'preview') ? PREVIEW_CHANNEL_LINUX : STABLE_CHANNEL_LINUX;
+    protected getFeedOptions(channel: string): GithubOptions {
+        if (channel !== STABLE_CHANNEL) {
+            autoUpdater.logger.info(`Update channel "${channel}" is not published for INTERLIS IDE. Falling back to "${STABLE_CHANNEL}".`);
         }
+        return {
+            provider: 'github',
+            owner: INTERLIS_IDE_RELEASES_OWNER,
+            repo: INTERLIS_IDE_RELEASES_REPO,
+            releaseType: 'release',
+            vPrefixedTagName: true
+        };
     }
 
     disconnectClient(client: TheiaUpdaterClient): void {

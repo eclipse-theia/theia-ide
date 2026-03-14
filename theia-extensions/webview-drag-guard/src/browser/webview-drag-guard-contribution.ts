@@ -138,7 +138,7 @@ body.${cls} .preview-content iframe {
         if (event.button !== 0 && event.pointerType !== 'touch' && event.pointerType !== 'pen') {
             return;
         }
-        const target = event.target instanceof Element ? event.target : null;
+        const target = event.target instanceof Element ? event.target : undefined;
         if (!this.isSplitHandle(target)) {
             return;
         }
@@ -181,8 +181,8 @@ body.${cls} .preview-content iframe {
         this.activePointerId = undefined;
     }
 
-    protected isSplitHandle(target: Element | null): boolean {
-        let element: Element | null = target;
+    protected isSplitHandle(target: Element | undefined): boolean {
+        let element: Element | undefined = target;
         while (element) {
             if (element.matches && element.matches(WebviewDragGuardContribution.HANDLE_SELECTORS)) {
                 return true;
@@ -190,7 +190,7 @@ body.${cls} .preview-content iframe {
             if (this.hasSplitDataAttribute(element)) {
                 return true;
             }
-            element = element.parentElement;
+            element = element.parentElement ?? undefined;
         }
         element = target;
         for (let depth = 0; element && depth < WebviewDragGuardContribution.CURSOR_CHECK_DEPTH; depth++) {
@@ -198,7 +198,7 @@ body.${cls} .preview-content iframe {
             if (cursor && WebviewDragGuardContribution.RESIZE_CURSORS.has(cursor)) {
                 return true;
             }
-            element = element.parentElement;
+            element = element.parentElement ?? undefined;
         }
         return false;
     }

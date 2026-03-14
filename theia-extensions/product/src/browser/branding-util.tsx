@@ -9,11 +9,18 @@
 
 import { WindowService } from '@theia/core/lib/browser/window/window-service';
 import * as React from 'react';
+import { getBrandingVariant } from './theia-ide-config';
 
 export interface ExternalBrowserLinkProps {
     text: string;
     url: string;
-    windowService: WindowService;
+    windowService?: WindowService;
+}
+
+export function renderProductName(): React.ReactNode {
+    const variant = getBrandingVariant();
+    const suffix = variant !== 'stable' ? ` ${variant.charAt(0).toUpperCase() + variant.slice(1)}` : '';
+    return <h1>INTERLIS <span className="gs-blue-header">IDE</span>{suffix}</h1>;
 }
 
 function BrowserLink(props: ExternalBrowserLinkProps): JSX.Element {
@@ -33,7 +40,8 @@ export function renderWhatIs(windowService: WindowService): React.ReactNode {
             What is this?
         </h3>
         <div>
-            The INTERLIS IDE streamlines schema modeling, validation, and documentation tasks across desktop platforms. The Java-based language server powers smart authoring tools while the IDE keeps teams productive with familiar editor ergonomics.
+            The INTERLIS IDE streamlines schema modeling, validation, and documentation tasks across desktop platforms.
+            The Java-based language server powers smart authoring tools while the IDE keeps teams productive with familiar editor ergonomics.
 
             The INTERLIS IDE is based on the <BrowserLink text="Theia platform"
             url="https://theia-ide.org" windowService={windowService} ></BrowserLink>.
@@ -84,17 +92,15 @@ export function renderTickets(windowService: WindowService): React.ReactNode {
             Reporting feature requests and bugs
         </h3>
         <div >
-            The features in the Eclipse Theia IDE are based on Theia and the included
-            extensions/plugins. For bugs in Theia please consider opening an issue in
-            the <BrowserLink text="Theia project on Github" url="https://github.com/eclipse-theia/theia/issues/new/choose"
+            The INTERLIS IDE combines the Theia platform with INTERLIS-specific tooling and packaging.
+            Please start by reporting IDE, installer, and editor issues in the
+            <BrowserLink text=" INTERLIS Editor issue tracker" url="https://github.com/edigonzales/interlis-lsp/issues/new?assignees=&labels=&template="
                 windowService={windowService} ></BrowserLink>.
         </div>
         <div>
-            Eclipse Theia IDE only packages existing functionality into a product and installers
-            for the product. If you believe there is a mistake in packaging, something needs to be added to the
-            packaging or the installers do not work properly,
-            please <BrowserLink text="open an issue on Github" url="https://github.com/eclipse-theia/theia-ide/issues/new/choose"
-                windowService={windowService} ></BrowserLink> to let us know.
+            For usage questions and known workflows, the
+            <BrowserLink text=" INTERLIS IDE documentation" url="https://interlis-ide.ch/docs/intro"
+                windowService={windowService} ></BrowserLink> is the primary reference.
         </div>
     </div>;
 }
@@ -106,7 +112,7 @@ export function renderSourceCode(windowService: WindowService): React.ReactNode 
         </h3>
         <div >
             The source code of INTERLIS IDE is available
-            on <BrowserLink text="Github" url="https://github.com/edigonzales/theia-ide"
+            on <BrowserLink text="Github" url="https://github.com/edigonzales/interlis-ide"
                 windowService={windowService} ></BrowserLink>.
         </div>
     </div>;
@@ -145,12 +151,12 @@ export function renderDownloads(): React.ReactNode {
             Updates and Downloads
         </h3>
         <div className='gs-action-container'>
-            You can update Eclipse Theia IDE directly in this application by navigating to
-            File {'>'} Preferences {'>'} Check for Updates… Moreover the application will check for updates
-            after each launch automatically.
+            You can update INTERLIS IDE directly in this application by navigating to
+            File {'>'} Preferences {'>'} Check for Updates… The application checks the stable release channel automatically after launch.
         </div>
         <div className='gs-action-container'>
-            Alternatively you can download the most recent version from the download page.
+            Alternatively you can download the most recent version from
+            <BrowserLink text=" GitHub Releases" url="https://github.com/edigonzales/interlis-ide/releases/latest" />.
         </div>
     </div>;
 }

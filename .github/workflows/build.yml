@@ -67,11 +67,6 @@ jobs:
         shell: bash
         run: yarn lint
 
-      - name: Update electron-builder.yml for macos-15
-        if: matrix.os == 'macos-15'
-        run: |
-          sed -i '' 's|https://download.eclipse.org/theia/ide/latest/macos|https://download.eclipse.org/theia/ide/latest/macos-arm|g' applications/electron/electron-builder.yml
-  
       - name: Build prod package
         if: runner.os != 'Linux' || runner.arch != 'ARM64'
         shell: bash
@@ -201,7 +196,7 @@ jobs:
     name: Create GitHub Release
     needs: build
     runs-on: ubuntu-latest
-    #if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v')
     
     steps:
 
@@ -360,6 +355,6 @@ jobs:
           generate_release_notes: true
           draft: false
           prerelease: false
-          make_latest: false
+          make_latest: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
