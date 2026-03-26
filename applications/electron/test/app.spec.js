@@ -12,6 +12,22 @@ process.env.THEIA_NO_SPLASH = '1';
 
 // Resolve the application directory from cwd so this spec can be shared across products
 const appDir = process.cwd();
+
+// Directory for saving screenshots on failure or for debugging
+const screenshotDir = path.join(appDir, 'test-screenshots');
+if (!fs.existsSync(screenshotDir)) {
+  fs.mkdirSync(screenshotDir, { recursive: true });
+}
+
+async function saveScreenshot(browser, name) {
+  try {
+    const filePath = path.join(screenshotDir, `${name}.png`);
+    await browser.saveScreenshot(filePath);
+    console.log(`Screenshot saved: ${filePath}`);
+  } catch (err) {
+    console.error(`Failed to save screenshot "${name}":`, err.message);
+  }
+}
 const builderConfig = fs.readFileSync(path.join(appDir, 'electron-builder.yml'), 'utf8');
 const productName = builderConfig.match(/^productName:\s*(.+)$/m)[1].trim();
 const packageName = require(path.join(appDir, 'package.json')).name;
@@ -112,6 +128,12 @@ describe('Theia App', function () {
   });
 
   afterEach(async function () {
+    // Save screenshot on test failure for debugging CI issues
+    if (this.currentTest.state === 'failed') {
+      const testName = this.currentTest.title.replace(/\s+/g, '-').toLowerCase();
+      await saveScreenshot(this.browser, `FAILED-${testName}`);
+    }
+
     const CLOSE_TIMEOUT = 10000; // 10 seconds
     try {
       await Promise.race([
@@ -225,8 +247,9 @@ describe('Theia App', function () {
     // Wait a bit to make sure key handlers are registered
     await new Promise(r => setTimeout(r, 5000));
 
-    // Open terminal (Ctrl+` on all platforms, including Mac)
-    await this.browser.keys(['Control', '`']);
+    // Create a new terminal (Ctrl+Shift+`) to ensure it is focused and visible,
+    // even when the terminal manager uses tabbed layout in the bottom panel.
+    await this.browser.keys(['Control', 'Shift', '`']);
 
     // Wait for terminal widget to appear
     const terminal = await this.browser.$('.xterm');

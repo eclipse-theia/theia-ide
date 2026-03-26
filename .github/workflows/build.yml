@@ -140,3 +140,12 @@ jobs:
         shell: bash
         run: |
           yarn electron test
+
+      - name: Upload test screenshots
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: test-screenshots-${{ matrix.os }}
+          path: applications/electron/test-screenshots/
+          if-no-files-found: ignore
+          retention-days: 5
