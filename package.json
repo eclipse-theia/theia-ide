@@ -60,7 +60,7 @@
     "lint:fix": "eslint --ext js,jsx,ts,tsx scripts --fix && lerna run lint:fix",
     "license:check": "npx dash-licenses-wrapper  --configFile=./configs/license-check-config.json",
     "license:check:review": "npx dash-licenses-wrapper  --configFile=./configs/license-check-config.json --review",
-    "postinstall": "theia-patch"
+    "postinstall": "theia-patch && npx patch-package --patch-dir patches"
   },
   "theiaPluginsDir": "plugins",
   "theiaPlugins": {

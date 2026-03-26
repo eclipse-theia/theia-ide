@@ -6,6 +6,7 @@ electronVersion: 39.7.0
 asar: true
 asarUnpack:
   - "**/lib/backend/native/**"
+  - "**/lib/backend/shell-integrations/**"
   - "**/lib/build/Release/**"
   - "**/lib/prebuilds/**"
 nodeGypRebuild: false

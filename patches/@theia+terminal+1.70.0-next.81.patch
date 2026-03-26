@@ -1,0 +1,13 @@
+diff --git a/node_modules/@theia/terminal/lib/node/shell-integration-injector.js b/node_modules/@theia/terminal/lib/node/shell-integration-injector.js
+index 1234567..abcdefg 100644
+--- a/node_modules/@theia/terminal/lib/node/shell-integration-injector.js
++++ b/node_modules/@theia/terminal/lib/node/shell-integration-injector.js
+@@ -77,7 +77,7 @@ let ShellIntegrationInjector = class ShellIntegrationInjector {
+             console.warn(`Shell integration file not found (application may not be bundled correctly): ${fullPath}`);
+             return undefined;
+         }
+-        return fullPath;
++        return fullPath.replace('.asar' + path.sep, '.asar.unpacked' + path.sep);
+     }
+     stripLoginFlag(args) {
+         if (args === undefined) {
