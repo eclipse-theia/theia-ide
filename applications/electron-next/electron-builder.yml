@@ -7,6 +7,7 @@ asar: true
 asarUnpack:
   - "**/lib/backend/native/**"
   - "**/lib/build/Release/**"
+  - "**/lib/prebuilds/**"
 nodeGypRebuild: false
 npmRebuild: false
 
