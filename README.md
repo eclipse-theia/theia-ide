@@ -51,6 +51,8 @@ Please check Theia's [prerequisites](https://github.com/eclipse-theia/theia/blob
 
 Documentation on how to package Theia as a Desktop Product may be found [here](https://theia-ide.org/docs/blueprint_documentation/)
 
+For adopters building their own products based on this template, see the [Adopter Guide](ADOPTER.md) for additional considerations.
+
 ### Repository Structure
 
 - Root level configures mono-repo build with lerna
@@ -61,6 +63,7 @@ Documentation on how to package Theia as a Desktop Product may be found [here](h
   - `product` contains a Theia extension contributing the product branding (about dialogue and welcome page).
   - `updater` contains a Theia extension contributing the update mechanism and corresponding UI elements (based on the electron updater).
   - `launcher` contains a Theia extension contributing, for AppImage applications, the option to create a script that allows to start the Eclipse Theia IDE from the command line by calling the 'theia' command.
+- `patches` contains patches applied to upstream packages
 
 ### Build
 
