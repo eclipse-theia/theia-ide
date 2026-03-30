@@ -88,6 +88,8 @@ yarn && yarn build && yarn download:plugins
 
 ATM we only produce packages for the Electron application.
 
+_If you are trying to compile for arm on an arm machine, you may want to follow [these steps](https://github.com/eclipse-theia/theia-ide/issues/690#issuecomment-4157768849) before_
+
 ```sh
 yarn package:applications
 # or
