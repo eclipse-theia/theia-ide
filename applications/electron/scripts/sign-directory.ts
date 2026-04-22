@@ -12,6 +12,7 @@ import yargs from 'yargs/yargs';
 import path from 'path';
 import fs from 'fs';
 import child_process from 'child_process';
+import { walkFiles } from './sign-utils';
 
 const signCommand = path.join(__dirname, 'sign.sh');
 const notarizeCommand = path.join(__dirname, 'notarize.sh');
@@ -75,26 +76,7 @@ function isBinaryFile(filePath: string): boolean {
 
 // Function to recursively find binaries in a directory
 function findBinariesToSign(dirPath: string): string[] {
-    const result: string[] = [];
-
-    function scanDirectory(currentPath: string): void {
-        const entries = fs.readdirSync(currentPath, { withFileTypes: true });
-
-        for (const entry of entries) {
-            const fullPath = path.join(currentPath, entry.name);
-
-            // Skip node_modules and .git directories
-            if (entry.isDirectory() &&
-                entry.name !== 'node_modules' &&
-                entry.name !== '.git') {
-                scanDirectory(fullPath);
-            } else if (entry.isFile() && isBinaryFile(fullPath)) {
-                result.push(fullPath);
-            }
-        }
-    }
-
-    scanDirectory(dirPath);
+    const result = walkFiles(dirPath, isBinaryFile, { skipDirs: ['node_modules', '.git'] });
 
     // Sort by path depth (deepest first) to ensure nested binaries are signed first
     return result.sort((a, b) => {

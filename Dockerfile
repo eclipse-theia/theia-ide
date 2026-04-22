@@ -6,4 +6,14 @@
 # We want to support as many Debian versions as possible.
 # Therefore, use the oldest Debian release that still provides the desired Node.js version.
 FROM node:24-bookworm
-RUN apt-get update && apt-get install -y libxkbfile-dev libsecret-1-dev python3
+RUN dpkg --add-architecture i386 \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends \
+      libxkbfile-dev libsecret-1-dev python3 \
+      wine wine32 wine64 \
+ && rm -rf /var/lib/apt/lists/*
+
+# UID-agnostic wine tuning. WINEPREFIX is intentionally NOT set here; callers
+# must provide a writable path owned by the runtime user.
+ENV WINEDLLOVERRIDES="mscoree=;mshtml=" \
+    WINEDEBUG=-all

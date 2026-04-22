@@ -120,26 +120,108 @@ spec:
                     }
                 }
                 stage('Windows: Create Installer') {
-                    agent {
-                        label 'windows'
-                    }
-                    steps {
-                        nodejs(nodeJSInstallationName: 'node_24.x') {
-                            // analyze memory usage
-                            bat "wmic ComputerSystem get TotalPhysicalMemory"
-                            bat "wmic OS get FreePhysicalMemory"
-                            bat "tasklist"
+                    // Windows installer creation is split into two sub-stages running on
+                    // different agents:
+                    //   1. Build the unpacked electron app on a real Windows agent.
+                    //   2. Sign each internal `.exe` via the Eclipse Authenticode service and
+                    //      package the NSIS installer from the already-signed directory on a
+                    //      Linux k8s pod
+                    stages {
+                        stage('Windows: Build unpacked') {
+                            agent {
+                                label 'windows'
+                            }
+                            steps {
+                                nodejs(nodeJSInstallationName: 'node_24.x') {
+                                    // analyze memory usage
+                                    bat "wmic ComputerSystem get TotalPhysicalMemory"
+                                    bat "wmic OS get FreePhysicalMemory"
+                                    bat "tasklist"
 
-                            buildInstaller(60)
+                                    buildUnpackedWindows()
+                                }
+                                retry(3) {
+                                    timeout(time: 30, unit: 'MINUTES') {
+                                        stash includes: 'applications/electron/dist/win-unpacked/**',
+                                              name: 'windows-unpacked'
+                                    }
+                                }
+                            }
                         }
-                        // Move Windows artifacts to windows folder for archiving
-                        sh "mkdir -p applications/electron/dist/windows"
-                        sh "find applications/electron/dist -maxdepth 1 -type f -not -path '*/\\.*' -exec mv {} applications/electron/dist/windows/ \\;"
-                        archiveArtifacts artifacts: "applications/electron/dist/windows/*", fingerprint: true
+                        stage('Windows: Sign & Package') {
+                            agent {
+                                kubernetes {
+                                    yaml """
+apiVersion: v1
+kind: Pod
+spec:
+  podRetention: never()
+  containers:
+  - name: theia-dev
+    image: eclipsetheia/theia-blueprint:builder
+    imagePullPolicy: Always
+    command:
+    - cat
+    tty: true
+    resources:
+      limits:
+        memory: "4000Mi"
+        cpu: "1000m"
+      requests:
+        memory: "512Mi"
+        cpu: "200m"
+    volumeMounts:
+    - name: global-cache
+      mountPath: /.cache
+    - name: global-yarn
+      mountPath: /.yarn
+    - name: global-npm
+      mountPath: /.npm
+    - name: electron-cache
+      mountPath: /.electron-gyp
+  volumes:
+  - name: global-cache
+    emptyDir: {}
+  - name: global-yarn
+    emptyDir: {}
+  - name: global-npm
+    emptyDir: {}
+  - name: electron-cache
+    emptyDir: {}
+"""
+                                }
+                            }
+                            environment {
+                                WINEPREFIX = "${env.WORKSPACE}/.wine-prefix"
+                            }
+                            steps {
+                                checkout scm
+                                retry(3) {
+                                    timeout(time: 30, unit: 'MINUTES') {
+                                        unstash 'windows-unpacked'
+                                    }
+                                }
+                                container('theia-dev') {
+                                    sh '''
+                                        wine --version
+                                        wine cmd /c echo wine-prefix-ok
+                                    '''
+                                    withCredentials([string(credentialsId: "github-bot-token", variable: 'GITHUB_TOKEN')]) {
+                                        sh 'yarn --network-timeout 100000 --frozen-lockfile --force'
+                                        sh 'yarn --cwd applications/electron sign:directory:windows -d dist/win-unpacked'
+                                        sh 'cd applications/electron && npx electron-builder --prepackaged dist/win-unpacked --win nsis -c.win.signAndEditExecutable=false --publish always'
+                                    }
+                                }
+                                // Move Windows artifacts to windows folder for archiving
+                                sh "mkdir -p applications/electron/dist/windows"
+                                sh "find applications/electron/dist -maxdepth 1 -type f -not -path '*/\\.*' -exec mv {} applications/electron/dist/windows/ \\;"
+                                archiveArtifacts artifacts: "applications/electron/dist/windows/*", fingerprint: true
+                            }
+                        }
                     }
                     post {
                         failure {
-                        error("Windows installer creation failed, aborting...")
+                            error("Windows installer creation failed, aborting...")
                         }
                     }
                 }
@@ -245,6 +327,22 @@ def createMacInstaller() {
     }
     
     sh "ls -al applications/electron/dist/mac-arm64 applications/electron/dist/mac-x64"
+}
+
+def buildUnpackedWindows() {
+    checkout scm
+
+    sh "git clean -xdf"
+    sh "yarn cache clean"
+
+    sh 'node --version'
+    sh 'printenv && yarn cache dir'
+
+    sh 'yarn --network-timeout 100000 --frozen-lockfile --force'
+    sh 'yarn build:extensions'
+    sh 'yarn electron build:prod'
+    sh 'yarn download:plugins'
+    sh 'cd applications/electron && npx electron-builder --dir --win -c.mac.identity=null --publish never'
 }
 
 def buildInstaller(int sleepBetweenRetries) {
