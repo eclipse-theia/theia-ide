@@ -23,19 +23,26 @@ class PatchRipgrepPlugin {
             const mainJsPath = path.join(compiler.outputPath, 'main.js');
             if (fs.existsSync(mainJsPath)) {
                 let content = fs.readFileSync(mainJsPath, 'utf8');
-                const isProduction = compiler.options.mode === 'production';
 
-                // Production (minified): t.rgPath=i.join(__dirname,"./native/rg"+("win32"===process.platform?".exe":""))
-                // Development: exports.rgPath = path.join(__dirname, `./native/rg${process.platform === 'win32' ? '.exe' : ''}`);
-                const pattern = isProduction
-                    ? /(\w+)\.rgPath\s*=\s*(\w+)\.join\(\s*__dirname\s*,\s*["']\.\/native\/rg["']\s*\+\s*\(["']win32["']\s*===\s*process\.platform\s*\?\s*["']\.exe["']\s*:\s*["']["']\s*\)\s*\)/g
-                    : /(\w+)\.rgPath\s*=\s*(\w+)\.join\(\s*__dirname\s*,\s*`\.\/native\/rg\$\{process\.platform\s*===\s*['"]win32['"]\s*\?\s*['"]\.exe['"]\s*:\s*['"]['"]}\s*`\s*\)/g;
+                // Match the ripgrep path construction regardless of export style.
+                // Handles CommonJS (exports.rgPath = path.join(...)) and
+                // harmony modules (const x = require('path').join(...)).
+                // The path module ref can be a variable (e.g. 'i') or require call (e.g. 'r(16928)').
+                // Production: PATHREF.join(__dirname,"./native/rg"+("win32"===process.platform?".exe":""))
+                // Development: PATHREF.join(__dirname, `./native/rg${process.platform === 'win32' ? '.exe' : ''}`)
+                const prodPattern = /((?:\w+\(\d+\))|\w+)\.join\(\s*__dirname\s*,\s*["']\.\/native\/rg["']\s*\+\s*\(["']win32["']\s*===\s*process\.platform\s*\?\s*["']\.exe["']\s*:\s*["']["']\s*\)\s*\)/g;
+                const devPattern = /((?:\w+\(\d+\))|\w+)\.join\(\s*__dirname\s*,\s*`\.\/native\/rg\$\{process\.platform\s*===\s*['"]win32['"]\s*\?\s*['"]\.exe['"]\s*:\s*['"]['"]}\s*`\s*\)/g;
 
                 let patched = false;
-                const newContent = content.replace(pattern, (match, exportsVar, pathVar) => {
+                const patchFn = (match, pathRef) => {
                     patched = true;
-                    return `(()=>{const p=${pathVar}.join(__dirname,"./native/rg"+("win32"===process.platform?".exe":""));return ${exportsVar}.rgPath=p.includes(".asar"+${pathVar}.sep)?p.replace(".asar"+${pathVar}.sep,".asar.unpacked"+${pathVar}.sep):p})()`;
-                });
+                    return `(()=>{const p=${pathRef}.join(__dirname,"./native/rg"+("win32"===process.platform?".exe":""));return p.includes(".asar"+${pathRef}.sep)?p.replace(".asar"+${pathRef}.sep,".asar.unpacked"+${pathRef}.sep):p})()`;
+                };
+
+                let newContent = content.replace(prodPattern, patchFn);
+                if (!patched) {
+                    newContent = content.replace(devPattern, patchFn);
+                }
 
                 if (patched) {
                     fs.writeFileSync(mainJsPath, newContent);
