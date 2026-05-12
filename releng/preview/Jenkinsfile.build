@@ -209,6 +209,11 @@ spec:
                                     withCredentials([string(credentialsId: "github-bot-token", variable: 'GITHUB_TOKEN')]) {
                                         sh 'yarn --network-timeout 100000 --frozen-lockfile --force'
                                         sh 'yarn --cwd applications/electron sign:directory:windows -d dist/win-unpacked'
+                                        // Generate app-update.yml for the Windows auto-updater.
+                                        // electron-builder skips this when using --dir (step 1) because the
+                                        // target is "dir", not "nsis", and --prepackaged (step 2) does not
+                                        // re-run the afterPack lifecycle.
+                                        sh 'node applications/electron/scripts/generate-app-update-yml.js'
                                         sh 'cd applications/electron && npx electron-builder --prepackaged dist/win-unpacked --win nsis -c.win.signAndEditExecutable=false --publish always'
                                     }
                                 }
