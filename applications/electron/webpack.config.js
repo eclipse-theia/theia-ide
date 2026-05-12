@@ -24,19 +24,27 @@ class PatchRipgrepPlugin {
             if (fs.existsSync(mainJsPath)) {
                 let content = fs.readFileSync(mainJsPath, 'utf8');
 
-                // Match the ripgrep path construction regardless of export style.
-                // Handles CommonJS (exports.rgPath = path.join(...)) and
-                // harmony modules (const x = require('path').join(...)).
-                // The path module ref can be a variable (e.g. 'i') or require call (e.g. 'r(16928)').
-                // Production: PATHREF.join(__dirname,"./native/rg"+("win32"===process.platform?".exe":""))
-                // Development: PATHREF.join(__dirname, `./native/rg${process.platform === 'win32' ? '.exe' : ''}`)
-                const prodPattern = /((?:\w+\(\d+\))|\w+)\.join\(\s*__dirname\s*,\s*["']\.\/native\/rg["']\s*\+\s*\(["']win32["']\s*===\s*process\.platform\s*\?\s*["']\.exe["']\s*:\s*["']["']\s*\)\s*\)/g;
-                const devPattern = /((?:\w+\(\d+\))|\w+)\.join\(\s*__dirname\s*,\s*`\.\/native\/rg\$\{process\.platform\s*===\s*['"]win32['"]\s*\?\s*['"]\.exe['"]\s*:\s*['"]['"]}\s*`\s*\)/g;
+                // Match the ripgrep path.join(__dirname, ...) call regardless of how
+                // the path module is referenced or how the result is exported.
+                // Webpack output varies across modes:
+                //   Production (minified):  i.join(__dirname,"./native/rg"+("win32"===...))
+                //   Dev (harmony):          (__webpack_require__(/*! path */ "path").join)(__dirname, `./native/rg${...}`)
+                //   Dev (CommonJS):         path.join(__dirname, `./native/rg${...}`)
+                // The .join call may be direct (EXPR.join(...)) or parenthesized ((EXPR.join)(...)).
+                // Both string concat (prod) and template literal (dev) arg forms are matched.
+                const rgSuffix = `("win32"===process.platform?".exe":"")`;
+                const prodArgs = /["']\.\/native\/rg["']\s*\+\s*\(["']win32["']\s*===\s*process\.platform\s*\?\s*["']\.exe["']\s*:\s*["']["']\s*\)/;
+                const devArgs = /`\.\/native\/rg\$\{process\.platform\s*===\s*['"]win32['"]\s*\?\s*['"]\.exe['"]\s*:\s*['"]['"]}\s*`/;
+                // Match both EXPR.join(__dirname, ARGS) and (EXPR.join)(__dirname, ARGS)
+                // Use [^=,;\n] (not \s) to allow spaces in webpack comments like /*! path */
+                const joinCall = (argsPattern) => new RegExp(`\\(?[^=,;\\n]+?\\.join\\)?\\(\\s*__dirname\\s*,\\s*${argsPattern.source}\\s*\\)`, 'g');
+                const prodPattern = joinCall(prodArgs);
+                const devPattern = joinCall(devArgs);
 
                 let patched = false;
-                const patchFn = (match, pathRef) => {
+                const patchFn = (match) => {
                     patched = true;
-                    return `(()=>{const p=${pathRef}.join(__dirname,"./native/rg"+("win32"===process.platform?".exe":""));return p.includes(".asar"+${pathRef}.sep)?p.replace(".asar"+${pathRef}.sep,".asar.unpacked"+${pathRef}.sep):p})()`;
+                    return `(()=>{const _p=require("path"),_r=_p.join(__dirname,"./native/rg"+${rgSuffix});return _r.includes(".asar"+_p.sep)?_r.replace(".asar"+_p.sep,".asar.unpacked"+_p.sep):_r})()`;
                 };
 
                 let newContent = content.replace(prodPattern, patchFn);
@@ -48,6 +56,11 @@ class PatchRipgrepPlugin {
                     fs.writeFileSync(mainJsPath, newContent);
                     console.log('Patched main.js ripgrep path for asar compatibility');
                 } else {
+                    const idx = content.indexOf('rgPath');
+                    if (idx !== -1) {
+                        console.error('Could not patch ripgrep path. Context around rgPath:');
+                        console.error(content.substring(Math.max(0, idx - 200), idx + 300));
+                    }
                     throw new Error('Could not find ripgrep pattern to patch in main.js. The pattern may have changed in @theia/native-webpack-plugin.');
                 }
             }
