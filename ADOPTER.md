@@ -40,20 +40,27 @@ When upstream code in `node_modules` needs modification, for example to adjust p
 * Patches live in the `patches` directory at the repository root
 * Patches are applied automatically via the `postinstall` script in `package.json`
 
-#### 3. Webpack Post Processing
+#### 3. Bundler Post Processing
 
-Another option is to adjust the bundled code in Webpack.
+Another option is to adjust the bundled code in the bundler.
 
-As an example, the `PatchRipgrepPlugin` in `applications/electron/webpack.config.js` patches the bundled `main.js` after webpack emit to rewrite ripgrep's path resolution from `.asar` to `.asar.unpacked`:
+As an example, the `asarRipgrepPlugin` in `applications/electron/esbuild.mjs` overrides the upstream esbuild native plugin's ripgrep replacement to rewrite ripgrep's path resolution from `.asar` to `.asar.unpacked` at bundle time:
 
 ```js
-class PatchRipgrepPlugin {
-    apply(compiler) {
-        compiler.hooks.afterEmit.tapAsync('PatchRipgrepPlugin', (compilation, callback) => {
-            // Reads main.js, finds the ripgrep path assignment, and rewrites
-            // .asar + path.sep → .asar.unpacked + path.sep
-            // ...
-        });
+const asarRipgrepPlugin = {
+    name: 'asar-ripgrep',
+    setup(build) {
+        build.onLoad({ filter: /@vscode[/\\]ripgrep[/\\]lib[/\\]index\.js$/ }, async () => ({
+            contents: `
+                const path = require("path");
+                let rgPath = path.join(__dirname, \`./native/rg\${process.platform === "win32" ? ".exe" : ""}\`);
+                if (rgPath.includes(".asar" + path.sep)) {
+                    rgPath = rgPath.replace(".asar" + path.sep, ".asar.unpacked" + path.sep);
+                }
+                export { rgPath };
+            `,
+            loader: 'js'
+        }));
     }
-}
+};
 ```
