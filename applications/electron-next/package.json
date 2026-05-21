@@ -141,7 +141,7 @@
     "@theia/cli": "1.72.0-next.42",
     "@theia/bundle-plugin": "1.72.0-next.42",
     "@types/js-yaml": "^3.12.10",
-    "@types/yargs": "17.0.7",
+    "@types/yargs": "^17",
     "@wdio/cli": "^6.12.1",
     "@wdio/local-runner": "^6.12.1",
     "@wdio/mocha-framework": "^6.11.0",
@@ -160,7 +160,7 @@
     "ts-node": "^10.9.2",
     "wdio-chromedriver-service": "^6.0.4",
     "webdriverio": "^6.12.1",
-    "yargs": "17.2.1"
+    "yargs": "^17.7.2"
   },
   "scripts": {
     "clean": "theia clean && rimraf node_modules",
