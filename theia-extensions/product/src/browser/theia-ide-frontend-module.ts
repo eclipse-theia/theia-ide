@@ -9,6 +9,7 @@
 
 import '../../src/browser/style/index.css';
 
+import { AIRegistryConfiguration } from '@theia/ai-registry/lib/common/ai-registry-configuration';
 import { WidgetFactory } from '@theia/core/lib/browser';
 import { AboutDialog } from '@theia/core/lib/browser/about-dialog';
 import { applyBranding } from './theia-ide-config';
@@ -17,6 +18,7 @@ import { ContainerModule } from '@theia/core/shared/inversify';
 import { GettingStartedWidget } from '@theia/getting-started/lib/browser/getting-started-widget';
 import { MenuContribution } from '@theia/core/lib/common/menu';
 import { TheiaIDEAboutDialog } from './theia-ide-about-dialog';
+import { TheiaIDEAIRegistryConfiguration } from './theia-ide-ai-registry-configuration';
 import { TheiaIDEContribution } from './theia-ide-contribution';
 import { TheiaIDEGettingStartedWidget } from './theia-ide-getting-started-widget';
 
@@ -38,4 +40,10 @@ export default new ContainerModule((bind, _unbind, isBound, rebind) => {
     [CommandContribution, MenuContribution].forEach(serviceIdentifier =>
         bind(serviceIdentifier).toService(TheiaIDEContribution)
     );
+
+    if (isBound(AIRegistryConfiguration)) {
+        rebind(AIRegistryConfiguration).to(TheiaIDEAIRegistryConfiguration).inSingletonScope();
+    } else {
+        bind(AIRegistryConfiguration).to(TheiaIDEAIRegistryConfiguration).inSingletonScope();
+    }
 });
