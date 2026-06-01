@@ -56,28 +56,37 @@ export class CreateLauncherCommandContribution implements FrontendApplicationCon
             }
         });
 
-        this.desktopFileService.isInitialized().then(async initialized => {
-            if (!initialized) {
-                const messageContainer = document.createElement('div');
-                // eslint-disable-next-line max-len
-                messageContainer.textContent = nls.localizeByDefault(`Would you like to create a .desktop file for ${applicationName}?\nThis will make it easier to open ${applicationName} directly\nfrom your applications menu and enables further features.`);
-                messageContainer.setAttribute('style', 'white-space: pre-line');
-                const dialog = new ConfirmDialog({
-                    title: nls.localizeByDefault('Create .desktop file'),
-                    msg: messageContainer,
-                    ok: Dialog.YES,
-                    cancel: Dialog.NO
-                });
-                const install = await dialog.open();
-                this.desktopFileService.createOrUpdateDesktopfile(!!install, {
+        this.desktopFileService.getState({ applicationName, uriScheme }).then(async state => {
+            if (state === 'up-to-date') {
+                this.logger.info('Desktop file already up to date.');
+                return;
+            }
+            if (state === 'needs-silent-update') {
+                await this.desktopFileService.createOrUpdateDesktopfile(true, {
                     applicationName,
                     createUrlHandler: true,
                     uriScheme
                 });
-                this.logger.info('Created or updated .desktop file.');
-            } else {
-                this.logger.info('Desktop file was not updated or created.');
+                this.logger.info('Desktop file silently updated to match current launcher template.');
+                return;
             }
+            const messageContainer = document.createElement('div');
+            // eslint-disable-next-line max-len
+            messageContainer.textContent = nls.localizeByDefault(`Would you like to create a .desktop file for ${applicationName}?\nThis will make it easier to open ${applicationName} directly\nfrom your applications menu and enables further features.`);
+            messageContainer.setAttribute('style', 'white-space: pre-line');
+            const dialog = new ConfirmDialog({
+                title: nls.localizeByDefault('Create .desktop file'),
+                msg: messageContainer,
+                ok: Dialog.YES,
+                cancel: Dialog.NO
+            });
+            const install = await dialog.open();
+            this.desktopFileService.createOrUpdateDesktopfile(!!install, {
+                applicationName,
+                createUrlHandler: true,
+                uriScheme
+            });
+            this.logger.info('Created or updated .desktop file.');
         });
     }
 }

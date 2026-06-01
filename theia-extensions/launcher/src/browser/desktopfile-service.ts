@@ -10,24 +10,27 @@
 import { Endpoint } from '@theia/core/lib/browser';
 import { injectable } from '@theia/core/shared/inversify';
 
+export type DesktopFileState = 'up-to-date' | 'needs-silent-update' | 'needs-prompt';
+
 export interface DesktopFileOptions {
-    applicationName?: string;
+    applicationName: string;
+    uriScheme: string;
     createUrlHandler?: boolean;
-    uriScheme?: string;
 }
 
 @injectable()
 export class DesktopFileService {
 
-    async isInitialized(): Promise<boolean> {
-        const response = await fetch(new Request(`${this.endpoint()}/initialized`), {
-            body: undefined,
-            method: 'GET'
-        }).then(r => r.json());
-        return !!response?.initialized;
+    async getState(options: DesktopFileOptions): Promise<DesktopFileState> {
+        const params = new URLSearchParams({
+            applicationName: options.applicationName,
+            uriScheme: options.uriScheme
+        });
+        const response = await fetch(new Request(`${this.endpoint()}/state?${params}`), { method: 'GET' }).then(r => r.json());
+        return response?.state ?? 'needs-prompt';
     }
 
-    async createOrUpdateDesktopfile(create: boolean, options?: DesktopFileOptions): Promise<void> {
+    async createOrUpdateDesktopfile(create: boolean, options: DesktopFileOptions): Promise<void> {
         fetch(new Request(`${this.endpoint()}`), {
             body: JSON.stringify({ create, ...options }),
             method: 'PUT',

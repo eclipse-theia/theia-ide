@@ -16,6 +16,9 @@ import { EnvVariablesServer } from '@theia/core/lib/common/env-variables';
 import { getStorageFilePath } from './launcher-util';
 import * as fs from 'fs-extra';
 import * as path from 'path';
+import { execFile } from 'child_process';
+
+export type DesktopFileState = 'up-to-date' | 'needs-silent-update' | 'needs-prompt';
 
 interface DesktopFileInformation {
     appImage: string;
@@ -34,41 +37,40 @@ export class TheiaDesktopFileServiceEndpoint implements BackendApplicationContri
     configure(app: Application): void {
         const router = Router();
         router.put('/', (request, response) => this.createOrUpdateDesktopfile(request, response));
-        router.get('/initialized', (request, response) => this.isInitialized(request, response));
+        router.get('/state', (request, response) => this.getState(request, response));
         app.use(json());
         app.use(TheiaDesktopFileServiceEndpoint.PATH, router);
     }
 
-    protected async isInitialized(_request: Request, response: Response): Promise<void> {
+    protected async getState(request: Request, response: Response): Promise<void> {
+        const applicationName = request.query.applicationName;
+        const uriScheme = request.query.uriScheme;
+        if (typeof applicationName !== 'string' || typeof uriScheme !== 'string') {
+            response.status(400).json({ error: 'applicationName and uriScheme query parameters are required' });
+            return;
+        }
+        response.json({ state: await this.computeState(applicationName, uriScheme) });
+    }
+
+    protected async computeState(applicationName: string, uriScheme: string): Promise<DesktopFileState> {
         if (!process.env.APPIMAGE) {
-            // we only want to create Desktop Files when running as an App Image
-            response.json({ initialized: true });
+            return 'up-to-date';
         }
         if (process.env.HOME === undefined) {
-            // log error but assume initialized, since we can't proceed
             console.error('Desktop files can only be created if there is a set HOME directory');
-            response.json({ initialized: true });
+            return 'up-to-date';
         }
         const storageFile = await getStorageFilePath(this.envServer, TheiaDesktopFileServiceEndpoint.STORAGE_FILE_NAME);
         if (!storageFile) {
             throw new Error('Could not resolve path to storage file.');
         }
-        if (!fs.existsSync(storageFile)) {
-            response.json({ initialized: false });
-            return;
+        const info = await this.readAppImageInformationFromStorage(storageFile);
+        if (!info || info.appImage !== process.env.APPIMAGE) {
+            return info?.declined?.includes(process.env.APPIMAGE) ? 'up-to-date' : 'needs-prompt';
         }
-        const appImageInformation = await this.readAppImageInformationFromStorage(storageFile);
-        if (appImageInformation === undefined) {
-            response.json({ initialized: false });
-            return;
-        }
-        if (appImageInformation.declined !== undefined && appImageInformation.declined.includes(process.env.APPIMAGE!)) {
-            // we don't want to create Desktop Files for this App Image
-            response.json({ initialized: true });
-            return;
-        }
-        const initialized = appImageInformation.appImage === process.env.APPIMAGE;
-        response.json({ initialized });
+        // Prior consent recorded for this AppImage — re-apply silently if the on-disk
+        // files no longer match what the current launcher template would render.
+        return this.isOnDiskUpToDate(applicationName, uriScheme) ? 'up-to-date' : 'needs-silent-update';
     }
 
     protected async readAppImageInformationFromStorage(storageFile: string): Promise<DesktopFileInformation | undefined> {
@@ -85,21 +87,25 @@ export class TheiaDesktopFileServiceEndpoint implements BackendApplicationContri
     }
 
     protected async createOrUpdateDesktopfile(request: Request, response: Response): Promise<void> {
+        const { applicationName, uriScheme } = request.body;
+        if (typeof applicationName !== 'string' || typeof uriScheme !== 'string') {
+            response.status(400).json({ error: 'applicationName and uriScheme are required' });
+            return;
+        }
+        const createOrUpdate: boolean = !!request.body.create;
+        const createUrlHandler: boolean = request.body.createUrlHandler !== false;
+        const appId = this.getAppId(applicationName);
+
         const storageFile = await getStorageFilePath(this.envServer, TheiaDesktopFileServiceEndpoint.STORAGE_FILE_NAME);
         let appImageInformation: DesktopFileInformation | undefined = await this.readAppImageInformationFromStorage(storageFile);
         if (appImageInformation === undefined) {
             appImageInformation = { appImage: '', declined: [] };
         }
 
-        const createOrUpdate = request.body.create;
-        const applicationName: string = request.body.applicationName || 'Theia IDE';
-        const createUrlHandler: boolean = request.body.createUrlHandler !== false;
-        const uriScheme: string = request.body.uriScheme || 'theia';
-        const appId = applicationName.toLowerCase().replace(/\s+/g, '-');
-
         if (createOrUpdate) {
             const iconFileName = appId + '-electron-app.png';
-            const applicationsDir = path.join(process.env.HOME!, '.local', 'share', 'applications');
+            const applicationsDir = this.getApplicationsDir();
+            fs.ensureDirSync(applicationsDir);
             const imagePath = path.join(applicationsDir, iconFileName);
             if (!fs.existsSync(imagePath)) {
                 const appDir = process.env.APPDIR;
@@ -127,13 +133,16 @@ export class TheiaDesktopFileServiceEndpoint implements BackendApplicationContri
             const desktopFilePath = path.join(applicationsDir, `${appId}-launcher.desktop`);
             fs.outputFileSync(desktopFilePath, this.getDesktopFileContents(applicationName, process.env.APPIMAGE!, imagePath));
 
+            const urlDesktopFileName = `${appId}-launcher-url.desktop`;
             if (createUrlHandler) {
-                const desktopURLFilePath = path.join(applicationsDir, `${appId}-launcher-url.desktop`);
+                const desktopURLFilePath = path.join(applicationsDir, urlDesktopFileName);
                 fs.outputFileSync(desktopURLFilePath, this.getDesktopURLFileContents(applicationName, process.env.APPIMAGE!, imagePath, uriScheme));
             }
 
             appImageInformation.appImage = process.env.APPIMAGE!;
             fs.outputJSONSync(storageFile, appImageInformation);
+
+            await this.refreshDesktopDatabase(applicationsDir, createUrlHandler ? { uriScheme, urlDesktopFileName } : undefined);
         } else {
             appImageInformation.declined.push(process.env.APPIMAGE!);
             fs.outputJSONSync(storageFile, appImageInformation);
@@ -155,7 +164,7 @@ Comment=IDE for cloud and desktop
 Categories=Development;IDE;`;
     }
 
-    protected getDesktopURLFileContents(applicationName: string, appImagePath: string, imagePath: string, uriScheme: string = 'theia'): string {
+    protected getDesktopURLFileContents(applicationName: string, appImagePath: string, imagePath: string, uriScheme: string): string {
         return `[Desktop Entry]
 Name=${applicationName} - URL Handler
 GenericName=Integrated Development Environment
@@ -167,5 +176,59 @@ Icon=${imagePath}
 MimeType=x-scheme-handler/${uriScheme};
 Comment=IDE for cloud and desktop
 Categories=Development;IDE;`;
+    }
+
+    protected getAppId(applicationName: string): string {
+        return applicationName.toLowerCase().replace(/\s+/g, '-');
+    }
+
+    protected getApplicationsDir(): string {
+        // XDG Base Directory Spec: $XDG_DATA_HOME/applications, falling back to
+        // $HOME/.local/share/applications when XDG_DATA_HOME is unset or empty.
+        const xdgDataHome = process.env.XDG_DATA_HOME || path.join(process.env.HOME!, '.local', 'share');
+        return path.join(xdgDataHome, 'applications');
+    }
+
+    protected isOnDiskUpToDate(applicationName: string, uriScheme: string): boolean {
+        const appId = this.getAppId(applicationName);
+        const applicationsDir = this.getApplicationsDir();
+        const imagePath = path.join(applicationsDir, `${appId}-electron-app.png`);
+        const launcherPath = path.join(applicationsDir, `${appId}-launcher.desktop`);
+        const urlPath = path.join(applicationsDir, `${appId}-launcher-url.desktop`);
+        const expectedLauncher = this.getDesktopFileContents(applicationName, process.env.APPIMAGE!, imagePath);
+        const expectedUrl = this.getDesktopURLFileContents(applicationName, process.env.APPIMAGE!, imagePath, uriScheme);
+        return this.fileMatches(launcherPath, expectedLauncher) && this.fileMatches(urlPath, expectedUrl);
+    }
+
+    protected fileMatches(filePath: string, expectedContents: string): boolean {
+        try {
+            return fs.readFileSync(filePath, 'utf8') === expectedContents;
+        } catch {
+            return false;
+        }
+    }
+
+    // Best-effort refresh so xdg-open / gio open immediately route the registered scheme
+    // to the freshly written .desktop file. Errors are logged but do not fail the request.
+    protected async refreshDesktopDatabase(applicationsDir: string, urlHandler?: { uriScheme: string; urlDesktopFileName: string }): Promise<void> {
+        if (process.platform !== 'linux') {
+            return;
+        }
+        const tasks: Promise<void>[] = [this.runCommand('update-desktop-database', [applicationsDir])];
+        if (urlHandler) {
+            tasks.push(this.runCommand('xdg-mime', ['default', urlHandler.urlDesktopFileName, `x-scheme-handler/${urlHandler.uriScheme}`]));
+        }
+        await Promise.all(tasks);
+    }
+
+    protected runCommand(command: string, args: string[]): Promise<void> {
+        return new Promise(resolve => {
+            execFile(command, args, { timeout: 5000 }, error => {
+                if (error) {
+                    console.warn(`Launcher: '${command} ${args.join(' ')}' failed:`, error.message);
+                }
+                resolve();
+            });
+        });
     }
 }
