@@ -304,6 +304,9 @@ function unlinkTheiaPackages() {
  */
 function buildIde() {
     run('yarn', ROOT_DIR, 'Install IDE dependencies');
+    // sync must run after yarn install so missing transitives are present
+    // in theia-ide/node_modules to copy from
+    syncMissingFrameworkDeps();
     run('yarn build:extensions', ROOT_DIR, 'Build IDE extensions');
     run('yarn build:applications:next:dev', ROOT_DIR, 'Build electron-next application');
     if (!options.skipPlugins) {
@@ -314,9 +317,146 @@ function buildIde() {
 }
 
 /**
+ * Check whether `depName` resolves by walking node_modules upwards from
+ * `startDir`, the same way Node and esbuild do. Stops at the filesystem root.
+ */
+function isResolvableFrom(depName, startDir) {
+    let dir = startDir;
+    while (true) {
+        if (fs.existsSync(path.join(dir, 'node_modules', depName, 'package.json'))) {
+            return true;
+        }
+        const parent = path.dirname(dir);
+        if (parent === dir) {
+            return false;
+        }
+        dir = parent;
+    }
+}
+
+/**
+ * List the package directories inside a node_modules folder, expanding
+ * @scope folders into their individual packages.
+ */
+function listPackageDirs(nodeModulesDir) {
+    const result = [];
+    if (!fs.existsSync(nodeModulesDir)) {
+        return result;
+    }
+    for (const entry of fs.readdirSync(nodeModulesDir)) {
+        if (entry === '.bin') {
+            continue;
+        }
+        const entryPath = path.join(nodeModulesDir, entry);
+        if (entry.startsWith('@')) {
+            for (const sub of fs.readdirSync(entryPath)) {
+                result.push(path.join(entryPath, sub));
+            }
+        } else {
+            result.push(entryPath);
+        }
+    }
+    return result;
+}
+
+/**
+ * Detect transitive deps required by the linked Theia packages that cannot be
+ * resolved from within the framework checkout. npm install in the framework
+ * sometimes nests a dependency (e.g. tar-stream@3 in filesystem/node_modules)
+ * whose own deps (e.g. b4a) are not hoisted anywhere reachable from there.
+ * Scans the real package files rather than `npm list`, which does not descend
+ * into yarn-linked packages.
+ */
+function detectMissingTransitives() {
+    const theiaPackages = findTheiaPackages(options.theiaPath);
+    const requiredDeps = collectAllTheiaDependencies();
+    const missing = new Set();
+    const visited = new Set();
+
+    const scan = pkgDir => {
+        if (visited.has(pkgDir)) {
+            return;
+        }
+        visited.add(pkgDir);
+        for (const dir of listPackageDirs(path.join(pkgDir, 'node_modules'))) {
+            const pkgJsonPath = path.join(dir, 'package.json');
+            if (!fs.existsSync(pkgJsonPath)) {
+                continue;
+            }
+            let pkg;
+            try {
+                pkg = readJson(pkgJsonPath);
+            } catch {
+                continue;
+            }
+            const deps = { ...pkg.dependencies, ...pkg.optionalDependencies };
+            for (const depName of Object.keys(deps)) {
+                if (!isResolvableFrom(depName, dir)) {
+                    missing.add(depName);
+                }
+            }
+            scan(dir);
+        }
+    };
+
+    for (const dep of requiredDeps) {
+        const pkgPath = theiaPackages.get(dep);
+        if (pkgPath) {
+            scan(pkgPath);
+        }
+    }
+    return missing;
+}
+
+/**
+ * Both esbuild bundling and electron-builder's dep-tree validator walk the
+ * node_modules tree starting from the linked framework checkout. Deps that
+ * are hoisted only in theia-ide/node_modules are unreachable from there.
+ * Copy any such missing transitives from theia-ide's node_modules into the
+ * framework's root node_modules so both walks succeed.
+ */
+function syncMissingFrameworkDeps() {
+    const missing = detectMissingTransitives();
+    if (missing.size === 0) {
+        return;
+    }
+    console.log(`\n${'='.repeat(60)}`);
+    console.log('> Sync transitive deps into framework node_modules');
+    console.log(`${'='.repeat(60)}`);
+    console.log(`  Deps not reachable from linked Theia packages: ${[...missing].join(', ')}`);
+    const targetDir = path.join(options.theiaPath, 'node_modules');
+    if (!fs.existsSync(targetDir)) {
+        if (options.dryRun) {
+            console.log(`  [DRY RUN] Would create ${targetDir}`);
+        } else {
+            fs.mkdirSync(targetDir, { recursive: true });
+        }
+    }
+    for (const dep of missing) {
+        const src = path.join(ROOT_DIR, 'node_modules', dep);
+        const dst = path.join(targetDir, dep);
+        if (!fs.existsSync(src)) {
+            console.log(`  Skipping ${dep}: not found in theia-ide/node_modules`);
+            continue;
+        }
+        if (fs.existsSync(dst)) {
+            continue;
+        }
+        if (options.dryRun) {
+            console.log(`  [DRY RUN] Would copy ${dep} -> ${dst}`);
+        } else {
+            fs.cpSync(src, dst, { recursive: true });
+            console.log(`  Copied ${dep}`);
+        }
+    }
+}
+
+/**
  * Package the electron-next application
  */
 function packageApp() {
+    // sync covers the --skip-ide-build --package path where buildIde did not run
+    syncMissingFrameworkDeps();
     run('yarn package:applications:next', ROOT_DIR, 'Package electron-next application');
 }
 
