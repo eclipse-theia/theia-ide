@@ -6,6 +6,7 @@ This document provides a unified, structured guide for publishing a new version 
 
 1. [Overview](#1-overview)
 2. [Update Package Versions and Theia](#2-update-package-versions-and-theia)
+   - [2.0 Patch Release Branch (Optional)](#20-patch-release-branch-optional)
    - [2.1 Install build dependencies](#21-install-build-dependencies)
    - [2.2 Update versions](#22-update-versions)
    - [2.3 Check for mandatory code changes](#23-check-for-mandatory-code-changes)
@@ -39,6 +40,22 @@ This guide differentiates between two version numbers:
 <!-- release: both -->
 
 Follow these steps to update dependencies and package versions:
+
+### 2.0. Patch Release Branch (Optional)
+<!-- release: patch -->
+
+If commits have already landed on `master` since the last minor release and should **not** be included in the patch, use a dedicated release branch instead of working on `master` directly:
+
+1. Create and push a branch from the minor release commit using the naming convention `release/{{version}}`:
+
+   ```sh
+   git checkout <sha-of-minor-release> -b release/{{version}}
+   git push origin release/{{version}}
+   ```
+
+2. Commit your patch changes directly on this branch — **no PR is required**.
+
+When using this path, see the adjusted instructions in [2.5 Mac Artifacts](#25-mac-artifacts) and [2.6 Merge Release PR & Trigger Jenkins Build](#26-merge-release-pr--trigger-jenkins-build).
 
 ### 2.1. Install build dependencies
 <!-- release: both -->
@@ -111,6 +128,8 @@ After completing step 2.3, open a PR with your changes <https://github.com/eclip
 - Download these two zips and replace them in this pre-release: <https://github.com/eclipse-theia/theia-ide/releases/tag/pre-release>.
 - These unsigned dmgs will be used as input for the Jenkins build.
 
+> **Patch release branch:** If using a `release/{{version}}` branch, manually trigger the [Build, package and test](https://github.com/eclipse-theia/theia-ide/actions/workflows/build.yml) workflow targeting the `release/{{version}}` branch to generate the mac artifacts (no PR build is triggered automatically).
+
 ### 2.6. Merge Release PR & Trigger Jenkins Build
 <!-- release: both -->
 
@@ -125,6 +144,15 @@ After completing step 2.3, open a PR with your changes <https://github.com/eclip
 5. Once 4. is successful it starts the upload job <https://ci.eclipse.org/theia/job/theia-ide-upload/>
 
   *Note*: Please report if upload fails more than 5 times, we need to investigate!
+
+> **Patch release branch:** If using a `release/{{version}}` branch:
+>
+> - Skip step 1 (no PR to merge). Proceed once CI checks on the release branch are complete.
+> - Before triggering the Jenkins jobs, change the branch specifier from `master` to `release/{{version}}` on all three jobs:
+>   - <https://ci.eclipse.org/theia/job/theia-ide-release/>
+>   - <https://ci.eclipse.org/theia/job/theia-ide-sign-notarize/>
+>   - <https://ci.eclipse.org/theia/job/theia-ide-upload/>
+> - ⚠️ **Reminder:** Once the preview build is complete, revert the branch specifier back to `master` on all three Jenkins jobs.
 
 ## 3. Preview, Testing, and Release Process
 <!-- release: both -->
