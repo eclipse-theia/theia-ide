@@ -18,9 +18,11 @@ import * as fs from 'fs-extra';
 import URI from '@theia/core/lib/common/uri';
 import { getStorageFilePath } from './launcher-util';
 
+export type LauncherEndpointState = 'up-to-date' | 'needs-silent-update' | 'needs-prompt';
+
 interface PathEntry {
     source: string;
-    target: string;
+    target?: string;
 }
 
 @injectable()
@@ -36,30 +38,65 @@ export class TheiaLauncherServiceEndpoint implements BackendApplicationContribut
     configure(app: Application): void {
         const router = Router();
         router.put('/', (request, response) => this.createLauncher(request, response));
-        router.get('/initialized', (request, response) => this.isInitialized(request, response));
+        router.get('/state', (request, response) => this.getState(request, response));
         app.use(json());
         app.use(TheiaLauncherServiceEndpoint.PATH, router);
     }
 
-    private async isInitialized(request: Request, response: Response): Promise<void> {
-        if (!process.env.APPIMAGE) {
-            // we are not running from an AppImage, so there's nothing to initialize
-            // return true
-            response.json({ initialized: true });
+    protected async getState(request: Request, response: Response): Promise<void> {
+        const uriScheme = request.query.uriScheme;
+        if (typeof uriScheme !== 'string') {
+            response.status(400).json({ error: 'uriScheme query parameter is required' });
+            return;
         }
-        const uriScheme = (request.query.uriScheme as string) || 'theia';
-        const launcherLink = `/usr/local/bin/${uriScheme}`;
+        response.json({ state: await this.computeState(uriScheme) });
+    }
+
+    protected async computeState(uriScheme: string): Promise<LauncherEndpointState> {
+        if (!process.env.APPIMAGE) {
+            // Not running from an AppImage — nothing to install.
+            return 'up-to-date';
+        }
+        const launcher = `/usr/local/bin/${uriScheme}`;
         const storageFile = await getStorageFilePath(this.envServer, TheiaLauncherServiceEndpoint.STORAGE_FILE_NAME);
         if (!storageFile) {
             throw new Error('Could not resolve path to storage file.');
         }
-        if (!fs.existsSync(storageFile)) {
-            response.json({ initialized: false });
-            return;
-        }
         const data = await this.readLauncherPathsFromStorage(storageFile);
-        const initialized = !!data.find(entry => entry.source === launcherLink);
-        response.json({ initialized });
+        // Latest entry wins so a previous decline followed by a later approve is honored correctly.
+        const latest = [...data].reverse().find(entry => entry.source === launcher);
+        if (!latest) {
+            return 'needs-prompt';
+        }
+        if (latest.target === undefined) {
+            // Previously declined for this scheme — don't re-prompt.
+            return 'up-to-date';
+        }
+        if (latest.target !== process.env.APPIMAGE) {
+            // AppImage path changed — ask for consent again.
+            return 'needs-prompt';
+        }
+        // Prior consent recorded for this AppImage — re-apply silently if the on-disk
+        // script no longer matches what the current generator would produce.
+        const logFile = await this.getLogFilePath();
+        const expected = this.buildLauncherScript(process.env.APPIMAGE, logFile);
+        return this.fileMatches(launcher, expected) ? 'up-to-date' : 'needs-silent-update';
+    }
+
+    protected fileMatches(filePath: string, expectedContents: string): boolean {
+        try {
+            return fs.readFileSync(filePath, 'utf8') === expectedContents;
+        } catch {
+            return false;
+        }
+    }
+
+    protected buildLauncherScript(target: string, logFile: string): string {
+        // Must reproduce the exact bytes the printf-based writer in createLauncher produces.
+        // The JS template builds `\$1`, but @vscode/sudo-prompt wraps the command in
+        // `/bin/bash -c "..."`, and the outer double-quote layer consumes the backslash,
+        // so the on-disk file ends up with `$1` (no backslash). Match that here.
+        return `#!/bin/bash\nexec "${target}" $1 &> ${logFile} &\n`;
     }
 
     private async readLauncherPathsFromStorage(storageFile: string): Promise<PathEntry[]> {
@@ -81,24 +118,32 @@ export class TheiaLauncherServiceEndpoint implements BackendApplicationContribut
     }
 
     private async createLauncher(request: Request, response: Response): Promise<void> {
-        const shouldCreateLauncher = request.body.create;
-        const uriScheme: string = request.body.uriScheme || 'theia';
+        const { uriScheme } = request.body;
+        if (typeof uriScheme !== 'string') {
+            response.status(400).json({ error: 'uriScheme is required' });
+            return;
+        }
+        const shouldCreateLauncher: boolean = !!request.body.create;
         const launcher = `/usr/local/bin/${uriScheme}`;
         const sudoPromptName = uriScheme === 'theia-next' ? 'Theia IDE Next' : 'Theia IDE';
         const target = process.env.APPIMAGE;
         const logFile = await this.getLogFilePath();
-        const command = `printf '%s\n' '#!/bin/bash' 'exec "${target}" \\$1 &> ${logFile} &' >${launcher} && chmod +x ${launcher}`;
         if (shouldCreateLauncher) {
             const targetExists = target && fs.existsSync(target);
             if (!targetExists) {
                 throw new Error('Could not find application to launch');
             }
+            const command = `printf '%s\n' '#!/bin/bash' 'exec "${target}" \\$1 &> ${logFile} &' >${launcher} && chmod +x ${launcher}`;
             sudo.exec(command, { name: sudoPromptName });
         }
 
         const storageFile = await getStorageFilePath(this.envServer, TheiaLauncherServiceEndpoint.STORAGE_FILE_NAME);
         const data = fs.existsSync(storageFile) ? await this.readLauncherPathsFromStorage(storageFile) : [];
-        fs.outputJSONSync(storageFile, [...data, { source: launcher, target: shouldCreateLauncher ? target : undefined }]);
+        const filtered = data.filter(existing => existing.source !== launcher);
+        const entry: PathEntry = shouldCreateLauncher
+            ? { source: launcher, target }
+            : { source: launcher };
+        fs.outputJSONSync(storageFile, [...filtered, entry]);
 
         response.sendStatus(200);
     }

@@ -53,6 +53,7 @@
     "watch": "lerna run --parallel watch",
     "test": "lerna run test",
     "electron": "yarn --cwd applications/electron",
+    "electron-next": "yarn --cwd applications/electron-next",
     "browser": "yarn --cwd applications/browser",
     "update:theia": "ts-node scripts/update-theia-version.ts",
     "update:theia:children": "lerna run update:theia -- ",
