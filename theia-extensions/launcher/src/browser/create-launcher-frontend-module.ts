@@ -10,10 +10,13 @@ import { CreateLauncherCommandContribution } from './create-launcher-contributio
 import { ContainerModule } from '@theia/core/shared/inversify';
 import { LauncherService } from './launcher-service';
 import { FrontendApplicationContribution } from '@theia/core/lib/browser';
+import { CommandContribution } from '@theia/core/lib/common';
 import { DesktopFileService } from './desktopfile-service';
 
 export default new ContainerModule(bind => {
-    bind(FrontendApplicationContribution).to(CreateLauncherCommandContribution);
+    bind(CreateLauncherCommandContribution).toSelf().inSingletonScope();
+    bind(FrontendApplicationContribution).toService(CreateLauncherCommandContribution);
+    bind(CommandContribution).toService(CreateLauncherCommandContribution);
     bind(LauncherService).toSelf().inSingletonScope();
     bind(DesktopFileService).toSelf().inSingletonScope();
 });

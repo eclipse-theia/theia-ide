@@ -10,20 +10,19 @@
 import { Endpoint } from '@theia/core/lib/browser';
 import { injectable } from '@theia/core/shared/inversify';
 
+export type LauncherEndpointState = 'up-to-date' | 'needs-silent-update' | 'needs-prompt';
+
 @injectable()
 export class LauncherService {
 
-    async isInitialized(uriScheme?: string): Promise<boolean> {
-        const query = uriScheme ? `?uriScheme=${encodeURIComponent(uriScheme)}` : '';
-        const response = await fetch(new Request(`${this.endpoint()}/initialized${query}`), {
-            body: undefined,
-            method: 'GET'
-        }).then(r => r.json());
-        return !!response?.initialized;
+    async getState(uriScheme: string): Promise<LauncherEndpointState> {
+        const params = new URLSearchParams({ uriScheme });
+        const response = await fetch(new Request(`${this.endpoint()}/state?${params}`), { method: 'GET' }).then(r => r.json());
+        return response?.state ?? 'needs-prompt';
     }
 
-    async createLauncher(create: boolean, uriScheme?: string): Promise<void> {
-        fetch(new Request(`${this.endpoint()}`), {
+    async createLauncher(create: boolean, uriScheme: string): Promise<void> {
+        await fetch(new Request(`${this.endpoint()}`), {
             body: JSON.stringify({ create, uriScheme }),
             method: 'PUT',
             headers: new Headers({ 'Content-Type': 'application/json' })
