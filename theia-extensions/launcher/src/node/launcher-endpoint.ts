@@ -15,6 +15,8 @@ import { ILogger } from '@theia/core/lib/common';
 import { EnvVariablesServer } from '@theia/core/lib/common/env-variables';
 import * as sudo from '@vscode/sudo-prompt';
 import * as fs from 'fs-extra';
+import * as os from 'os';
+import * as path from 'path';
 import URI from '@theia/core/lib/common/uri';
 import { getStorageFilePath } from './launcher-util';
 
@@ -91,12 +93,28 @@ export class TheiaLauncherServiceEndpoint implements BackendApplicationContribut
         }
     }
 
+    // The normal launch path backgrounds the process and redirects to a log file,
+    // which would swallow --help / --version output. Detect those flags up front
+    // and exec without redirect so the text reaches the user's terminal.
+    // setsid -f forks the AppImage into a new session, fully detached from the
+    // terminal — so closing the terminal does not prompt about a still-running
+    // process and SIGHUP cannot reach the IDE.
     protected buildLauncherScript(target: string, logFile: string): string {
-        // Must reproduce the exact bytes the printf-based writer in createLauncher produces.
-        // The JS template builds `\$1`, but @vscode/sudo-prompt wraps the command in
-        // `/bin/bash -c "..."`, and the outer double-quote layer consumes the backslash,
-        // so the on-disk file ends up with `$1` (no backslash). Match that here.
-        return `#!/bin/bash\nexec "${target}" $1 &> ${logFile} &\n`;
+        const t = this.bashQuote(target);
+        const l = this.bashQuote(logFile);
+        return `#!/bin/bash
+for arg in "$@"; do
+    case "$arg" in
+        --) break ;;
+        --help|--version|-v) exec ${t} "$@" ;;
+    esac
+done
+setsid -f ${t} "$@" >> ${l} 2>&1 < /dev/null
+`;
+    }
+
+    private bashQuote(s: string): string {
+        return '"' + s.replace(/(["\\$`])/g, '\\$1') + '"';
     }
 
     private async readLauncherPathsFromStorage(storageFile: string): Promise<PathEntry[]> {
@@ -133,8 +151,13 @@ export class TheiaLauncherServiceEndpoint implements BackendApplicationContribut
             if (!targetExists) {
                 throw new Error('Could not find application to launch');
             }
-            const command = `printf '%s\n' '#!/bin/bash' 'exec "${target}" \\$1 &> ${logFile} &' >${launcher} && chmod +x ${launcher}`;
-            sudo.exec(command, { name: sudoPromptName });
+            const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'theia-launcher-'));
+            const tmpFile = path.join(tmpDir, path.basename(launcher));
+            fs.writeFileSync(tmpFile, this.buildLauncherScript(target!, logFile), { mode: 0o755 });
+            const command = `mv ${this.bashQuote(tmpFile)} ${this.bashQuote(launcher)} && chmod 755 ${this.bashQuote(launcher)}`;
+            sudo.exec(command, { name: sudoPromptName }, () => {
+                try { fs.removeSync(tmpDir); } catch { /* best effort */ }
+            });
         }
 
         const storageFile = await getStorageFilePath(this.envServer, TheiaLauncherServiceEndpoint.STORAGE_FILE_NAME);
