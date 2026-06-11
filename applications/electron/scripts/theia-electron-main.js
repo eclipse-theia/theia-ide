@@ -2,6 +2,11 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const { copyBundledPlugins } = require('./appimage-helpers');
+const { handleVersionAndHelp } = require('./cli-usage');
+
+// Handle --version and --help early, before loading the full electron stack.
+const packageJsonPath = path.resolve(__dirname, '../', 'package.json');
+handleVersionAndHelp(packageJsonPath);
 
 // Update to override the supported VS Code API version.
 // process.env.VSCODE_API_VERSION = '1.50.0'
@@ -21,7 +26,6 @@ if (isAppImage) {
     // The AppImage mount point (/tmp/.mount_*) is read-only
     const configDir = process.env.THEIA_CONFIG_DIR || path.join(os.homedir(), '.theia-ide');
     const userPluginsDir = path.join(configDir, 'builtInPlugins');
-    const packageJsonPath = path.resolve(__dirname, '../', 'package.json');
     const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
     const currentVersion = packageJson.version;
 
