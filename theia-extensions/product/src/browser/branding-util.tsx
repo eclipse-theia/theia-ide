@@ -23,7 +23,7 @@ export function renderProductName(): React.ReactNode {
     return <h1>Eclipse Theia <span className="gs-blue-header">IDE</span>{suffix}</h1>;
 }
 
-function BrowserLink(props: ExternalBrowserLinkProps): JSX.Element {
+function BrowserLink(props: ExternalBrowserLinkProps): React.JSX.Element {
     return <a
         role={'button'}
         tabIndex={0}
