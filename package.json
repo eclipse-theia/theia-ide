@@ -1,6 +1,6 @@
 {
   "private": true,
-  "version": "1.72.100",
+  "version": "1.73.0",
   "license": "MIT",
   "author": "Rob Moran <github@thegecko.org>",
   "homepage": "https://github.com/eclipse-theia/theia-ide#readme",
@@ -17,7 +17,7 @@
   },
   "devDependencies": {
     "@eclipse-dash/nodejs-wrapper": "^0.0.1",
-    "@theia/cli": "1.73.0-next.60",
+    "@theia/cli": "1.73.0",
     "@types/yargs": "^17",
     "@typescript-eslint/eslint-plugin": "^4.33.0",
     "@typescript-eslint/eslint-plugin-tslint": "^4.33.0",
@@ -80,6 +80,8 @@
     "theia-extensions/*"
   ],
   "resolutions": {
+    "@mermaid-js/parser": "1.1.1",
+    "@types/d3-dispatch": "3.0.6",
     "@types/puppeteer": "^5.4.7",
     "@yarnpkg/parsers": "3.0.0-rc.44",
     "**/multer": "1.4.4-lts.1",
