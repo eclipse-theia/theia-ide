@@ -23,7 +23,7 @@ This matches the script's default `--theia-path` of `../theia`. You can clone Th
 
 ## Important Note
 
-This script does not update the IDE version or Theia package versions in `package.json` files. It uses the current state of both repositories and relies on yarn linking to override the dependencies. If needed, you can run versioning commands (e.g., `yarn update:theia <version>`) separately before building.
+This script does not update the IDE version or Theia package versions in `package.json` files. It uses the current state of both repositories and symlinks the local `@theia/*` packages into the IDE's `node_modules` to override the dependencies. If needed, you can run versioning commands (e.g., `yarn update:theia <version>`) separately before building.
 
 ## Quick Start
 
@@ -31,30 +31,46 @@ This script does not update the IDE version or Theia package versions in `packag
 # Clone Theia as a sibling (if not already done)
 git clone https://github.com/eclipse-theia/theia.git ../theia
 
-# Build everything
-node scripts/build-with-local-theia.js
+# Build everything (default location ../theia)
+yarn build:local-theia
+```
+
+`yarn build:local-theia` is a convenience wrapper for the default setup. It is
+equivalent to running `node scripts/build-with-local-theia.js` directly.
+
+Any options are forwarded to the script, so the two forms below are equivalent:
+
+```sh
+yarn build:local-theia --theia-path /path/to/theia --package
+node scripts/build-with-local-theia.js --theia-path /path/to/theia --package
 ```
 
 ## What the Script Does
 
 1. Build the local Theia framework (`npm ci` + `npm run compile`)
-2. Create yarn links for all `@theia/*` packages
-3. Link those packages into the Theia IDE
-4. Build the Theia IDE extensions and electron-next application
-5. Download required plugins
+2. Install the IDE dependencies (`yarn`)
+3. Symlink all `@theia/*` packages from the local Theia into the IDE's `node_modules`, pointing at the given `--theia-path`
+4. Copy any transitive dependencies that the linked packages need but cannot resolve from the Theia checkout (see [Why some dependencies are copied](#why-some-dependencies-are-copied))
+5. Build the Theia IDE extensions and electron-next application
+6. Download required plugins
+
+The symlinks point explicitly at the requested `--theia-path`, so the build always uses that exact checkout. This works with Theia cloned in any location, including git worktrees.
 
 ## Usage
 
 ### Full Build
 
 ```sh
-node scripts/build-with-local-theia.js
+yarn build:local-theia
 ```
 
 ### Using a Different Theia Location
 
+Theia can live anywhere; pass its path with `--theia-path`. This also works with
+git worktrees, since the packages are symlinked at the exact path you provide:
+
 ```sh
-node scripts/build-with-local-theia.js --theia-path /path/to/theia
+yarn build:local-theia --theia-path /path/to/theia
 ```
 
 ### Incremental Development
@@ -63,7 +79,7 @@ After the initial build, you can iterate faster:
 
 ```sh
 # Rebuild only Theia IDE (Theia unchanged)
-node scripts/build-with-local-theia.js --skip-theia-build
+yarn build:local-theia --skip-theia-build
 
 # Rebuild only Theia packages, then rebuild Theia IDE
 cd ../theia && npm run compile
@@ -75,7 +91,7 @@ cd ../theia-ide && yarn build:applications:next:dev
 To create a distributable application:
 
 ```sh
-node scripts/build-with-local-theia.js --package
+yarn build:local-theia --package
 ```
 
 The packaged application will be in `applications/electron-next/dist/`.
@@ -85,7 +101,7 @@ The packaged application will be in `applications/electron-next/dist/`.
 If you want to manage builds manually:
 
 ```sh
-node scripts/build-with-local-theia.js --skip-theia-build --skip-ide-build
+yarn build:local-theia --skip-theia-build --skip-ide-build
 ```
 
 ### Skip Plugin Download
@@ -93,7 +109,7 @@ node scripts/build-with-local-theia.js --skip-theia-build --skip-ide-build
 If you already have plugins or want to skip downloading them:
 
 ```sh
-node scripts/build-with-local-theia.js --skip-plugins
+yarn build:local-theia --skip-plugins
 ```
 
 ### Restore Normal Dependencies
@@ -101,17 +117,17 @@ node scripts/build-with-local-theia.js --skip-plugins
 When you're done testing with the local Theia:
 
 ```sh
-node scripts/build-with-local-theia.js --unlink
+yarn build:local-theia --unlink
 ```
 
-This removes all yarn links and reinstalls packages from npm.
+This removes the `@theia/*` symlinks and reinstalls packages from npm.
 
 ### Dry Run
 
 Preview what commands will be executed:
 
 ```sh
-node scripts/build-with-local-theia.js --dry-run
+yarn build:local-theia --dry-run
 ```
 
 ## Running the Theia IDE (Next)
@@ -132,7 +148,7 @@ A typical development workflow looks like:
 
     ```sh
     git clone https://github.com/eclipse-theia/theia.git ../theia
-    node scripts/build-with-local-theia.js
+    yarn build:local-theia
     ```
 
 2. **Make changes in Theia**: Edit files in `../theia`
@@ -154,7 +170,7 @@ A typical development workflow looks like:
 5. **When done**: Restore npm dependencies
 
     ```sh
-    node scripts/build-with-local-theia.js --unlink
+    yarn build:local-theia --unlink
     ```
 
 ## Command Reference
@@ -170,6 +186,25 @@ A typical development workflow looks like:
 | `--dry-run`           | Print commands without executing them                |
 | `--help`              | Show help message                                    |
 
+## Why some dependencies are copied
+
+When the local Theia is installed with `npm`, some transitive dependencies end
+up nested inside a package's own `node_modules` (for example
+`packages/filesystem/node_modules/tar-stream`). Such a nested package may rely
+on a dependency (e.g. `b4a`) that is not installed anywhere reachable from the
+Theia checkout. Because the build bundler and the packager resolve modules
+starting from the symlinked location, they would fail with errors like:
+
+```text
+✘ [ERROR] Could not resolve "b4a"
+    ../../../theia/packages/filesystem/node_modules/tar-stream/pack.js
+```
+
+To avoid this, the script scans the linked packages for dependencies that
+cannot be resolved from the Theia checkout and copies them from the IDE's own
+`node_modules` into the Theia checkout's `node_modules`. This is generic over
+the dependency name and runs during both the build and the packaging step.
+
 ## Troubleshooting
 
 ### "Theia directory not found"
@@ -183,7 +218,7 @@ git clone https://github.com/eclipse-theia/theia.git ../theia
 Or specify the correct path:
 
 ```sh
-node scripts/build-with-local-theia.js --theia-path /correct/path/to/theia
+yarn build:local-theia --theia-path /correct/path/to/theia
 ```
 
 ### "Package not found in local Theia"
@@ -202,7 +237,7 @@ If you switch branches in either repository, clean and rebuild:
 ```sh
 # In theia-ide
 git clean -xfd
-node scripts/build-with-local-theia.js
+yarn build:local-theia
 
 # Or if only Theia packages changed
 cd ../theia && git clean -xfd && npm ci && npm run compile
@@ -215,7 +250,7 @@ If things get into a bad state:
 
 ```sh
 # Unlink and restore npm packages
-node scripts/build-with-local-theia.js --unlink
+yarn build:local-theia --unlink
 
 # Full clean rebuild
 git clean -xfd
