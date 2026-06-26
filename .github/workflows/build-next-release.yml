@@ -62,6 +62,7 @@ jobs:
           name: theia-ide-next-linux
           path: |
             applications/electron-next/dist/TheiaIDENext.AppImage
+            applications/electron-next/dist/TheiaIDENext.deb
           retention-days: 7
 
       - name: Publish to rolling next release
@@ -71,11 +72,12 @@ jobs:
           gh release delete next --yes --cleanup-tag 2>/dev/null || true
           # Create a new pre-release with the next tag
           gh release create next \
-            --title "Next Build - Ubuntu AppImage (${{ env.THEIA_IDE_VERSION }})" \
-            --notes "Automated next build of the Ubuntu AppImage from \`master\` ($(date -u '+%Y-%m-%d %H:%M UTC'))." \
+            --title "Next Build - Ubuntu AppImage & .deb (${{ env.THEIA_IDE_VERSION }})" \
+            --notes "Automated next build of the Ubuntu AppImage and .deb from \`master\` ($(date -u '+%Y-%m-%d %H:%M UTC'))." \
             --prerelease \
             --target ${{ github.sha }} \
             applications/electron-next/dist/TheiaIDENext.AppImage \
+            applications/electron-next/dist/TheiaIDENext.deb \
             applications/electron-next/dist/latest-linux.yml
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
