@@ -60,8 +60,9 @@
     "update:next": "ts-node scripts/update-theia-version.ts next && lerna run update:next",
     "lint": "eslint --ext js,jsx,ts,tsx scripts && lerna run lint",
     "lint:fix": "eslint --ext js,jsx,ts,tsx scripts --fix && lerna run lint:fix",
-    "license:check": "npx dash-licenses-wrapper  --configFile=./configs/license-check-config.json",
-    "license:check:review": "npx dash-licenses-wrapper  --configFile=./configs/license-check-config.json --review",
+    "license:check:fetch-jar": "node scripts/fetch-dash-licenses-jar.js",
+    "license:check": "yarn license:check:fetch-jar && npx dash-licenses-wrapper  --configFile=./configs/license-check-config.json",
+    "license:check:review": "yarn license:check:fetch-jar && npx dash-licenses-wrapper  --configFile=./configs/license-check-config.json --review",
     "postinstall": "theia-patch && npx patch-package --patch-dir patches"
   },
   "theiaPluginsDir": "plugins",
