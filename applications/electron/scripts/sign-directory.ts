@@ -97,7 +97,7 @@ const signFile = (file: string) => {
     }
 
     console.log(`Signing ${file}...`);
-    child_process.spawnSync(signCommand, [
+    const result = child_process.spawnSync(signCommand, [
         path.basename(file),
         entitlements
     ], {
@@ -108,12 +108,34 @@ const signFile = (file: string) => {
         encoding: 'utf-8'
     });
 
+    // Fail hard if the signing command could not be spawned or exited with an error.
+    // Otherwise a broken signing step (e.g. an unreachable signing host) is silently
+    // ignored and produces an unsigned bundle that only fails much later at notarization.
+    if (result.error) {
+        throw new Error(`Failed to run signing command for ${file}: ${result.error.message}`);
+    }
+    if (result.status !== 0) {
+        throw new Error(`Signing command failed for ${file} with exit code ${result.status ?? `signal ${result.signal}`}.`);
+    }
+
     // Get SHA hash of file after signing - only for actual files, not directories
     if (stat.isFile()) {
         const shaAfterSigning = child_process.execSync(`shasum -a 256 "${file}"`).toString().trim();
-        // Log a warning if the SHA hash hasn't changed after signing
         if (shaBeforeSigning === shaAfterSigning) {
-            console.warn(`WARNING: SHA hash did not change after signing for ${file}. This might indicate the file was not properly signed.`);
+            // The signing service only signs Mach-O binaries and leaves other executables
+            // (e.g. shell scripts like jdtls, *.sh, mvnw) untouched. That is expected:
+            // Apple notarization only requires Mach-O executables to be signed. So only
+            // treat an unchanged *Mach-O* file as a hard error; otherwise just warn.
+            let isMachO = false;
+            try {
+                isMachO = child_process.execSync(`file "${file}"`).toString().includes('Mach-O');
+            } catch (e) {
+                // If 'file' cannot classify it, fall back to non-fatal.
+            }
+            if (isMachO) {
+                throw new Error(`SHA hash did not change after signing for ${file}. The Mach-O binary was not properly signed.`);
+            }
+            console.warn(`WARNING: SHA hash did not change after signing for ${file}. Skipping - not a Mach-O binary.`);
         }
     }
 
@@ -129,7 +151,10 @@ const argv = yargs(hideBin(process.argv))
     .wrap(120)
     .parseSync();
 
-execute();
+execute().catch(error => {
+    console.error(error instanceof Error ? error.message : error);
+    process.exit(1);
+});
 
 async function execute(): Promise<void> {
     console.log(`signCommand: ${signCommand}; notarizeCommand: ${notarizeCommand}; entitlements: ${entitlements}; directory: ${argv.directory}`);
@@ -147,7 +172,7 @@ async function execute(): Promise<void> {
 
     // Notarize app
     console.log('Notarizing application...');
-    child_process.spawnSync(notarizeCommand, [
+    const notarizeResult = child_process.spawnSync(notarizeCommand, [
         path.basename(argv.directory),
         'eclipse.theia'
     ], {
@@ -157,4 +182,11 @@ async function execute(): Promise<void> {
         stdio: 'inherit',
         encoding: 'utf-8'
     });
+
+    if (notarizeResult.error) {
+        throw new Error(`Failed to run notarization command: ${notarizeResult.error.message}`);
+    }
+    if (notarizeResult.status !== 0) {
+        throw new Error(`Notarization command failed with exit code ${notarizeResult.status ?? `signal ${notarizeResult.signal}`}.`);
+    }
 }

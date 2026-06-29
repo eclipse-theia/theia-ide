@@ -20,7 +20,7 @@ fi
 
 # copy file to storage server
 echo "=== DEBUG: Copying $INPUT to storage server ==="
-scp -p "${INPUT}" genie.theia@projects-storage.eclipse.org:./
+scp -O -p "${INPUT}" genie.theia@projects-storage.eclipse.org:./
 if [ $? -eq 0 ]; then
     echo "=== DEBUG: Successfully copied $INPUT to storage server ==="
 else
@@ -31,7 +31,7 @@ rm -f "${INPUT}"
 
 # copy entitlements to storage server
 echo "=== DEBUG: Copying entitlements file to storage server ==="
-scp -p "${ENTITLEMENTS}" genie.theia@projects-storage.eclipse.org:./entitlements.plist
+scp -O -p "${ENTITLEMENTS}" genie.theia@projects-storage.eclipse.org:./entitlements.plist
 if [ $? -eq 0 ]; then
     echo "=== DEBUG: Successfully copied entitlements to storage server ==="
 else
@@ -56,7 +56,7 @@ fi
 
 # copy signed file back from server
 echo "=== DEBUG: Copying signed file back from storage server ==="
-scp -T -p genie.theia@projects-storage.eclipse.org:"\"./signed-${REMOTE_NAME}\"" "${INPUT}"
+scp -O -T -p genie.theia@projects-storage.eclipse.org:"\"./signed-${REMOTE_NAME}\"" "${INPUT}"
 if [ $? -eq 0 ]; then
     echo "=== DEBUG: Successfully retrieved signed file ==="
 else
