@@ -15,7 +15,7 @@ if [ -d "${INPUT}" ]; then
 fi
 
 # copy file to storage server
-scp -p "${INPUT}" genie.theia@projects-storage.eclipse.org:./
+scp -O -p "${INPUT}" genie.theia@projects-storage.eclipse.org:./
 rm -f "${INPUT}"
 
 # name to use on server
@@ -49,7 +49,7 @@ fi
 ssh -q genie.theia@projects-storage.eclipse.org curl -o "\"stapled-${REMOTE_NAME}\"" https://cbi.eclipse.org/macos/xcrun/${UUID}/download
 
 # copy stapled file back from server
-scp -T -p genie.theia@projects-storage.eclipse.org:"\"./stapled-${REMOTE_NAME}\"" "${INPUT}"
+scp -O -T -p genie.theia@projects-storage.eclipse.org:"\"./stapled-${REMOTE_NAME}\"" "${INPUT}"
 
 # ensure storage server is clean
 ssh -q genie.theia@projects-storage.eclipse.org rm -f "\"${REMOTE_NAME}\"" "\"stapled-${REMOTE_NAME}\"" entitlements.plist
