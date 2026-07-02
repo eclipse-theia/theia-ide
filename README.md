@@ -12,10 +12,9 @@ Eclipse Theia IDE also serves as a template for building desktop-based products 
 
 </div>
 
-[![Installers](https://img.shields.io/badge/download-installers-blue.svg?style=flat-curved)](https://theia-ide.org//#theiaidedownload)
-[![Build Status](https://ci.eclipse.org/theia/buildStatus/icon?subject=latest&job=Theia2%2Fmaster)](https://ci.eclipse.org/theia/job/Theia2/job/master/)
-<!-- currently we have no working next job because next builds are not published -->
-<!-- [![Build Status](https://ci.eclipse.org/theia/buildStatus/icon?subject=next&job=theia-next%2Fmaster)](https://ci.eclipse.org/theia/job/theia-next/job/master/) -->
+[![Installers](https://img.shields.io/badge/download-installers-blue.svg?style=flat-curved)](https://theia-ide.org/#theiaidedownload)
+[![Build](https://github.com/eclipse-theia/theia-ide/actions/workflows/build.yml/badge.svg?event=schedule)](https://github.com/eclipse-theia/theia-ide/actions/workflows/build.yml?query=event%3Aschedule)
+[![Next Build](https://github.com/eclipse-theia/theia-ide/actions/workflows/build-next-release.yml/badge.svg?branch=master)](https://github.com/eclipse-theia/theia-ide/actions/workflows/build-next-release.yml)
 
 [Main Theia Repository](https://github.com/eclipse-theia/theia)
 
@@ -32,8 +31,8 @@ Eclipse Theia IDE also serves as a template for building desktop-based products 
 
 ## What is this?
 
-The Eclipse IDE is a modern and open IDE for cloud and desktop. The Theia IDE is based on the [Theia platform](https://theia-ide.org).
-The Theia IDE is available as a [downloadable desktop application](https://theia-ide.org//#theiaidedownload). You can also try the latest version of the Theia IDE online. The online test version is limited to 30 minutes per session and hosted via Theia.cloud. Finally, we provide an [experimental Docker image](#docker) for hosting the Theia IDE online.
+The Eclipse Theia IDE is a modern and open IDE for cloud and desktop. The Theia IDE is based on the [Theia platform](https://theia-ide.org).
+The Theia IDE is available as a [downloadable desktop application](https://theia-ide.org/#theiaidedownload). You can also try the latest version of the Theia IDE online. The online test version is limited to 30 minutes per session and hosted via Theia.cloud. Finally, we provide an [experimental Docker image](#docker) for hosting the Theia IDE online.
 
 The Eclipse Theia IDE also serves as a **template** for building desktop-based products based on the Eclipse Theia platform, as well as to showcase Eclipse Theia capabilities. It is made up of a subset of existing Eclipse Theia features and extensions. [Documentation is available](https://theia-ide.org/docs/composing_applications/) to help you customize and build your own Eclipse Theia-based product.
 
@@ -49,7 +48,7 @@ Please check Theia's [prerequisites](https://github.com/eclipse-theia/theia/blob
 
 ### Documentation
 
-Documentation on how to package Theia as a Desktop Product may be found [here](https://theia-ide.org/docs/blueprint_documentation/)
+Documentation on how to package Theia as a Desktop Product may be found [here](https://theia-ide.org/docs/blueprint_documentation/).
 
 For adopters building their own products based on this template, see the [Adopter Guide](ADOPTER.md) for additional considerations.
 
@@ -62,7 +61,7 @@ For adopters building their own products based on this template, see the [Adopte
 - `theia-extensions` groups the various custom theia extensions for the Eclipse Theia IDE
   - `product` contains a Theia extension contributing the product branding (about dialogue and welcome page).
   - `updater` contains a Theia extension contributing the update mechanism and corresponding UI elements (based on the electron updater).
-  - `launcher` contains a Theia extension contributing, for AppImage applications, the option to create a script that allows to start the Eclipse Theia IDE from the command line by calling the 'theia' command.
+  - `launcher` contains a Theia extension contributing, for AppImage applications, the option to create a script that allows starting the Eclipse Theia IDE from the command line by calling the 'theia' command.
 - `patches` contains patches applied to upstream packages
 
 ### Build
@@ -72,7 +71,7 @@ For development and casual testing of the Eclipse Theia IDE, one can build it in
 NOTE: If manually building after updating dependencies or pulling to a newer commit, run `git clean -xfd` to help avoid runtime conflicts.
 
 ```sh
-# Build "dev" version of the app. Its quicker, uses less resources, 
+# Build "dev" version of the app. It's quicker, uses less resources,
 # but the front end app is not "minified"
 yarn && yarn build:dev && yarn download:plugins
 ```
@@ -86,9 +85,9 @@ yarn && yarn build && yarn download:plugins
 
 ### Package the Applications
 
-ATM we only produce packages for the Electron application.
+Currently we only produce packages for the Electron application.
 
-_If you are trying to compile for arm on an arm machine, you may want to follow [these steps](https://github.com/eclipse-theia/theia-ide/issues/690#issuecomment-4157768849) before_
+_If you are trying to compile for ARM on an ARM machine, you may want to follow [these steps](https://github.com/eclipse-theia/theia-ide/issues/690#issuecomment-4157768849) beforehand._
 
 ```sh
 yarn package:applications
@@ -98,7 +97,7 @@ yarn electron package
 
 The packaged application is located in `applications/electron/dist`.
 
-### Create a Preview Electron Electron Application (without packaging it)
+### Create a Preview Electron Application (without packaging it)
 
 ```sh
 yarn electron package:preview
@@ -108,8 +107,7 @@ The packaged application is located in `applications/electron/dist`.
 
 ### Running E2E Tests on Electron
 
-The E2E tests basic UI tests of the actual application.
-This is done based on the preview of the packaged application.
+The E2E tests are basic UI tests of the actual application, run against the preview of the packaged application.
 
 ```sh
 yarn electron package:preview
@@ -124,7 +122,7 @@ The browser app may be started with
 yarn browser start
 ```
 
-and connect to <http://localhost:3000/>
+Then connect to <http://localhost:3000/>.
 
 ### Developing with Local Theia Framework
 
@@ -138,6 +136,10 @@ To build and test the Theia IDE against a local development version of the Theia
 
 The features in the Eclipse Theia IDE are based on Theia and the included extensions/plugins. For bugs in Theia please consider opening an issue in the [Theia project on Github](https://github.com/eclipse-theia/theia/issues/new/choose).
 The Eclipse Theia IDE only packages existing functionality into a product and installers for the product. If you believe there is a mistake in packaging, something needs to be added to the packaging or the installers do not work properly, please [open an issue on Github](https://github.com/eclipse-theia/theia-ide/issues/new/choose) to let us know.
+
+### Linux (AppImage)
+
+The AppImage distribution of the Theia IDE requires FUSE (`libfuse2`) to be installed on the system. This is a general requirement of the AppImage format, not specific to Theia IDE. See the [AppImage documentation](https://docs.appimage.org/user-guide/troubleshooting/fuse.html) for details and installation instructions per distribution.
 
 ### Docker
 
@@ -156,4 +158,4 @@ You may then run this with
 docker run -p=3000:3000 --rm theia-ide
 ```
 
-and connect to <http://localhost:3000/>
+Then connect to <http://localhost:3000/>.
