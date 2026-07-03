@@ -335,13 +335,13 @@ Promote the IDE using the [Build Job](https://ci.eclipse.org/theia/job/Theia%20-
 - Post a comment to announce the official release of the Theia IDE:
 
    ```md
-   {{ideVersion}} has been promoted to stable
+   [{{ideVersion}} has been promoted to stable](https://download.eclipse.org/theia/ide/{{ideVersion}}/)
    ```
 
   - Update the [Base Preview discussion](#32-announce-preview-test-phase) status table with a checkmark and the version that has been published.
 
    ```md
-   | [Theia IDE {{majorMinor}}.x Promoted to Stable](https://download.eclipse.org/theia/ide/1.67.100/) | {{today}} | :white_check_mark: |
+   | [Theia IDE {{ideVersion}} Promoted to Stable](https://download.eclipse.org/theia/ide/{{ideVersion}}/) | {{today}} | :white_check_mark: |
    ```
 
   - Mark the message as the answer.
@@ -368,15 +368,15 @@ After promoting the release, tag the release commit as follows:
 ## 6. Publish Docker Image
 <!-- release: both -->
 
-Publish the Docker image by running the [workflow](https://github.com/eclipse-theia/theia-ide/actions/workflows/publish-theia-ide-img.yml) from the `master` branch. Use **${THEIA_IDE_VERSION}** as the version.
-(We do NOT use the v prefix here in this case currently).
+Publish the Docker image by running the [workflow](https://github.com/eclipse-theia/theia-ide/actions/workflows/publish-theia-ide-img.yml) from the `master` branch or the release tag.
+Use **${THEIA_IDE_VERSION}** as the version. We do **NOT** use the v prefix here in this case currently.
 
 - Check the GH package page if the image was published correctly: <https://github.com/eclipse-theia/theia-ide/pkgs/container/theia-ide%2Ftheia-ide>
 
 - Update the [Preview discussion](#32-announce-preview-test-phase) status table
 
    ```md
-   | [Docker image Publish](https://github.com/eclipse-theia/theia-ide/pkgs/container/theia-ide%2Ftheia-ide) | {{today}} | :white_check_mark: |
+   | [Docker image {{ideVersion}} published](https://github.com/eclipse-theia/theia-ide/pkgs/container/theia-ide%2Ftheia-ide) | {{today}} | :white_check_mark: |
    ```
 
 ## 7. Snap Update
@@ -401,7 +401,7 @@ After the IDE is promoted to stable, perform these steps for the snap update:
 9. Update the [Preview discussion](#32-announce-preview-test-phase) status table
 
    ```md
-   | [Snap updated](https://snapcraft.io/theia-ide) | {{today}} | :white_check_mark: |
+   | [Snap latest/stable updated to {{ideVersion}}](https://snapcraft.io/theia-ide) | {{today}} | :white_check_mark: |
    ```
 
 ## 8. Upgrade Dependencies
