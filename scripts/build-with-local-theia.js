@@ -203,6 +203,87 @@ function collectAllTheiaDependencies() {
 }
 
 /**
+ * Determine which required @theia/* dependencies are only available locally,
+ * i.e. present in the local Theia checkout but not yet published to npm. Such
+ * packages have no entry in the IDE's yarn.lock (published ones always do).
+ *
+ * These would make `yarn install` abort, since it tries to fetch the declared
+ * version from the npm registry before the linking step ever runs. Returns a
+ * Map of package name -> local package directory.
+ */
+function findUnpublishedLocalDeps() {
+    const theiaPackages = findTheiaPackages(options.theiaPath);
+    const requiredDeps = collectAllTheiaDependencies();
+    const lockfilePath = path.join(ROOT_DIR, 'yarn.lock');
+    const lockfile = fs.existsSync(lockfilePath) ? fs.readFileSync(lockfilePath, 'utf-8') : '';
+
+    const unpublished = new Map();
+    for (const dep of requiredDeps) {
+        const localPath = theiaPackages.get(dep);
+        if (!localPath) {
+            // Not available locally; either published (resolved from npm) or
+            // genuinely missing (reported later by linkTheiaPackages).
+            continue;
+        }
+        // A published dependency always appears as a "<name>@..." key in the
+        // lockfile. Absence means it is local-only and cannot be fetched.
+        if (!lockfile.includes(`${dep}@`)) {
+            unpublished.set(dep, localPath);
+        }
+    }
+    return unpublished;
+}
+
+/**
+ * Run a yarn install command. Any required @theia/* packages that exist only
+ * in the local checkout (unpublished) would make yarn fail while resolving
+ * them against the npm registry. To avoid this, temporarily add `file:`
+ * resolutions pointing at the local checkout so the install succeeds; the
+ * subsequent linkTheiaPackages step replaces them with symlinks anyway.
+ *
+ * package.json and yarn.lock are restored afterwards so the repository is not
+ * left with machine-specific paths.
+ */
+function runYarnInstall(cmd, description) {
+    const unpublished = findUnpublishedLocalDeps();
+    if (unpublished.size === 0) {
+        run(cmd, ROOT_DIR, description);
+        return;
+    }
+
+    console.log('\nUnpublished local @theia packages detected (added as temporary file: resolutions):');
+    unpublished.forEach((localPath, dep) => console.log(`  - ${dep} -> ${localPath}`));
+
+    if (options.dryRun) {
+        run(cmd, ROOT_DIR, description);
+        return;
+    }
+
+    const pkgPath = path.join(ROOT_DIR, 'package.json');
+    const lockPath = path.join(ROOT_DIR, 'yarn.lock');
+    const originalPkg = fs.readFileSync(pkgPath, 'utf-8');
+    const originalLock = fs.existsSync(lockPath) ? fs.readFileSync(lockPath, 'utf-8') : undefined;
+
+    const pkg = JSON.parse(originalPkg);
+    pkg.resolutions = pkg.resolutions || {};
+    unpublished.forEach((localPath, dep) => {
+        pkg.resolutions[dep] = `file:${localPath}`;
+    });
+    fs.writeFileSync(pkgPath, `${JSON.stringify(pkg, undefined, 2)}\n`);
+
+    try {
+        run(cmd, ROOT_DIR, description);
+    } finally {
+        // Restore so the repo is not left with local file: paths. node_modules
+        // already contains the packages; linkTheiaPackages will symlink them.
+        fs.writeFileSync(pkgPath, originalPkg);
+        if (originalLock !== undefined) {
+            fs.writeFileSync(lockPath, originalLock);
+        }
+    }
+}
+
+/**
  * Build Theia
  */
 function buildTheia() {
@@ -273,14 +354,17 @@ function linkTheiaPackages() {
 }
 
 /**
- * Remove the symlinks created by linkTheiaPackages and restore npm versions.
+ * Remove any @theia/* entries in the IDE's node_modules that are symlinks
+ * created by a previous linkTheiaPackages run. Returns the number removed.
+ *
+ * This must happen before `yarn install`: yarn trips over a symlinked package
+ * (it tries to create a nested node_modules inside it and fails with EEXIST
+ * because the link target already has one) and cannot cleanly replace it with
+ * the registry version.
  */
-function unlinkTheiaPackages() {
-    console.log(`\n${'='.repeat(60)}`);
-    console.log('> Removing Theia package links and restoring npm dependencies');
-    console.log(`${'='.repeat(60)}\n`);
-
+function removeTheiaSymlinks() {
     const requiredDeps = collectAllTheiaDependencies();
+    let removed = 0;
 
     for (const dep of requiredDeps) {
         const linkPath = idePackagePath(dep);
@@ -293,16 +377,32 @@ function unlinkTheiaPackages() {
         if (!isSymlink) {
             continue;
         }
+        // rmSync on a symlink removes the link itself, not the target contents.
         if (options.dryRun) {
             console.log(`[DRY RUN] Would remove link ${dep}`);
         } else {
             fs.rmSync(linkPath, { recursive: true, force: true });
             console.log(`Removed link ${dep}`);
         }
+        removed++;
     }
 
-    // Reinstall to restore npm versions
-    run('yarn --force', ROOT_DIR, 'Reinstall npm dependencies');
+    return removed;
+}
+
+/**
+ * Remove the symlinks created by linkTheiaPackages and restore npm versions.
+ */
+function unlinkTheiaPackages() {
+    console.log(`\n${'='.repeat(60)}`);
+    console.log('> Removing Theia package links and restoring npm dependencies');
+    console.log(`${'='.repeat(60)}\n`);
+
+    removeTheiaSymlinks();
+
+    // Reinstall to restore npm versions. Unpublished local packages still need
+    // temporary file: resolutions, otherwise this reinstall fails the same way.
+    runYarnInstall('yarn --force', 'Reinstall npm dependencies');
 
     console.log('\nLinks removed and npm dependencies restored');
 }
@@ -311,9 +411,12 @@ function unlinkTheiaPackages() {
  * Build IDE
  */
 function buildIde() {
-    // Install first: yarn install replaces node_modules/@theia/* with the
-    // registry versions, so the local packages must be linked afterwards.
-    run('yarn', ROOT_DIR, 'Install IDE dependencies');
+    // Remove symlinks left by a previous run first: yarn install fails on a
+    // symlinked @theia package (EEXIST creating its nested node_modules).
+    removeTheiaSymlinks();
+    // Install: yarn install replaces node_modules/@theia/* with the registry
+    // versions, so the local packages must be linked afterwards.
+    runYarnInstall('yarn', 'Install IDE dependencies');
     linkTheiaPackages();
     // sync must run after install+link so the missing transitives are present
     // in theia-ide/node_modules to copy from
