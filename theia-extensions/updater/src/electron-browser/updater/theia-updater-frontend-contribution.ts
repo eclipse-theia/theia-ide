@@ -67,8 +67,8 @@ export class TheiaUpdaterClientImpl implements TheiaUpdaterClient {
         this.onReadyToInstallEmitter.fire();
     }
 
-    updateAvailable(available: boolean, updateInfo?: UpdateInfo): void {
-        this.onUpdateAvailableEmitter.fire({ available, updateInfo });
+    updateAvailable(available: boolean, updateInfo?: UpdateInfo, notifyIfNoUpdate = true): void {
+        this.onUpdateAvailableEmitter.fire({ available, updateInfo, notifyIfNoUpdate });
     }
 
     reportError(error: UpdaterError): void {
@@ -127,11 +127,11 @@ export class TheiaUpdaterFrontendContribution implements CommandContribution, Me
 
     @postConstruct()
     protected init(): void {
-        this.updaterClient.onUpdateAvailable(({ available, updateInfo }) => {
+        this.updaterClient.onUpdateAvailable(({ available, updateInfo, notifyIfNoUpdate }) => {
             if (available) {
                 this.currentUpdateInfo = updateInfo;
                 this.handleDownloadUpdate(updateInfo);
-            } else {
+            } else if (notifyIfNoUpdate) {
                 this.handleNoUpdate();
             }
         });

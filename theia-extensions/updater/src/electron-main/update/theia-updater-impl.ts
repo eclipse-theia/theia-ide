@@ -48,12 +48,14 @@ export class TheiaUpdaterImpl implements TheiaUpdater, ElectronMainApplicationCo
 
     private initialCheck: boolean = true;
     private reportOnFirstRegistration: boolean = false;
+    private notifyIfNoUpdate: boolean = false;
     private cancellationToken: CancellationToken = new CancellationToken();
     private updateCheckTimer: NodeJS.Timeout | undefined;
 
     constructor() {
         autoUpdater.autoDownload = false;
         autoUpdater.on('update-available', (info: { version: string }) => {
+            this.notifyIfNoUpdate = false;
             if (this.initialCheck) {
                 this.initialCheck = false;
                 if (this.clients.length === 0) {
@@ -64,11 +66,12 @@ export class TheiaUpdaterImpl implements TheiaUpdater, ElectronMainApplicationCo
             this.clients.forEach(c => c.updateAvailable(true, updateInfo));
         });
         autoUpdater.on('update-not-available', () => {
+            const notifyIfNoUpdate = this.notifyIfNoUpdate;
+            this.notifyIfNoUpdate = false;
             if (this.initialCheck) {
                 this.initialCheck = false;
-                return;
             }
-            this.clients.forEach(c => c.updateAvailable(false));
+            this.clients.forEach(c => c.updateAvailable(false, undefined, notifyIfNoUpdate));
         });
 
         autoUpdater.on('update-downloaded', () => {
@@ -76,6 +79,7 @@ export class TheiaUpdaterImpl implements TheiaUpdater, ElectronMainApplicationCo
         });
 
         autoUpdater.on('error', (err: unknown) => {
+            this.notifyIfNoUpdate = false;
             if (err instanceof Error && err.message.includes('cancelled')) {
                 return;
             }
@@ -84,7 +88,8 @@ export class TheiaUpdaterImpl implements TheiaUpdater, ElectronMainApplicationCo
         });
     }
 
-    checkForUpdates(): void {
+    checkForUpdates(notifyIfNoUpdate = true): void {
+        this.notifyIfNoUpdate = this.notifyIfNoUpdate || notifyIfNoUpdate;
         const feedURL = this.getFeedURL(this.settings.channel);
         autoUpdater.setFeedURL(feedURL);
         autoUpdater.checkForUpdates();
@@ -142,13 +147,13 @@ export class TheiaUpdaterImpl implements TheiaUpdater, ElectronMainApplicationCo
             return;
         }
 
-        this.checkForUpdates();
+        this.checkForUpdates(false);
 
         const intervalMs = Math.max(this.settings.checkInterval, 1) * 60 * 1000;
 
         this.updateCheckTimer = setInterval(() => {
             if (this.settings.checkForUpdates) {
-                this.checkForUpdates();
+                this.checkForUpdates(false);
             }
         }, intervalMs);
     }
