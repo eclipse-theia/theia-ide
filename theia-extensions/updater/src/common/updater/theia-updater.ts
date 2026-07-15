@@ -18,7 +18,7 @@ export interface UpdaterSettings {
 }
 
 export interface TheiaUpdater extends RpcServer<TheiaUpdaterClient> {
-    checkForUpdates(): void;
+    checkForUpdates(notifyIfNoUpdate?: boolean): void;
     downloadUpdate(): void;
     onRestartToUpdateRequested(): void;
     disconnectClient(client: TheiaUpdaterClient): void;
@@ -40,10 +40,11 @@ export interface UpdateInfo {
 export interface UpdateAvailabilityInfo {
     available: boolean;
     updateInfo?: UpdateInfo;
+    notifyIfNoUpdate: boolean;
 }
 
 export interface TheiaUpdaterClient {
-    updateAvailable(available: boolean, updateInfo?: UpdateInfo): void;
+    updateAvailable(available: boolean, updateInfo?: UpdateInfo, notifyIfNoUpdate?: boolean): void;
     notifyReadyToInstall(): void;
     reportError(error: UpdaterError): void;
     reportCancelled(): void;
