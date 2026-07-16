@@ -159,7 +159,7 @@ Exec=${appImagePath} %U
 Terminal=false
 Type=Application
 Icon=${imagePath}
-StartupWMClass=${applicationName}
+StartupWMClass=${this.getAppId(applicationName)}
 Comment=IDE for cloud and desktop
 Categories=Development;IDE;`;
     }
