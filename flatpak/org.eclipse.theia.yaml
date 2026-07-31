@@ -30,10 +30,6 @@ modules:
         path: ..
       - type: patch
         path: electron-builder.patch
-      - type: script
-        dest-filename: wrapper.sh
-        commands:
-          - exec zypak-wrapper /app/share/theia/theia-ide-electron-app.bin --ozone-platform-hint=auto --no-sandbox "$@"
       - type: inline
         contents: |
           --install.frozen-lockfile true
@@ -41,6 +37,8 @@ modules:
           --run.offline true
           yarn-offline-mirror ./flatpak-node/yarn-mirror
         dest-filename: .yarnrc
+      - type: file
+        path: theia.sh
       - type: file
         path: org.eclipse.theia.desktop
       - type: file
@@ -61,7 +59,7 @@ modules:
       - yarn run build
       - yarn run package:applications:prod
       - mv applications/electron/dist/linux-unpacked ${FLATPAK_DEST}/share/theia
-      - install -Dm0755 wrapper.sh ${FLATPAK_DEST}/bin/theia
+      - install -Dm0755 theia.sh ${FLATPAK_DEST}/bin/theia
       - install -Dm0644 ${FLATPAK_ID}.desktop -t ${FLATPAK_DEST}/share/applications
       - install -Dm0644 ${FLATPAK_ID}.metainfo.xml -t ${FLATPAK_DEST}/share/metainfo
       - install -Dm0644
