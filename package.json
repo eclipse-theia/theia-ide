@@ -17,7 +17,7 @@
   },
   "devDependencies": {
     "@eclipse-dash/nodejs-wrapper": "^0.0.1",
-    "@theia/cli": "1.74.1",
+    "@theia/cli": "1.75.0-next.21",
     "@types/yargs": "^17",
     "@typescript-eslint/eslint-plugin": "^4.33.0",
     "@typescript-eslint/eslint-plugin-tslint": "^4.33.0",
@@ -83,16 +83,17 @@
   ],
   "resolutions": {
     "@types/puppeteer": "^5.4.7",
-    "**/node-abi": "4.33.0",
     "**/yauzl": "^3.3.1",
     "**/adm-zip": "^0.6.0",
     "**/cross-spawn": "^7.0.6",
+    "**/dompurify": "^3.4.13",
     "**/globule/minimatch": "^3.1.5",
     "**/nx/brace-expansion": "^5.0.9",
-    "**/serialize-javascript": "^7.0.3",
+    "**/serialize-javascript": "^7.1.0",
     "**/tmp": "^0.2.6",
-    "**/tar": "^7.5.19",
+    "**/tar": "^7.5.22",
+    "**/uuid": "^11.1.1",
     "**/mocha": "^11.0.0",
-    "lerna/js-yaml": "^4.2.0"
+    "lerna/js-yaml": "^4.3.1"
   }
 }
