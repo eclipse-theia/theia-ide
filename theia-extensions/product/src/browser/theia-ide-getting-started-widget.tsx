@@ -33,6 +33,8 @@ export class TheiaIDEGettingStartedWidget extends GettingStartedWidget {
 
     protected async doInit(): Promise<void> {
         super.doInit();
+        // Brand the tab with the application icon, the way a favicon marks a page.
+        this.title.iconClass = 'tide-welcome-tab-icon';
         this.vscodeApiVersion = await this.vsxEnvironment.getVscodeApiVersion();
         await this.preferenceService.ready;
         this.update();
