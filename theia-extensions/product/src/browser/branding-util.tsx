@@ -22,7 +22,7 @@ export interface ExternalBrowserLinkProps {
 export function renderProductName(): React.ReactNode {
     const variant = getBrandingVariant();
     const suffix = variant !== 'stable' ? ` ${variant.charAt(0).toUpperCase() + variant.slice(1)}` : '';
-    return <h1>Eclipse Theia <span className="gs-blue-header">IDE</span>{suffix}</h1>;
+    return <h1>Eclipse Theia <span className="tide-branding-accent">IDE</span>{suffix}</h1>;
 }
 
 export const DOWNLOAD_URL = 'https://theia-ide.org/#theiaidedownload';

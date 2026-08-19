@@ -9,27 +9,43 @@
 
 :root {
     --theia-branding-logo: url(../icons/TheiaIDE.png);
+    --theia-branding-icon: url(../icons/512-512.png);
     --theia-branding-accent: #5088e7;
 }
 
+body[data-theia-branding="next"] {
+    --theia-branding-logo: url(../icons/TheiaIDE-next.png);
+    --theia-branding-icon: url(../icons/512-512-next.png);
+    /* The exact purple of the `next` application icon, so the product name matches it. */
+    --theia-branding-accent: #8b5cf6;
+}
+
 .theia-icon {
-    background-image: url("../icons/512-512.png");
+    background-image: var(--theia-branding-icon);
     background-position: center;
     background-repeat: no-repeat;
     background-size: contain;
 }
 
-body[data-theia-branding="next"] {
-    --theia-branding-logo: url(../icons/TheiaIDE-next.png);
-    /* The exact purple of the `next` application icon, so the product name matches it. */
-    --theia-branding-accent: #8b5cf6;
+/*
+ * The application icon on the welcome tab, so the tab is recognizable the way a favicon makes a page.
+ * Tab icons in the main area are drawn as a mask tinted with `--theia-icon-foreground`, which would flatten
+ * the brand color, so the icon is put back as a plain background image. Core does the same for file icons,
+ * hence the selectors have to be as specific as the rules in its `tabs.css`.
+ */
+.lm-TabBar.theia-app-centers .lm-TabBar-tabIcon.tide-welcome-tab-icon,
+.lm-TabBar-tab.lm-mod-drag-image .lm-TabBar-tabIcon.tide-welcome-tab-icon {
+    /*
+     * `content-box` keeps the icon out of the `padding-right` that core gives every tab icon as the gap
+     * before the label. Without it the background fills the padding box and eats into that gap.
+     */
+    background: var(--theia-branding-icon) center/contain no-repeat content-box;
+    -webkit-mask: none;
+    mask: none;
+    min-height: var(--theia-icon-size);
 }
 
-body[data-theia-branding="next"] .theia-icon {
-    background-image: url("../icons/512-512-next.png");
-}
-
-.gs-blue-header {
+.tide-branding-accent {
     color: var(--theia-branding-accent);
     text-transform: capitalize;
     font-weight: 600;
