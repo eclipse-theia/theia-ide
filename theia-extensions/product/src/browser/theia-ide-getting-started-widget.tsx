@@ -9,12 +9,9 @@
 
 import * as React from 'react';
 
-import { Message } from '@theia/core/lib/browser';
 import { PreferenceService } from '@theia/core/lib/common';
 import { inject, injectable } from '@theia/core/shared/inversify';
-import {
-    renderDocumentation, renderDownloads, renderExtendingCustomizing, renderProductName, renderSourceCode, renderSupport, renderTickets, renderWhatIs, renderCollaboration
-} from './branding-util';
+import { renderBrandingSections, renderProductName } from './branding-util';
 
 import { GettingStartedWidget } from '@theia/getting-started/lib/browser/getting-started-widget';
 import { VSXEnvironment } from '@theia/vsx-registry/lib/common/vsx-environment';
@@ -24,7 +21,7 @@ import { WindowService } from '@theia/core/lib/browser/window/window-service';
 export class TheiaIDEGettingStartedWidget extends GettingStartedWidget {
 
     @inject(VSXEnvironment)
-    protected readonly environment: VSXEnvironment;
+    protected readonly vsxEnvironment: VSXEnvironment;
 
     @inject(WindowService)
     protected readonly windowService: WindowService;
@@ -36,77 +33,36 @@ export class TheiaIDEGettingStartedWidget extends GettingStartedWidget {
 
     protected async doInit(): Promise<void> {
         super.doInit();
-        this.vscodeApiVersion = await this.environment.getVscodeApiVersion();
+        this.vscodeApiVersion = await this.vsxEnvironment.getVscodeApiVersion();
         await this.preferenceService.ready;
         this.update();
     }
 
-    protected onActivateRequest(msg: Message): void {
-        super.onActivateRequest(msg);
-        const htmlElement = document.getElementById('alwaysShowWelcomePage');
-        if (htmlElement) {
-            htmlElement.focus();
-        }
-    }
-
     protected render(): React.ReactNode {
+        if (this.walkthroughService.selectedWalkthrough) {
+            return this.renderSelectedWalkthrough();
+        }
         return <div className='gs-container'>
             <div className='gs-content-container'>
-                <div className='gs-float'>
-                    <div className='gs-logo'>
-                    </div>
-                    {this.renderActions()}
-                </div>
                 {this.renderHeader()}
                 <hr className='gs-hr' />
-                <div className='flex-grid'>
-                    <div className='col'>
-                        {this.renderNews()}
-                    </div>
-                </div>
-                <div className='flex-grid'>
-                    <div className='col'>
-                        {renderWhatIs(this.windowService)}
-                    </div>
-                </div>
-                <div className='flex-grid'>
-                    <div className='col'>
-                        {renderExtendingCustomizing(this.windowService)}
-                    </div>
-                </div>
-                <div className='flex-grid'>
-                    <div className='col'>
-                        {renderSupport(this.windowService)}
-                    </div>
-                </div>
-                <div className='flex-grid'>
-                    <div className='col'>
-                        {renderTickets(this.windowService)}
-                    </div>
-                </div>
-                <div className='flex-grid'>
-                    <div className='col'>
-                        {renderSourceCode(this.windowService)}
-                    </div>
-                </div>
-                <div className='flex-grid'>
-                    <div className='col'>
-                        {renderDocumentation(this.windowService)}
-                    </div>
-                </div>
-                <div className='flex-grid'>
-                    <div className='col'>
+                {this.aiIsIncluded &&
+                    <div className='tide-welcome-banner'>
                         {this.renderAIBanner()}
                     </div>
-                </div>
-                <div className='flex-grid'>
-                    <div className='col'>
-                        {renderCollaboration(this.windowService)}
+                }
+                <div className='tide-welcome-grid'>
+                    <div className='tide-welcome-column'>
+                        {this.renderStart()}
+                        {this.renderRecentWorkspaces()}
+                        {this.renderWalkthroughs()}
+                        {this.renderSettings()}
+                        {this.renderHelp()}
                     </div>
-                </div>
-                <div className='flex-grid'>
-                    <div className='col'>
-                        {renderDownloads()}
+                    <div className='tide-welcome-column'>
+                        {renderBrandingSections({
+                            windowService: this.windowService
+                        })}
                     </div>
                 </div>
             </div>
@@ -116,55 +72,27 @@ export class TheiaIDEGettingStartedWidget extends GettingStartedWidget {
         </div>;
     }
 
-    protected renderActions(): React.ReactNode {
-        return <div className='gs-container'>
-            <div className='flex-grid'>
-                <div className='col'>
-                    {this.renderStart()}
-                </div>
-            </div>
-            <div className='flex-grid'>
-                <div className='col'>
-                    {this.renderRecentWorkspaces()}
-                </div>
-            </div>
-            <div className='flex-grid'>
-                <div className='col'>
-                    {this.renderSettings()}
-                </div>
-            </div>
-            <div className='flex-grid'>
-                <div className='col'>
-                    {this.renderHelp()}
-                </div>
-            </div>
-        </div>;
-    }
-
+    /**
+     * The square application icon is used rather than the wordmark logo: it carries the brand without
+     * repeating the product name next to it, and the same box fits every branding variant.
+     */
     protected renderHeader(): React.ReactNode {
-        return <div className='gs-header'>
-            {renderProductName()}
-            {this.renderVersion()}
+        return <div className='gs-header tide-welcome-header'>
+            <div className='theia-icon tide-welcome-icon'>
+            </div>
+            <div>
+                {renderProductName()}
+                {this.renderVersion()}
+            </div>
         </div>;
     }
 
+    /**
+     * Both versions go on a single line, so that the header stays as flat as the sections below it.
+     */
     protected renderVersion(): React.ReactNode {
-        return <div>
-            <p className='gs-sub-header' >
-                {this.applicationInfo ? 'Version ' + this.applicationInfo.version : '-'}
-            </p>
-
-            <p className='gs-sub-header' >
-                {'VS Code API Version: ' + this.vscodeApiVersion}
-            </p>
-        </div>;
-    }
-
-    protected renderAIBanner(): React.ReactNode {
-        const framework = super.renderAIBanner();
-        if (React.isValidElement<React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement>>(framework)) {
-            return React.cloneElement(framework, { className: 'gs-section' });
-        }
-        return framework;
+        return <p className='gs-sub-header'>
+            {'Version ' + (this.applicationInfo?.version ?? '-') + ' · VS Code API ' + (this.vscodeApiVersion ?? '-')}
+        </p>;
     }
 }
