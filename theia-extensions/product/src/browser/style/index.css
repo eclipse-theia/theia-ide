@@ -9,6 +9,7 @@
 
 :root {
     --theia-branding-logo: url(../icons/TheiaIDE.png);
+    --theia-branding-accent: #5088e7;
 }
 
 .theia-icon {
@@ -20,6 +21,8 @@
 
 body[data-theia-branding="next"] {
     --theia-branding-logo: url(../icons/TheiaIDE-next.png);
+    /* The exact purple of the `next` application icon, so the product name matches it. */
+    --theia-branding-accent: #8b5cf6;
 }
 
 body[data-theia-branding="next"] .theia-icon {
@@ -27,7 +30,7 @@ body[data-theia-branding="next"] .theia-icon {
 }
 
 .gs-blue-header {
-    color: #5088e7;
+    color: var(--theia-branding-accent);
     text-transform: capitalize;
     font-weight: 600;
 }
@@ -40,19 +43,65 @@ body[data-theia-branding="next"] .theia-icon {
     text-decoration: underline;
 }
 
-.gs-float {
-    float: right;
-    padding-left: 20px;
+/*
+ * The welcome page lays out its sections in two columns: what you can do on the left, what the IDE is on
+ * the right. `auto-fit` folds them into a single column on a narrow editor without needing a media query.
+ */
+.tide-welcome-grid {
+    display: grid;
+    /*
+     * `min()` keeps the track from staying at 320px once the widget gets narrower than that: the welcome
+     * widget suppresses horizontal scrolling, so anything wider than it would be clipped rather than
+     * reachable.
+     */
+    grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
+    gap: calc(var(--theia-ui-padding) * 4);
+    align-items: start;
 }
 
-.gs-logo {
-    background-image: var(--theia-branding-logo);
-    background-position: center center;
-    background-repeat: no-repeat;
-    background-size: contain;
-    width: 250px;
-    height: 118px;
-    padding: 20px;
+.tide-welcome-column {
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--theia-ui-padding) * 3);
+    /* Keeps the recent workspace paths ellipsizing instead of widening the column. */
+    min-width: 0;
+}
+
+.tide-welcome-header {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: calc(var(--theia-ui-padding) * 3);
+}
+
+.tide-welcome-header h1 {
+    margin: 0;
+}
+
+.tide-welcome-header .gs-sub-header {
+    margin: calc(var(--theia-ui-padding) / 2) 0 0 0;
+}
+
+.tide-welcome-banner {
+    margin: calc(var(--theia-ui-padding) * 3) 0;
+}
+
+/* The banner is no longer nested in a floating box, so the full height it asks for has to be undone. */
+.tide-welcome-banner > .gs-container {
+    height: auto;
+}
+
+/*
+ * The header shows the square application icon rather than the wordmark logo. The icon is the same shape in
+ * every branding variant, so one box fits all of them, and being transparent it sits on a light and a dark
+ * theme alike. `.theia-icon` above supplies the image and swaps it per variant.
+ */
+.tide-welcome-header .tide-welcome-icon {
+    flex: 0 0 auto;
+    width: 64px;
+    height: 64px;
+    /* `.theia-icon` in core is sized and spaced for the browser menu bar logo. */
+    margin: 0;
 }
 
 .ad-logo {

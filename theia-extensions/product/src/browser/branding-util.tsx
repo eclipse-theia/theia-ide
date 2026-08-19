@@ -7,7 +7,9 @@
  * SPDX-License-Identifier: MIT
  ********************************************************************************/
 
+import { codicon } from '@theia/core/lib/browser';
 import { WindowService } from '@theia/core/lib/browser/window/window-service';
+import { environment } from '@theia/core/lib/common';
 import * as React from 'react';
 import { getBrandingVariant } from './theia-ide-config';
 
@@ -23,6 +25,8 @@ export function renderProductName(): React.ReactNode {
     return <h1>Eclipse Theia <span className="gs-blue-header">IDE</span>{suffix}</h1>;
 }
 
+export const DOWNLOAD_URL = 'https://theia-ide.org/#theiaidedownload';
+
 function BrowserLink(props: ExternalBrowserLinkProps): React.JSX.Element {
     return <a
         role={'button'}
@@ -34,20 +38,25 @@ function BrowserLink(props: ExternalBrowserLinkProps): React.JSX.Element {
     </a>;
 }
 
+/*
+ * The sections below are shared by the welcome page and the About dialog, so that both describe the product
+ * in the same words. Keep them to a sentence or two each: the welcome page has to stay scannable.
+ */
+
 export function renderWhatIs(windowService: WindowService): React.ReactNode {
     return <div className='gs-section'>
         <h3 className='gs-section-header'>
+            <i className={codicon('info')}></i>
             What is this?
         </h3>
         <div>
-            The Eclipse Theia IDE is a modern and open IDE for cloud and desktop. The Theia IDE is based on the <BrowserLink text="Theia platform"
-                url="https://theia-ide.org" windowService={windowService} ></BrowserLink>.
+            The Eclipse Theia IDE is a modern and open IDE for cloud and desktop, built on
+            the <BrowserLink text="Theia platform" url="https://theia-ide.org" windowService={windowService} />.
         </div>
         <div>
-            The IDE is available as a <BrowserLink text="downloadable desktop application" url="https://theia-ide.org//#theiaidedownload"
-                windowService={windowService} ></BrowserLink>. You can also <BrowserLink text="try the latest version of the Theia IDE online"
-                    url="https://try.theia-cloud.io/" windowService={windowService} ></BrowserLink>. The online test version is limited to 30 minutes per session and hosted
-            via <BrowserLink text="Theia Cloud" url="https://theia-cloud.io/" windowService={windowService} ></BrowserLink>.
+            You can get it as a <BrowserLink text="desktop application" url={DOWNLOAD_URL} windowService={windowService} /> or <BrowserLink
+                text="try the latest version online" url="https://try.theia-cloud.io/" windowService={windowService} />. The online version is limited to
+            30 minutes per session and hosted on <BrowserLink text="Theia Cloud" url="https://theia-cloud.io/" windowService={windowService} />.
         </div>
     </div>;
 }
@@ -55,76 +64,18 @@ export function renderWhatIs(windowService: WindowService): React.ReactNode {
 export function renderExtendingCustomizing(windowService: WindowService): React.ReactNode {
     return <div className='gs-section'>
         <h3 className='gs-section-header'>
-            Extending/Customizing the Theia IDE
-        </h3>
-        <div >
-            You can extend the Theia IDE at runtime by installing VS Code extensions, e.g. from the <BrowserLink text="OpenVSX registry" url="https://open-vsx.org/"
-                windowService={windowService} ></BrowserLink>, an open marketplace for VS Code extensions. Just open the extension view or browse <BrowserLink
-                    text="OpenVSX online" url="https://open-vsx.org/" windowService={windowService} ></BrowserLink>.
-        </div>
-        <div>
-            Furthermore, the Theia IDE is based on the flexible Theia platform. Therefore, the Theia IDE can serve as a <span className='gs-text-bold'>template</span> for building
-            custom tools and IDEs. Browse <BrowserLink text="the documentation" url="https://theia-ide.org/docs/composing_applications/"
-                windowService={windowService} ></BrowserLink> to help you customize and build your own Eclipse Theia-based product.
-        </div>
-    </div>;
-}
-
-export function renderSupport(windowService: WindowService): React.ReactNode {
-    return <div className='gs-section'>
-        <h3 className='gs-section-header'>
-            Professional Support
+            <i className={codicon('extensions')}></i>
+            Extending &amp; Customizing
         </h3>
         <div>
-            Professional support, implementation services, consulting and training for building tools like Theia IDE and for building other tools based on Eclipse Theia is
-            available by selected companies as listed on the <BrowserLink text=" Theia support page" url="https://theia-ide.org/support/"
-                windowService={windowService} ></BrowserLink>.
-        </div>
-    </div>;
-}
-
-export function renderTickets(windowService: WindowService): React.ReactNode {
-    return <div className='gs-section'>
-        <h3 className='gs-section-header'>
-            Reporting feature requests and bugs
-        </h3>
-        <div >
-            The features in the Eclipse Theia IDE are based on Theia and the included
-            extensions/plugins. For bugs in Theia please consider opening an issue in
-            the <BrowserLink text="Theia project on Github" url="https://github.com/eclipse-theia/theia/issues/new/choose"
-                windowService={windowService} ></BrowserLink>.
+            You can extend the IDE at runtime by installing VS Code extensions from
+            the <BrowserLink text="Open VSX registry" url="https://open-vsx.org/" windowService={windowService} />, an open marketplace. Open the Extensions
+            view to browse them.
         </div>
         <div>
-            Eclipse Theia IDE only packages existing functionality into a product and installers
-            for the product. If you believe there is a mistake in packaging, something needs to be added to the
-            packaging or the installers do not work properly,
-            please <BrowserLink text="open an issue on Github" url="https://github.com/eclipse-theia/theia-ide/issues/new/choose"
-                windowService={windowService} ></BrowserLink> to let us know.
-        </div>
-    </div>;
-}
-
-export function renderSourceCode(windowService: WindowService): React.ReactNode {
-    return <div className='gs-section'>
-        <h3 className='gs-section-header'>
-            Source Code
-        </h3>
-        <div >
-            The source code of Eclipse Theia IDE is available
-            on <BrowserLink text="Github" url="https://github.com/eclipse-theia/theia-ide"
-                windowService={windowService} ></BrowserLink>.
-        </div>
-    </div>;
-}
-
-export function renderDocumentation(windowService: WindowService): React.ReactNode {
-    return <div className='gs-section'>
-        <h3 className='gs-section-header'>
-            Documentation
-        </h3>
-        <div >
-            Please see the <BrowserLink text="documentation" url="https://theia-ide.org/docs/user_getting_started/"
-                windowService={windowService} ></BrowserLink> on how to use the Theia IDE.
+            The IDE is built on the flexible Theia platform, so it can also serve as
+            a <span className='gs-text-bold'>template</span> for your own tools and IDEs. See
+            the <BrowserLink text="documentation" url="https://theia-ide.org/docs/composing_applications/" windowService={windowService} /> to get started.
         </div>
     </div>;
 }
@@ -132,30 +83,91 @@ export function renderDocumentation(windowService: WindowService): React.ReactNo
 export function renderCollaboration(windowService: WindowService): React.ReactNode {
     return <div className='gs-section'>
         <h3 className='gs-section-header'>
+            <i className={codicon('live-share')}></i>
             Collaboration
         </h3>
-        <div >
-            The IDE features a built-in collaboration feature.
-            You can share your workspace with others and work together in real-time by clicking on the <i>Collaborate</i> item in the status bar.
-            The collaboration feature is powered by
-            the <BrowserLink text="Open Collaboration Tools" url="https://www.open-collab.tools/" windowService={windowService} /> project
-            and uses their public server infrastructure.
+        <div>
+            Share your workspace with others and work together in real time by clicking <i>Collaborate</i> in the status bar. The feature is powered
+            by <BrowserLink text="Open Collaboration Tools" url="https://www.open-collab.tools/" windowService={windowService} /> and uses their public
+            server infrastructure.
         </div>
     </div>;
 }
 
-export function renderDownloads(): React.ReactNode {
+export function renderSupport(windowService: WindowService): React.ReactNode {
     return <div className='gs-section'>
         <h3 className='gs-section-header'>
-            Updates and Downloads
+            <i className={codicon('organization')}></i>
+            Professional Support
         </h3>
-        <div className='gs-action-container'>
-            You can update Eclipse Theia IDE directly in this application by navigating to
-            File {'>'} Preferences {'>'} Check for Updates… Moreover the application will check for updates
-            after each launch automatically.
-        </div>
-        <div className='gs-action-container'>
-            Alternatively you can download the most recent version from the download page.
+        <div>
+            Professional support, implementation services, consulting and training for the Theia IDE and for other tools based on Eclipse Theia are available
+            from selected companies. They are listed on
+            the <BrowserLink text="Theia support page" url="https://theia-ide.org/support/" windowService={windowService} />.
         </div>
     </div>;
+}
+
+export function renderCommunity(windowService: WindowService): React.ReactNode {
+    return <div className='gs-section'>
+        <h3 className='gs-section-header'>
+            <i className={codicon('comment-discussion')}></i>
+            Community
+        </h3>
+        <div>
+            The features of the Theia IDE come from Theia and the included extensions, while this project packages them into a product and its installers. So
+            please report a bug in a feature to the <BrowserLink text="Theia project"
+                url="https://github.com/eclipse-theia/theia/issues/new/choose" windowService={windowService} />, and anything wrong with the packaging or the
+            installers to the <BrowserLink text="Theia IDE project" url="https://github.com/eclipse-theia/theia-ide/issues/new/choose"
+                windowService={windowService} />.
+        </div>
+        <div>
+            The <BrowserLink text="source code" url="https://github.com/eclipse-theia/theia-ide" windowService={windowService} /> of the Theia IDE is available
+            on GitHub.
+        </div>
+    </div>;
+}
+
+export interface BrandingProps {
+    windowService: WindowService;
+}
+
+/**
+ * Renders nothing outside of the desktop application: the updater and its `updates.*` preferences are
+ * contributed by `theia-ide-updater-ext`, which is part of the Electron builds only.
+ */
+export function renderUpdates(props: BrandingProps): React.ReactNode {
+    if (!environment.electron.is()) {
+        return undefined;
+    }
+    return <div className='gs-section'>
+        <h3 className='gs-section-header'>
+            <i className={codicon('cloud-download')}></i>
+            Updates
+        </h3>
+        <div>
+            You can update the Theia IDE directly in this application. It also checks for updates automatically after each launch.
+        </div>
+        <div>
+            You can also download the most recent version from
+            the <BrowserLink text="download page" url={DOWNLOAD_URL} windowService={props.windowService} />.
+        </div>
+    </div>;
+}
+
+/**
+ * The product description as shown by both the welcome page and the About dialog. Sharing the whole list
+ * rather than only the individual sections keeps the two from drifting apart as sections come and go.
+ */
+export function renderBrandingSections(props: BrandingProps): React.ReactNode {
+    const row = (content: React.ReactNode) => <div className='flex-grid'><div className='col'>{content}</div></div>;
+    const updates = renderUpdates(props);
+    return <React.Fragment>
+        {row(renderWhatIs(props.windowService))}
+        {row(renderExtendingCustomizing(props.windowService))}
+        {row(renderCollaboration(props.windowService))}
+        {row(renderSupport(props.windowService))}
+        {row(renderCommunity(props.windowService))}
+        {updates && row(updates)}
+    </React.Fragment>;
 }
