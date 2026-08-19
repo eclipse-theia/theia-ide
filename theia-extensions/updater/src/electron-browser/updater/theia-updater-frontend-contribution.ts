@@ -45,7 +45,15 @@ export namespace TheiaUpdaterCommands {
 }
 
 export namespace TheiaUpdaterMenu {
-    export const MENU_PATH: MenuPath = [...CommonMenus.FILE_SETTINGS_SUBMENU, '3_settings_submenu_update'];
+    /**
+     * `Help` is where desktop applications conventionally offer the update check, VS Code included. On macOS
+     * it would belong in the application menu, but Theia builds that one from a fixed template, so `Help` is
+     * used on every platform.
+     *
+     * The entries go straight into `Help` rather than into a group of their own: a group is positioned by its
+     * id, so only an action registered directly can be placed with an `order`.
+     */
+    export const MENU_PATH: MenuPath = CommonMenus.HELP;
 }
 
 @injectable()
@@ -182,11 +190,14 @@ export class TheiaUpdaterFrontendContribution implements CommandContribution, Me
     }
 
     registerMenus(registry: MenuModelRegistry): void {
+        // `z` keeps the update entries at the bottom of `Help`, below `About`, which core registers with `9`.
         registry.registerMenuAction(TheiaUpdaterMenu.MENU_PATH, {
-            commandId: TheiaUpdaterCommands.CHECK_FOR_UPDATES.id
+            commandId: TheiaUpdaterCommands.CHECK_FOR_UPDATES.id,
+            order: 'z1'
         });
         registry.registerMenuAction(TheiaUpdaterMenu.MENU_PATH, {
-            commandId: TheiaUpdaterCommands.RESTART_TO_UPDATE.id
+            commandId: TheiaUpdaterCommands.RESTART_TO_UPDATE.id,
+            order: 'z2'
         });
     }
 

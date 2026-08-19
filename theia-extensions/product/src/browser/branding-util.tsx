@@ -146,7 +146,8 @@ export function renderUpdates(props: BrandingProps): React.ReactNode {
             Updates
         </h3>
         <div>
-            You can update the Theia IDE directly in this application. It also checks for updates automatically after each launch.
+            You can update the Theia IDE directly in this application from Help {'>'} Check for Updates… It also checks for updates automatically
+            after each launch.
         </div>
         <div>
             You can also download the most recent version from
