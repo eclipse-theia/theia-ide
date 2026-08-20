@@ -566,11 +566,44 @@ function syncMissingFrameworkDeps() {
 }
 
 /**
+ * Ensure the Electron binary distribution is present before packaging.
+ *
+ * electron-builder packages from node_modules/electron/dist. That directory is
+ * created by Electron's own postinstall step (node_modules/electron/install.js).
+ * In the link-based flow node_modules is installed and reinstalled repeatedly
+ * and @theia symlinks are swapped in and out, which can leave the electron
+ * package in place while its postinstall does not re-run, so dist/ ends up
+ * missing and electron-builder aborts with:
+ *   "The specified electronDist does not exist: .../node_modules/electron/dist".
+ *
+ * Re-running install.js fixes this: it is a no-op when dist/ already exists and
+ * otherwise extracts from the local Electron cache (no network download in the
+ * common case). A plain `yarn && build && package` never hits this because that
+ * single fresh install runs the postinstall cleanly.
+ */
+function ensureElectronDist() {
+    const electronDir = path.join(ROOT_DIR, 'node_modules', 'electron');
+    const distDir = path.join(electronDir, 'dist');
+    const installScript = path.join(electronDir, 'install.js');
+
+    if (fs.existsSync(distDir)) {
+        return;
+    }
+    if (!fs.existsSync(installScript)) {
+        console.log('\nWarning: node_modules/electron/install.js not found; cannot ensure Electron dist.');
+        return;
+    }
+    run(`node "${installScript}"`, electronDir, 'Ensure Electron dist (run Electron postinstall)');
+}
+
+/**
  * Package the electron-next application
  */
 function packageApp() {
     // sync covers the --skip-ide-build --package path where buildIde did not run
     syncMissingFrameworkDeps();
+    // Make sure node_modules/electron/dist exists, else electron-builder aborts
+    ensureElectronDist();
     run('yarn package:applications:next', ROOT_DIR, 'Package electron-next application');
 }
 
