@@ -9,9 +9,7 @@
 
 import { hideBin } from 'yargs/helpers';
 import yargs from 'yargs/yargs';
-import { executeAppBuilderAsJson } from 'app-builder-lib/out/util/appBuilder';
-// eslint-disable-next-line import/no-extraneous-dependencies
-import { BlockMapDataHolder } from 'builder-util-runtime';
+import { buildBlockMap } from 'app-builder-lib/out/targets/blockmap/blockmap';
 import { rmSync } from 'fs';
 import * as path from 'path';
 
@@ -39,5 +37,6 @@ async function execute(): Promise<void> {
     rmSync(blockMapFile, {
         force: true,
     });
-    await executeAppBuilderAsJson<BlockMapDataHolder>(['blockmap', '--input', executablePath, '--output', blockMapFile]);
+    // 'gzip' matches what electron-builder itself uses when it writes a separate .blockmap file.
+    await buildBlockMap(executablePath, 'gzip', blockMapFile);
 };
