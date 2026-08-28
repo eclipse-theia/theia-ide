@@ -67,6 +67,21 @@ yarn
 ### 2.2. Update versions
 <!-- release: both -->
 
+Determine **THEIA_IDE_VERSION** as described in [1. Overview](#1-overview), then run the release preparation script with both versions:
+
+```sh
+yarn release:prepare --theia {{version}} --ide {{ideVersion}}
+```
+
+It updates the monorepo version, all package versions, the Theia dependencies and the yarn lock file. It never derives a version, both are taken exactly as passed.
+
+- Omit `--theia` if there is no new Theia release to consume, `--ide` is always required.
+- Add `--dry-run` to print the versions and the commands without running them.
+
+Review the resulting diff before continuing, it should only contain version changes.
+
+Optional: the manual steps would be:
+
 1. Update the monorepo version to **THEIA_IDE_VERSION** (without creating a Git tag):
 
    ```sh
