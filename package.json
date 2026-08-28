@@ -59,6 +59,7 @@
     "update:theia": "ts-node scripts/update-theia-version.ts",
     "update:theia:children": "lerna run update:theia -- ",
     "update:next": "ts-node scripts/update-theia-version.ts next && lerna run update:next",
+    "release:prepare": "ts-node scripts/prepare-release.ts",
     "lint": "eslint --ext js,jsx,ts,tsx scripts && lerna run lint",
     "lint:fix": "eslint --ext js,jsx,ts,tsx scripts --fix && lerna run lint:fix",
     "license:check:fetch-jar": "node scripts/fetch-dash-licenses-jar.js",

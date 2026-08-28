@@ -31,20 +31,21 @@ jobs:
       - name: Export build variables
         shell: bash
         run: |
-          THEIA_VERSION=next
-          echo "THEIA_VERSION=${THEIA_VERSION}" >> $GITHUB_ENV
-          yarn version --minor --no-git-tag-version
-          IDE_VERSION=$(jq -r .version package.json)
-          echo "THEIA_IDE_VERSION=${IDE_VERSION}-next-$(date +%Y-%m-%d)" >> $GITHUB_ENV
+          # Build against the version currently published under the Theia `next` dist tag, e.g.
+          # 1.76.0-next.0, and publish the IDE as a dated pre-release of the same upcoming release.
+          THEIA_NEXT=$(npm view @theia/core@next version)
+          if [ -z "$THEIA_NEXT" ]; then
+            echo "Could not resolve the version published under the Theia 'next' dist tag." >&2
+            exit 1
+          fi
+          echo "THEIA_VERSION=${THEIA_NEXT}" >> $GITHUB_ENV
+          echo "THEIA_IDE_VERSION=${THEIA_NEXT%%-*}-next-$(date -u +%Y-%m-%d)" >> $GITHUB_ENV
 
       - name: Build next package
         shell: bash
         run: |
           yarn --skip-integrity-check --network-timeout 100000
-          yarn version --new-version $THEIA_IDE_VERSION --no-git-tag-version
-          yarn lerna version $THEIA_IDE_VERSION --no-push --no-git-tag-version --yes
-          yarn update:theia $THEIA_VERSION && yarn update:theia:children $THEIA_VERSION
-          yarn --skip-integrity-check --network-timeout 100000
+          yarn release:prepare --theia $THEIA_VERSION --ide $THEIA_IDE_VERSION
           yarn build:extensions
           yarn build:applications:next
           yarn download:plugins
