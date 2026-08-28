@@ -8,6 +8,11 @@ on:
       - '**/*.md'
       - 'TheiaIDE logo/**'
   workflow_dispatch:
+    inputs:
+      upload_mac_artifacts:
+        description: "Upload the mac artifacts to the rolling 'pre-release' (PUBLISHING.md step 2.5)"
+        type: boolean
+        default: false
   pull_request:
     branches:
       - master
@@ -29,6 +34,9 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
+
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout
@@ -149,3 +157,44 @@ jobs:
           path: applications/electron/test-screenshots/
           if-no-files-found: ignore
           retention-days: 5
+
+  # PUBLISHING.md 2.5: provides the unsigned mac dmgs as input for the Jenkins release build.
+  # Kept as a separate job so that only this step runs with a writable token.
+  upload-mac-artifacts:
+    name: Publish mac artifacts to the rolling pre-release
+    if: ${{ inputs.upload_mac_artifacts }}
+    needs: build
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+
+    permissions:
+      contents: write # required to replace the assets of the 'pre-release'
+
+    strategy:
+      fail-fast: false
+      matrix:
+        artifact: [mac-x64, mac-arm64]
+
+    steps:
+      # Downloaded as-is: the artifact zip is already the asset that the Jenkins build unzips.
+      - name: Download ${{ matrix.artifact }}
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ${{ matrix.artifact }}
+          path: download
+          skip-decompress: true
+
+      # Replaces the asset in place, so the 'pre-release' tag stays stable as input for the Jenkins jobs.
+      - name: Replace ${{ matrix.artifact }}.zip on the pre-release
+        shell: bash
+        run: |
+          DOWNLOADED=$(find download -name '*.zip' -print -quit)
+          if [ -z "$DOWNLOADED" ]; then
+            echo "No zip found in the downloaded '${{ matrix.artifact }}' artifact." >&2
+            exit 1
+          fi
+          ASSET="$RUNNER_TEMP/${{ matrix.artifact }}.zip"
+          mv "$DOWNLOADED" "$ASSET"
+          gh release upload pre-release "$ASSET" --clobber --repo "$GITHUB_REPOSITORY"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
