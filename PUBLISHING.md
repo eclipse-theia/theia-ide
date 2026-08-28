@@ -139,11 +139,11 @@ After completing step 2.3, open a PR with your changes <https://github.com/eclip
 ### 2.5. Mac Artifacts
 <!-- release: both -->
 
-- The PR will trigger a verification build that generates two zip files with mac artifacts.
-- Download these two zips and replace them in this pre-release: <https://github.com/eclipse-theia/theia-ide/releases/tag/pre-release>.
-- These unsigned dmgs will be used as input for the Jenkins build.
+The Jenkins build does not build the mac app itself, it downloads the unsigned dmgs from this pre-release and signs them: <https://github.com/eclipse-theia/theia-ide/releases/tag/pre-release>. Its `mac-x64.zip` and `mac-arm64.zip` assets therefore have to be replaced with the artifacts of the release build.
 
-> **Patch release branch:** If using a `release/{{version}}` branch, manually trigger the [Build, package and test](https://github.com/eclipse-theia/theia-ide/actions/workflows/build.yml) workflow targeting the `release/{{version}}` branch to generate the mac artifacts (no PR build is triggered automatically).
+Trigger the [Build, package and test](https://github.com/eclipse-theia/theia-ide/actions/workflows/build.yml) workflow on the release branch (the head branch of the release PR, or `release/{{version}}` for a patch release) and enable the **Upload the mac artifacts to the rolling 'pre-release'** option. Once the build is green on all platforms, it replaces both assets in place.
+
+Optional: the manual steps would be to download the two zip files from the run, which the build uploads as regular workflow artifacts on pull request builds as well, and to replace the two pre-release assets by hand.
 
 ### 2.6. Merge Release PR & Trigger Jenkins Build
 <!-- release: both -->
