@@ -18,6 +18,8 @@ import { hideBin } from 'yargs/helpers';
 const VERSION_PATTERN = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z-.]+)?(?:\+[0-9A-Za-z-.]+)?$/;
 /** An npm dist tag, e.g. `next` or `latest`. */
 const DIST_TAG_PATTERN = /^[A-Za-z][A-Za-z0-9-]*$/;
+/** A `patch-package` file for a Theia package, e.g. `@theia+terminal+1.75.0.patch`. */
+const THEIA_PATCH_PATTERN = /^(@theia\+[^+]+)\+(\d+\.\d+\.\d+.*)\.patch$/;
 
 const argv = yargs(hideBin(process.argv))
     .option('theia', {
@@ -68,6 +70,7 @@ function execute(): void {
         if (theiaVersion) {
             run(`yarn update:theia ${theiaVersion}`);
             run(`yarn update:theia:children ${theiaVersion}`);
+            renameTheiaPatches(theiaVersion);
         }
         run(`yarn lerna version ${ideVersion} --exact --no-push --no-git-tag-version --yes`);
         run('yarn');
@@ -94,6 +97,33 @@ function assertVersions(theiaVersion: string | undefined, ideVersion: string): v
     }
     if (theiaVersion && !VERSION_PATTERN.test(theiaVersion) && !DIST_TAG_PATTERN.test(theiaVersion)) {
         throw new Error(`'--theia ${theiaVersion}' is neither a version nor a dist tag. Expected e.g. '1.76.0', '1.76.0-next.0' or 'next'.`);
+    }
+}
+
+/**
+ * `patch-package` reads the package version from the patch file name, so a patch that keeps the
+ * previous version in its name is applied with a mismatch warning. Rename the Theia patches along
+ * with the dependencies, before the lock file is refreshed and the patches are applied again.
+ */
+function renameTheiaPatches(theiaVersion: string): void {
+    if (!VERSION_PATTERN.test(theiaVersion)) {
+        console.log(`Skipping the patch file rename, the dist tag '${theiaVersion}' does not name a version.`);
+        return;
+    }
+    const patchesDir = path.resolve('./', 'patches');
+    if (!fs.existsSync(patchesDir)) {
+        return;
+    }
+    for (const patch of fs.readdirSync(patchesDir)) {
+        const match = THEIA_PATCH_PATTERN.exec(patch);
+        if (!match || match[2] === theiaVersion) {
+            continue;
+        }
+        const renamed = `${match[1]}+${theiaVersion}.patch`;
+        console.log(`${argv.dryRun ? '[dry run] ' : ''}Renaming ${patch} to ${renamed}`);
+        if (!argv.dryRun) {
+            fs.renameSync(path.join(patchesDir, patch), path.join(patchesDir, renamed));
+        }
     }
 }
 
