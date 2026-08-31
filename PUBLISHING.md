@@ -73,7 +73,7 @@ Determine **THEIA_IDE_VERSION** as described in [1. Overview](#1-overview), then
 yarn release:prepare --theia {{version}} --ide {{ideVersion}}
 ```
 
-It updates the monorepo version, all package versions, the Theia dependencies and the yarn lock file. It never derives a version, both are taken exactly as passed.
+It updates the monorepo version, all package versions, the Theia dependencies, the versioned `@theia` patch file names and the yarn lock file. It never derives a version, both are taken exactly as passed.
 
 - Omit `--theia` if there is no new Theia release to consume, `--ide` is always required.
 - Add `--dry-run` to print the versions and the commands without running them.
