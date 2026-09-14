@@ -48,16 +48,18 @@ export class TheiaIDEGettingStartedWidget extends GettingStartedWidget {
             <div className='gs-content-container'>
                 {this.renderHeader()}
                 <hr className='gs-hr' />
-                {this.aiIsIncluded &&
-                    <div className='tide-welcome-banner'>
-                        {this.renderAIBanner()}
-                    </div>
-                }
+                {/*
+                  * The walkthroughs take the row the AI banner used to have, since they now carry the AI
+                  * onboarding it announced. The section renders nothing once no walkthrough is pending, and the
+                  * row then collapses with it, leaving the two columns to themselves.
+                  */}
+                <div className='tide-welcome-walkthroughs'>
+                    {this.renderWalkthroughs()}
+                </div>
                 <div className='tide-welcome-grid'>
                     <div className='tide-welcome-column'>
                         {this.renderStart()}
                         {this.renderRecentWorkspaces()}
-                        {this.renderWalkthroughs()}
                         {this.renderSettings()}
                         {this.renderHelp()}
                     </div>
