@@ -83,6 +83,41 @@ body[data-theia-branding="next"] {
     min-width: 0;
 }
 
+/*
+ * The walkthroughs get a row of their own above the two columns, so that the onboarding is the first thing
+ * offered. Without a pending walkthrough the section renders nothing, and the row must not keep its margin.
+ */
+.tide-welcome-walkthroughs {
+    margin-bottom: calc(var(--theia-ui-padding) * 4);
+}
+
+.tide-welcome-walkthroughs:empty {
+    display: none;
+}
+
+/*
+ * Across the row rather than in the single column the cards form in the narrow side column of the framework
+ * welcome page. They keep the minimum and the measure of a column, so that a lone card stays the size of a
+ * card instead of stretching over the whole page.
+ */
+.tide-welcome-walkthroughs .gs-walkthrough-cards {
+    flex-direction: row;
+    flex-wrap: wrap;
+    max-width: none;
+}
+
+.tide-welcome-walkthroughs .gs-walkthrough-card {
+    flex: 1 1 320px;
+    max-width: 420px;
+    /*
+     * The row decides how wide a card is, not its content: a flex item otherwise refuses to go below the
+     * width of its text, which makes a card with a longer title or description wider than the others.
+     */
+    min-width: 0;
+    /* A long unbreakable word would then reach out of the card rather than widen it. */
+    overflow-wrap: anywhere;
+}
+
 .tide-welcome-header {
     display: flex;
     align-items: center;
@@ -96,15 +131,6 @@ body[data-theia-branding="next"] {
 
 .tide-welcome-header .gs-sub-header {
     margin: calc(var(--theia-ui-padding) / 2) 0 0 0;
-}
-
-.tide-welcome-banner {
-    margin: calc(var(--theia-ui-padding) * 3) 0;
-}
-
-/* The banner is no longer nested in a floating box, so the full height it asks for has to be undone. */
-.tide-welcome-banner > .gs-container {
-    height: auto;
 }
 
 /*
