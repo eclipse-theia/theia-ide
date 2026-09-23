@@ -44,7 +44,7 @@ When upstream code in `node_modules` needs modification, for example to adjust p
 
 Another option is to adjust the bundled code in the bundler.
 
-As an example, the `asarRipgrepPlugin` in `applications/electron/esbuild.mjs` overrides the upstream esbuild native plugin's ripgrep replacement to rewrite ripgrep's path resolution from `.asar` to `.asar.unpacked` at bundle time:
+As an example, the `asarRipgrepPlugin` formerly used in `applications/electron/esbuild.mjs` overrode the upstream esbuild native plugin's ripgrep replacement to rewrite ripgrep's path resolution from `.asar` to `.asar.unpacked` at bundle time:
 
 ```js
 const asarRipgrepPlugin = {
