@@ -1793,6 +1793,16 @@
     "@theia/monaco-editor-core" "1.108.201"
     "@theia/workspace" "1.76.0"
 
+"@theia/ai-external-api@1.76.0":
+  version "1.76.0"
+  resolved "https://registry.yarnpkg.com/@theia/ai-external-api/-/ai-external-api-1.76.0.tgz#84eb02be52a0548c9faee72c9cc907916907a6fb"
+  integrity sha512-XQlMuK79fqp9vKmFR8Iua51BIUNXyqyYkAeTJ8lYRJ8aGTAe/6eWPzJntYoAytYa+CkPJ9/R+RStKWcwn7eE7g==
+  dependencies:
+    "@theia/ai-chat" "1.76.0"
+    "@theia/core" "1.76.0"
+    "@theia/external-api" "1.76.0"
+    "@theia/workspace" "1.76.0"
+
 "@theia/ai-google@1.76.0":
   version "1.76.0"
   resolved "https://registry.yarnpkg.com/@theia/ai-google/-/ai-google-1.76.0.tgz#6f73364fdc6bf30918fca335c88b3640f43ef086"
@@ -2226,6 +2236,13 @@
     electron-store "^8.2.0"
     fix-path "^4.0.0"
     native-keymap "^2.5.0"
+
+"@theia/external-api@1.76.0":
+  version "1.76.0"
+  resolved "https://registry.yarnpkg.com/@theia/external-api/-/external-api-1.76.0.tgz#21020fe74e4789fbc2832f34ec47828c27943b97"
+  integrity sha512-1FzmVZp2kXZUotYPwXKloqORZRvn7dEBiFm+pmvxIbbkhhcjk+SFcPhk+lQg9VSXOsy8FqNav5Fwkz3QPB0hBQ==
+  dependencies:
+    "@theia/core" "1.76.0"
 
 "@theia/external-terminal@1.76.0":
   version "1.76.0"
