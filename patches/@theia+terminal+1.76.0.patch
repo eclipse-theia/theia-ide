@@ -1,9 +1,0 @@
-diff --git a/node_modules/@theia/terminal/lib/node/shell-integration-injector.js b/node_modules/@theia/terminal/lib/node/shell-integration-injector.js
-index 657f0a7..f7f04cf 100644
---- a/node_modules/@theia/terminal/lib/node/shell-integration-injector.js
-+++ b/node_modules/@theia/terminal/lib/node/shell-integration-injector.js
-@@ -80,3 +80,3 @@ let ShellIntegrationInjector = class ShellIntegrationInjector {
-         }
--        return fullPath;
-+        return fullPath.replace('.asar' + path.sep, '.asar.unpacked' + path.sep);
-     }

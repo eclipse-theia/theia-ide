@@ -37,8 +37,14 @@ asarUnpack:
 
 When upstream code in `node_modules` needs modification, for example to adjust paths, [patch-package](https://github.com/ds300/patch-package) can apply source level patches after `yarn install`.
 
-* Patches live in the `patches` directory at the repository root
+* Patches live in a `patches` directory (by default at the repository root)
 * Patches are applied automatically via the `postinstall` script in `package.json`
+
+Theia itself uses this mechanism to ship its own maintained patches, see [Theia-maintained Dependency Patches](#theia-maintained-dependency-patches) below. If you need your own patches in addition, you can chain a second `patch-package` invocation with a separate patch directory:
+
+```json
+"postinstall": "theia-patch && patch-package --patch-dir patches"
+```
 
 #### 3. Bundler Post Processing
 
@@ -64,3 +70,13 @@ const asarRipgrepPlugin = {
     }
 };
 ```
+
+## Theia-maintained Dependency Patches
+
+Some Theia features rely on small patches to third-party dependencies that are not (yet) fixed upstream. These are maintained by the Theia team and shipped inside `@theia/cli`, so adopters do not need their own patch files. They are applied via the `theia-patch` command, run from the `postinstall` script:
+
+```json
+"postinstall": "theia-patch"
+```
+
+Keep this hook in place so your application always picks up the patches the current Theia version requires. Currently this includes a `@lumino/widgets` fix for menus in secondary (detached) windows.

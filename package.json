@@ -65,7 +65,7 @@
     "license:check:fetch-jar": "node scripts/fetch-dash-licenses-jar.js",
     "license:check": "yarn license:check:fetch-jar && npx dash-licenses-wrapper  --configFile=./configs/license-check-config.json",
     "license:check:review": "yarn license:check:fetch-jar && npx dash-licenses-wrapper  --configFile=./configs/license-check-config.json --review",
-    "postinstall": "theia-patch && npx patch-package --patch-dir patches"
+    "postinstall": "theia-patch"
   },
   "theiaPluginsDir": "plugins",
   "theiaPlugins": {
