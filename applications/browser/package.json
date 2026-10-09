@@ -118,15 +118,15 @@
     "@theia/vsx-registry": "1.77.0-next.25",
     "@theia/workspace": "1.77.0-next.25",
     "fs-extra": "^9.1.0",
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
     "theia-ide-product-ext": "1.77.0-next-2026-10-07"
   },
   "devDependencies": {
     "@theia/bundle-plugin": "1.77.0-next.25",
     "@theia/cli": "1.77.0-next.25",
-    "@types/react": "^19.2.18",
-    "@types/react-dom": "^19.2.7"
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0"
   },
   "scripts": {
     "clean": "theia clean && rimraf node_modules",
