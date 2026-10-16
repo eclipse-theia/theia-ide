@@ -49,7 +49,7 @@ node scripts/build-with-local-theia.js --theia-path /path/to/theia --package
 
 1. Build the local Theia framework (`npm ci` + `npm run compile`)
 2. Install the IDE dependencies (`yarn`)
-3. Symlink all `@theia/*` packages from the local Theia into the IDE's `node_modules`, pointing at the given `--theia-path`
+3. Symlink the IDE's direct and transitive `@theia/*` dependencies from the local Theia into the IDE's `node_modules`, pointing at the given `--theia-path`
 4. Copy any transitive dependencies that the linked packages need but cannot resolve from the Theia checkout (see [Why some dependencies are copied](#why-some-dependencies-are-copied))
 5. Build the Theia IDE extensions and electron-next application
 6. Download required plugins
@@ -120,7 +120,7 @@ When you're done testing with the local Theia:
 yarn build:local-theia --unlink
 ```
 
-This removes the `@theia/*` symlinks and reinstalls packages from npm.
+This removes the `@theia/*` symlinks, including transitive dependencies and stale links from previous checkouts, and reinstalls packages from npm.
 
 ### Dry Run
 
@@ -229,6 +229,25 @@ Some `@theia/*` packages used by the Theia IDE may not exist in your Theia check
 - The package is from a different source
 
 The script will warn about missing packages but continue with available ones.
+
+### Missing DI Bindings After a Local Build
+
+Errors such as `No matching bindings found for serviceIdentifier: Symbol(TelemetryConsentProvider)`
+can occur when the IDE loads an installed copy of a Theia package while linked
+framework packages load the local copy. Each copy creates different DI symbols,
+even when the versions match.
+
+The local-build script links transitive `@theia/*` dependencies as well as direct
+ones to avoid this duplication. If dependencies were reinstalled separately,
+restore the links and rebuild the application:
+
+```sh
+yarn build:local-theia --skip-theia-build --skip-ide-build
+yarn build:applications:next:dev
+```
+
+Do not run `yarn install` between restoring the links and rebuilding, as it can
+replace links with installed copies again.
 
 ### Build Errors After Switching Branches
 

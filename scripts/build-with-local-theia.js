@@ -129,11 +129,11 @@ function readJson(filePath) {
 /**
  * Get all @theia/* packages from a package.json
  */
-function getTheiaDependencies(packageJsonPath) {
+function getTheiaDependencies(packageJsonPath, includeDevDependencies = true) {
     const pkg = readJson(packageJsonPath);
     const theiaDeps = new Set();
 
-    for (const deps of [pkg.dependencies, pkg.devDependencies]) {
+    for (const deps of [pkg.dependencies, includeDevDependencies && pkg.devDependencies, pkg.optionalDependencies, pkg.peerDependencies]) {
         if (deps) {
             for (const dep of Object.keys(deps)) {
                 if (dep.startsWith('@theia/')) {
@@ -174,7 +174,7 @@ function findTheiaPackages(theiaPath) {
 }
 
 /**
- * Collect all @theia/* dependencies from IDE packages
+ * Collect direct and transitive @theia/* dependencies from IDE and local packages
  */
 function collectAllTheiaDependencies() {
     const allDeps = new Set();
@@ -196,6 +196,15 @@ function collectAllTheiaDependencies() {
         const extPkgPath = path.join(ROOT_DIR, 'theia-extensions', ext, 'package.json');
         if (fs.existsSync(extPkgPath)) {
             getTheiaDependencies(extPkgPath).forEach(d => allDeps.add(d));
+        }
+    }
+
+    const theiaPackages = findTheiaPackages(options.theiaPath);
+    // Set iteration includes newly added dependencies and visits cycles only once.
+    for (const dep of allDeps) {
+        const localPath = theiaPackages.get(dep);
+        if (localPath) {
+            getTheiaDependencies(path.join(localPath, 'package.json'), false).forEach(d => allDeps.add(d));
         }
     }
 
@@ -363,10 +372,15 @@ function linkTheiaPackages() {
  * the registry version.
  */
 function removeTheiaSymlinks() {
-    const requiredDeps = collectAllTheiaDependencies();
+    const scopeDir = path.join(ROOT_DIR, 'node_modules', '@theia');
+    if (!fs.existsSync(scopeDir)) {
+        return 0;
+    }
     let removed = 0;
 
-    for (const dep of requiredDeps) {
+    // Include links from previous checkouts, even when no longer dependencies.
+    for (const entry of fs.readdirSync(scopeDir)) {
+        const dep = `@theia/${entry}`;
         const linkPath = idePackagePath(dep);
         let isSymlink = false;
         try {
