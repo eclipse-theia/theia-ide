@@ -154,7 +154,7 @@ export class TheiaDesktopFileServiceEndpoint implements BackendApplicationContri
         return `[Desktop Entry]
 Name=${applicationName}
 GenericName=Integrated Development Environment
-Exec=${appImagePath} %U
+Exec=${this.toExecArgument(appImagePath)} %U
 Terminal=false
 Type=Application
 Icon=${imagePath}
@@ -167,7 +167,7 @@ Categories=Development;IDE;`;
         return `[Desktop Entry]
 Name=${applicationName} - URL Handler
 GenericName=Integrated Development Environment
-Exec=${appImagePath} --open-url %U
+Exec=${this.toExecArgument(appImagePath)} --open-url %U
 Terminal=false
 Type=Application
 NoDisplay=true
@@ -175,6 +175,19 @@ Icon=${imagePath}
 MimeType=x-scheme-handler/${uriScheme};
 Comment=IDE for cloud and desktop
 Categories=Development;IDE;`;
+    }
+
+    // Desktop Entry Specification, "The Exec key": an argument that contains a reserved
+    // character (e.g. a space or parenthesis in the AppImage path) must be double-quoted,
+    // with `"`, `` ` ``, `$` and `\` escaped inside the quotes, and a literal `%` must be
+    // written as `%%`. String-value escaping applies on top, so each backslash is doubled.
+    protected toExecArgument(arg: string): string {
+        const escaped = arg.replace(/%/g, '%%');
+        if (!/[\s"'\\><~|&;$*?#()`]/.test(escaped)) {
+            return escaped;
+        }
+        const quoted = '"' + escaped.replace(/(["`$\\])/g, '\\$1') + '"';
+        return quoted.replace(/\\/g, '\\\\');
     }
 
     protected getAppId(applicationName: string): string {
