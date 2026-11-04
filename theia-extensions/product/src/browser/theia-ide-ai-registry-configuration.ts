@@ -9,7 +9,7 @@
 
 import { AIRegistryConfiguration } from '@theia/ai-registry/lib/common/ai-registry-configuration';
 import { injectable } from '@theia/core/shared/inversify';
-import { getBrandingVariant } from './theia-ide-config';
+import { getBrandingVariant } from './theia-ide-config.js';
 
 @injectable()
 export class TheiaIDEAIRegistryConfiguration extends AIRegistryConfiguration {

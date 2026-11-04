@@ -8,12 +8,12 @@
  ********************************************************************************/
 
 import { CommandContribution, MenuContribution } from '@theia/core/lib/common';
-import { ElectronMenuUpdater, TheiaUpdaterClientImpl, TheiaUpdaterFrontendContribution } from './updater/theia-updater-frontend-contribution';
-import { TheiaUpdater, TheiaUpdaterClient, TheiaUpdaterPath } from '../common/updater/theia-updater';
+import { ElectronMenuUpdater, TheiaUpdaterClientImpl, TheiaUpdaterFrontendContribution } from './updater/theia-updater-frontend-contribution.js';
+import { TheiaUpdater, TheiaUpdaterClient, TheiaUpdaterPath } from '../common/updater/theia-updater.js';
 import { ContainerModule } from '@theia/core/shared/inversify';
 import { ElectronIpcConnectionProvider } from '@theia/core/lib/electron-browser/messaging/electron-ipc-connection-source';
 import { PreferenceContribution } from '@theia/core/lib/common';
-import { theiaUpdaterPreferenceSchema } from './updater/theia-updater-preferences';
+import { theiaUpdaterPreferenceSchema } from './updater/theia-updater-preferences.js';
 
 export default new ContainerModule((bind, _unbind, isBound, rebind) => {
     bind(ElectronMenuUpdater).toSelf().inSingletonScope();

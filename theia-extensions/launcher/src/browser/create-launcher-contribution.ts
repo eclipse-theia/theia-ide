@@ -12,8 +12,8 @@ import { FrontendApplicationConfigProvider } from '@theia/core/lib/browser/front
 import { Command, CommandContribution, CommandRegistry, ILogger, MaybePromise } from '@theia/core/lib/common';
 import { nls } from '@theia/core/lib/common/nls';
 import { inject, injectable } from '@theia/core/shared/inversify';
-import { LauncherService } from './launcher-service';
-import { DesktopFileService } from './desktopfile-service';
+import { LauncherService } from './launcher-service.js';
+import { DesktopFileService } from './desktopfile-service.js';
 
 export namespace LauncherCommands {
     export const CREATE_LAUNCHER: Command = {

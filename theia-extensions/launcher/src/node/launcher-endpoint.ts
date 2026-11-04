@@ -10,15 +10,15 @@
 import { inject, injectable } from '@theia/core/shared/inversify';
 import { BackendApplicationContribution } from '@theia/core/lib/node/backend-application';
 import { Application, Router, Request, Response } from '@theia/core/shared/express';
-import { json } from 'body-parser';
+import bodyParser from 'body-parser';
 import { ILogger } from '@theia/core/lib/common';
 import { EnvVariablesServer } from '@theia/core/lib/common/env-variables';
 import * as sudo from '@vscode/sudo-prompt';
-import * as fs from 'fs-extra';
+import * as fs from '@theia/core/shared/fs-extra';
 import * as os from 'os';
 import * as path from 'path';
 import URI from '@theia/core/lib/common/uri';
-import { getStorageFilePath } from './launcher-util';
+import { getStorageFilePath } from './launcher-util.js';
 
 export type LauncherEndpointState = 'up-to-date' | 'needs-silent-update' | 'needs-prompt';
 
@@ -41,7 +41,7 @@ export class TheiaLauncherServiceEndpoint implements BackendApplicationContribut
         const router = Router();
         router.put('/', (request, response) => this.createLauncher(request, response));
         router.get('/state', (request, response) => this.getState(request, response));
-        app.use(json());
+        app.use(bodyParser.json());
         app.use(TheiaLauncherServiceEndpoint.PATH, router);
     }
 

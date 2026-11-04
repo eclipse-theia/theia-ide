@@ -6,12 +6,12 @@
  *
  * SPDX-License-Identifier: MIT
  ********************************************************************************/
-import { CreateLauncherCommandContribution } from './create-launcher-contribution';
+import { CreateLauncherCommandContribution } from './create-launcher-contribution.js';
 import { ContainerModule } from '@theia/core/shared/inversify';
-import { LauncherService } from './launcher-service';
+import { LauncherService } from './launcher-service.js';
 import { FrontendApplicationContribution } from '@theia/core/lib/browser';
 import { CommandContribution } from '@theia/core/lib/common';
-import { DesktopFileService } from './desktopfile-service';
+import { DesktopFileService } from './desktopfile-service.js';
 
 export default new ContainerModule(bind => {
     bind(CreateLauncherCommandContribution).toSelf().inSingletonScope();

@@ -40,4 +40,8 @@ if (isAppImage) {
 }
 
 // Handover to the auto-generated electron application handler.
-require('../lib/backend/electron-main.js');
+// It is bundled as an ES module, see lib/backend/package.json.
+import('../lib/backend/electron-main.js').catch(error => {
+    console.error('Failed to load the Electron main process.', error);
+    process.exit(1);
+});
