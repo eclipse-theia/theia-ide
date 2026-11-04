@@ -7,15 +7,17 @@
  * SPDX-License-Identifier: MIT
  ********************************************************************************/
 
-import * as fs from 'fs-extra';
+import * as fs from '@theia/core/shared/fs-extra';
 import * as http from 'http';
 import * as os from 'os';
 import * as path from 'path';
 import { ElectronMainApplication, ElectronMainApplicationContribution } from '@theia/core/lib/electron-main/electron-main-application';
-import { TheiaUpdater, TheiaUpdaterClient, UpdaterSettings } from '../../common/updater/theia-updater';
+import { TheiaUpdater, TheiaUpdaterClient, UpdaterSettings } from '../../common/updater/theia-updater.js';
 import { injectable } from '@theia/core/shared/inversify';
 import { isOSX, isWindows } from '@theia/core';
 import { CancellationToken } from 'builder-util-runtime';
+import electronUpdater from 'electron-updater';
+import log from 'electron-log';
 
 const STABLE_CHANNEL_WINDOWS = 'https://download.eclipse.org/theia/ide/version/windows';
 const STABLE_CHANNEL_MACOS = 'https://download.eclipse.org/theia/ide/latest/macos';
@@ -31,10 +33,12 @@ const PREVIEW_CHANNEL_LINUX = 'https://download.eclipse.org/theia/ide-preview/la
 // The feed is served from GitHub Release assets (rolling "next" tag).
 const NEXT_CHANNEL_LINUX = 'https://github.com/eclipse-theia/theia-ide/releases/download/next';
 
-const { autoUpdater } = require('electron-updater');
+// `electron-updater` defines `autoUpdater` with a getter and `electron-log` assigns `module.exports`,
+// so Node can't detect their named exports: import them as a whole.
+const { autoUpdater } = electronUpdater;
 
-autoUpdater.logger = require('electron-log');
-autoUpdater.logger.transports.file.level = 'info';
+autoUpdater.logger = log;
+log.transports.file.level = 'info';
 
 @injectable()
 export class TheiaUpdaterImpl implements TheiaUpdater, ElectronMainApplicationContribution {
@@ -83,7 +87,7 @@ export class TheiaUpdaterImpl implements TheiaUpdater, ElectronMainApplicationCo
             if (err instanceof Error && err.message.includes('cancelled')) {
                 return;
             }
-            const errorLogPath = autoUpdater.logger.transports.file.getFile().path;
+            const errorLogPath = log.transports.file.getFile().path;
             this.clients.forEach(c => c.reportError({ message: 'An error has occurred while attempting to update.', errorLogPath }));
         });
     }
@@ -110,13 +114,13 @@ export class TheiaUpdaterImpl implements TheiaUpdater, ElectronMainApplicationCo
     }
 
     cancel(): void {
-        autoUpdater.logger.info('Update cancelled by user');
+        log.info('Update cancelled by user');
         this.cancellationToken.cancel();
         this.clients.forEach(c => c.reportCancelled());
     }
 
     downloadUpdate(): void {
-        autoUpdater.logger.info('Downloading update');
+        log.info('Downloading update');
         this.cancellationToken = new CancellationToken();
         autoUpdater.downloadUpdate(this.cancellationToken);
 

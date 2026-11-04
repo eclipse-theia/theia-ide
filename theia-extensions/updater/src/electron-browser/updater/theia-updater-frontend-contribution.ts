@@ -19,12 +19,12 @@ import {
     Progress
 } from '@theia/core/lib/common';
 import { PreferenceScope, PreferenceService } from '@theia/core/lib/common';
-import { TheiaUpdater, TheiaUpdaterClient, UpdaterError, UpdateInfo, UpdateAvailabilityInfo, UpdaterSettings } from '../../common/updater/theia-updater';
+import { TheiaUpdater, TheiaUpdaterClient, UpdaterError, UpdateInfo, UpdateAvailabilityInfo, UpdaterSettings } from '../../common/updater/theia-updater.js';
 import { inject, injectable, postConstruct } from '@theia/core/shared/inversify';
 import { CommonMenus, OpenerService } from '@theia/core/lib/browser';
 import { ElectronMainMenuFactory } from '@theia/core/lib/electron-browser/menu/electron-main-menu-factory';
 import URI from '@theia/core/lib/common/uri';
-import { URI as VSCodeURI } from 'vscode-uri';
+import { URI as VSCodeURI } from '@theia/core/shared/vscode-uri';
 
 export namespace TheiaUpdaterCommands {
 

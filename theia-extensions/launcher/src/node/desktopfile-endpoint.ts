@@ -8,13 +8,12 @@
  ********************************************************************************/
 
 import { BackendApplicationContribution } from '@theia/core/lib/node/backend-application';
-import { Application, Router } from '@theia/core/shared/express';
+import { Application, Router, Request, Response } from '@theia/core/shared/express';
 import { inject, injectable } from '@theia/core/shared/inversify';
-import { Request, Response } from 'express-serve-static-core';
-import { json } from 'body-parser';
+import bodyParser from 'body-parser';
 import { EnvVariablesServer } from '@theia/core/lib/common/env-variables';
-import { getStorageFilePath } from './launcher-util';
-import * as fs from 'fs-extra';
+import { getStorageFilePath } from './launcher-util.js';
+import * as fs from '@theia/core/shared/fs-extra';
 import * as path from 'path';
 import { execFile } from 'child_process';
 
@@ -38,7 +37,7 @@ export class TheiaDesktopFileServiceEndpoint implements BackendApplicationContri
         const router = Router();
         router.put('/', (request, response) => this.createOrUpdateDesktopfile(request, response));
         router.get('/state', (request, response) => this.getState(request, response));
-        app.use(json());
+        app.use(bodyParser.json());
         app.use(TheiaDesktopFileServiceEndpoint.PATH, router);
     }
 

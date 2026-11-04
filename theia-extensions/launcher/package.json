@@ -20,8 +20,7 @@
   "dependencies": {
     "@theia/core": "1.77.0-next.101",
     "@vscode/sudo-prompt": "9.3.2",
-    "body-parser": "^1.20.8",
-    "fs-extra": "^4.0.3"
+    "body-parser": "^1.20.8"
   },
   "devDependencies": {
     "rimraf": "^2.7.1",
@@ -41,5 +40,13 @@
       "frontendElectron": "lib/browser/create-launcher-frontend-module",
       "backend": "lib/node/launcher-backend-module"
     }
-  ]
+  ],
+  "type": "module",
+  "exports": {
+    "./package.json": "./package.json",
+    "./lib/*.json": "./lib/*.json",
+    "./lib/*.js": "./lib/*.js",
+    "./lib/*": "./lib/*.js",
+    "./*": "./*"
+  }
 }

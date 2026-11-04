@@ -10,8 +10,8 @@
 import { codicon } from '@theia/core/lib/browser';
 import { WindowService } from '@theia/core/lib/browser/window/window-service';
 import { environment } from '@theia/core/lib/common';
-import * as React from 'react';
-import { getBrandingVariant } from './theia-ide-config';
+import * as React from '@theia/core/shared/react';
+import { getBrandingVariant } from './theia-ide-config.js';
 
 export interface ExternalBrowserLinkProps {
     text: string;

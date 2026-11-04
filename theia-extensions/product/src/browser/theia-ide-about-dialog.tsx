@@ -7,10 +7,10 @@
  * SPDX-License-Identifier: MIT
  ********************************************************************************/
 
-import * as React from 'react';
+import * as React from '@theia/core/shared/react';
 import { AboutDialog, AboutDialogProps, ABOUT_CONTENT_CLASS } from '@theia/core/lib/browser/about-dialog';
 import { injectable, inject } from '@theia/core/shared/inversify';
-import { renderBrandingSections, renderProductName } from './branding-util';
+import { renderBrandingSections, renderProductName } from './branding-util.js';
 import { VSXEnvironment } from '@theia/vsx-registry/lib/common/vsx-environment';
 import { WindowService } from '@theia/core/lib/browser/window/window-service';
 @injectable()

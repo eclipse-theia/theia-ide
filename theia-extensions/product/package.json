@@ -3,13 +3,13 @@
   "name": "theia-ide-product-ext",
   "version": "1.77.0-next-2026-10-13",
   "description": "Eclipse Theia IDE Product Branding",
+  "type": "module",
   "dependencies": {
     "@theia/ai-registry": "1.77.0-next.101",
     "@theia/core": "1.77.0-next.101",
     "@theia/getting-started": "1.77.0-next.101",
     "@theia/vsx-registry": "1.77.0-next.101",
     "@theia/workspace": "1.77.0-next.101"
-    "inversify": "^6.2.2"
   },
   "devDependencies": {
     "rimraf": "^2.7.1",
@@ -48,5 +48,12 @@
   },
   "peerDependencies": {
     "react": "^19.2.8"
+  },
+  "exports": {
+    "./package.json": "./package.json",
+    "./lib/*.json": "./lib/*.json",
+    "./lib/*.js": "./lib/*.js",
+    "./lib/*": "./lib/*.js",
+    "./*": "./*"
   }
 }

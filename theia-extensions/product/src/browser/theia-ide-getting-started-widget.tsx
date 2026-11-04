@@ -7,11 +7,11 @@
  * SPDX-License-Identifier: MIT
  ********************************************************************************/
 
-import * as React from 'react';
+import * as React from '@theia/core/shared/react';
 
 import { PreferenceService } from '@theia/core/lib/common';
 import { inject, injectable } from '@theia/core/shared/inversify';
-import { renderBrandingSections, renderProductName } from './branding-util';
+import { renderBrandingSections, renderProductName } from './branding-util.js';
 
 import { GettingStartedWidget } from '@theia/getting-started/lib/browser/getting-started-widget';
 import { VSXEnvironment } from '@theia/vsx-registry/lib/common/vsx-environment';
