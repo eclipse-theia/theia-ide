@@ -12,6 +12,8 @@ import '../../src/browser/style/index.css';
 import { AIRegistryConfiguration } from '@theia/ai-registry/lib/common/ai-registry-configuration';
 import { WidgetFactory } from '@theia/core/lib/browser';
 import { AboutDialog } from '@theia/core/lib/browser/about-dialog';
+import { ServiceConnectionProvider } from '@theia/core/lib/browser/messaging/service-connection-provider';
+import { VERSIONS_SERVICE_PATH, VersionsService } from '../common/versions-service.js';
 import { applyBranding } from './theia-ide-config.js';
 import { CommandContribution } from '@theia/core/lib/common/command';
 import { ContainerModule } from '@theia/core/shared/inversify';
@@ -24,6 +26,14 @@ import { TheiaIDEGettingStartedWidget } from './theia-ide-getting-started-widget
 
 export default new ContainerModule((bind, _unbind, isBound, rebind) => {
     applyBranding();
+
+    /*
+     * Local rather than remote: the versions describe the desktop application the user runs, which stays the
+     * same when a remote session (SSH, WSL, dev container) moves the other services to a remote backend.
+     */
+    bind(VersionsService).toDynamicValue(ctx =>
+        ServiceConnectionProvider.createLocalProxy<VersionsService>(ctx.container, VERSIONS_SERVICE_PATH)
+    ).inSingletonScope();
 
     bind(TheiaIDEGettingStartedWidget).toSelf();
     bind(WidgetFactory).toDynamicValue(context => ({

@@ -8,13 +8,11 @@
  ********************************************************************************/
 
 :root {
-    --theia-branding-logo: url(../icons/TheiaIDE.png);
     --theia-branding-icon: url(../icons/512-512.png);
     --theia-branding-accent: #5088e7;
 }
 
 body[data-theia-branding="next"] {
-    --theia-branding-logo: url(../icons/TheiaIDE-next.png);
     --theia-branding-icon: url(../icons/512-512-next.png);
     /* The exact purple of the `next` application icon, so the product name matches it. */
     --theia-branding-accent: #8b5cf6;
@@ -146,31 +144,126 @@ body[data-theia-branding="next"] {
     margin: 0;
 }
 
-.ad-logo {
-    background-image: var(--theia-branding-logo);
-    background-position: center center;
-    background-repeat: no-repeat;
-    background-size: contain;
-    width: 250px;
-    height: 118px;
-    padding: 20px;
-}
-
-.ad-float {
-    float: right;
-}
-
+/*
+ * The About dialog: a header across the top, then the product information on the left and the extension
+ * list on the right. The container takes the height the dialog content allows, so that each column scrolls
+ * on its own and the dialog content itself never needs a second scroll bar.
+ */
 .ad-container {
-    padding: 20px;
-    width: 1150px;
-    height: 700;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    grid-template-rows: auto minmax(0, 1fr);
+    column-gap: calc(var(--theia-ui-padding) * 4);
+    width: min(1100px, 85vw);
+    height: min(700px, calc(70vh - var(--theia-ui-padding) * 4));
+    padding: 0 calc(var(--theia-ui-padding) * 2);
+    box-sizing: border-box;
 }
 
+.ad-header {
+    grid-column: 1 / -1;
+    padding-bottom: calc(var(--theia-ui-padding) * 2);
+    margin-bottom: calc(var(--theia-ui-padding) * 2);
+    border-bottom: var(--theia-border-width) solid var(--theia-panel-border);
+}
+
+.ad-main-column {
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--theia-ui-padding) * 2);
+    overflow-y: auto;
+    padding-right: var(--theia-ui-padding);
+}
+
+/*
+ * The sections keep their full height and the column scrolls instead. The section rows reuse `.flex-grid`
+ * from the welcome page, whose `overflow: hidden` would otherwise let them shrink and clip their text.
+ */
+.ad-main-column > * {
+    flex-shrink: 0;
+}
+
+.ad-side-column {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    padding-left: calc(var(--theia-ui-padding) * 4);
+    border-left: var(--theia-border-width) solid var(--theia-panel-border);
+}
+
+/* The versions line up as a table of labels and values rather than running on as sentences. */
+.ad-version-table {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    gap: calc(var(--theia-ui-padding) / 2) calc(var(--theia-ui-padding) * 4);
+    margin: 0;
+}
+
+.ad-version-table dt {
+    color: var(--theia-descriptionForeground);
+}
+
+/* Selectable, so that a single version can be copied without the whole block. */
+.ad-version-table dd {
+    margin: 0;
+    user-select: text;
+    overflow-wrap: anywhere;
+}
+
+.ad-extensions {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+/*
+ * Fills the column instead of the fixed height core gives the list, and scrolls within it. The padding keeps
+ * the right-aligned versions off the scroll bar.
+ */
 ul.theia-aboutExtensions {
-    height: 450px;
-    overflow: hidden;
-    overflow-y: scroll;
-    list-style-type: none;
-    padding: 0;
-    margin-left: 10px;
+    flex: 1;
+    height: auto;
+    min-height: 0;
+    overflow-y: auto;
+    margin: 0;
+    padding-right: calc(var(--theia-ui-padding) * 2);
+}
+
+/*
+ * Name and version share a line while they fit. A long prerelease version such as `1.78.0-next.0+b0e3080cb`
+ * wraps onto a line of its own instead, still right-aligned, rather than squeezing the name.
+ */
+ul.theia-aboutExtensions li {
+    display: flex;
+    flex-wrap: wrap;
+    column-gap: calc(var(--theia-ui-padding) * 2);
+    padding: calc(var(--theia-ui-padding) / 3) 0;
+}
+
+ul.theia-aboutExtensions li > span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.ad-extension-version {
+    margin-left: auto;
+    color: var(--theia-descriptionForeground);
+}
+
+/* A narrow window stacks the extensions below the product information, all in one scrolling column. */
+@media (max-width: 900px) {
+    .ad-container {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: auto;
+        height: auto;
+    }
+
+    .ad-side-column {
+        padding-left: 0;
+        padding-top: calc(var(--theia-ui-padding) * 2);
+        border-left: none;
+        border-top: var(--theia-border-width) solid var(--theia-panel-border);
+        margin-top: calc(var(--theia-ui-padding) * 2);
+    }
 }
